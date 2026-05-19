@@ -6,7 +6,7 @@
 
 | Слой           | Технологии                                                        |
 |----------------|-------------------------------------------------------------------|
-| Frontend       | React 19, TypeScript, React Router v6, Zustand                    |
+| Frontend       | React 19, TypeScript, React Router v6, Zustand, Ant Design        |
 | Backend        | Node.js, Fastify                                                  |
 | Database       | PostgreSQL                                                        |
 | Инфраструктура | Docker                                                            |
