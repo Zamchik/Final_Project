@@ -1,13 +1,27 @@
-// backend/prisma.config.ts
-import 'dotenv/config';
-import { defineConfig, env } from '@prisma/config';
+// import dotenv from 'dotenv';
+// import path from 'path';
+
+// // Явно загружаем .env из текущей папки backend
+// dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+// import { defineConfig, env } from '@prisma/config';
+
+// export default defineConfig({
+//   schema: 'prisma/schema.prisma',
+//   datasource: {
+//     url: env('DATABASE_URL'),
+//   },
+// });
+
+import dotenv from 'dotenv';
+import path from 'path';
+dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+import { defineConfig } from '@prisma/config';
 
 export default defineConfig({
-  // Указываем путь к файлу со схемой данных
   schema: 'prisma/schema.prisma',
-  // В этом блоке задаём настройки подключения к БД
   datasource: {
-    // Берём URL базы данных из переменной окружения DATABASE_URL
-    url: env('DATABASE_URL'),
+    url: process.env.DATABASE_URL,
   },
 });

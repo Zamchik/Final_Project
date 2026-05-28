@@ -1,26 +1,29 @@
 import 'dotenv/config';
-import Fastify from 'fastify';
+import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+import authRoutes from './routes/auth.routes';
 
 const app = Fastify({ logger: true });
 
 app.register(cors, { origin: true });
-app.register(jwt, { secret: 'supersecretkey' });
+app.register(jwt, { secret: process.env.JWT_SECRET || 'supersecretkey' });
 
+// Декоратор authenticate
+app.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
+  try {
+    await request.jwtVerify();
+  } catch {
+    reply.status(401).send({ error: 'Unauthorized' });
+  }
+});
+
+// Маршруты
+app.register(authRoutes, { prefix: '/auth' });
+
+// Health check
 app.get('/health', async () => {
-  const userCount = await prisma.user.count();
-  return { status: 'ok', users: userCount };
+  return { status: 'ok' };
 });
 
 const start = async () => {
