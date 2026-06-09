@@ -8,7 +8,10 @@ import categoryRoutes from './routes/category.routes';
 
 const app = Fastify({ logger: true });
 
-app.register(cors, { origin: true });
+app.register(cors, {
+  origin: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+});
 app.register(jwt, { secret: process.env.JWT_SECRET || 'supersecretkey' });
 app.register(categoryRoutes, { prefix: '/categories' });
 

@@ -51,4 +51,7 @@ model ProductKey {
   isSold    Boolean  @default(false) @map("is_sold")
   orderId   Int?     @map("order_id")
   createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([keyValue])       // индекс для быстрого поиска по значению ключа
+  @@map("product_keys")     // имя таблицы в БД
 }

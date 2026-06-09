@@ -1,12 +1,21 @@
 import { Outlet, Link } from 'react-router-dom';
 import { Layout as AntLayout, Menu } from 'antd';
 import { useAuthStore } from '../stores/authStore';
+import { useEffect } from 'react';
 
 const { Header, Content, Footer } = AntLayout;
 
 const MainLayout = () => {
   const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
+  const fetchUser = useAuthStore((s) => s.fetchUser);
+
+  // При монтировании Layout, если есть токен, но нет данных пользователя, загружаем их
+  useEffect(() => {
+    if (token && !user) {
+      fetchUser();
+    }
+  }, [token, user, fetchUser]);
 
   // Собираем пункты меню динамически
   const items = [
@@ -15,7 +24,7 @@ const MainLayout = () => {
     ...(token
       ? [{ key: 'cabinet', label: <Link to="/cabinet">Личный кабинет</Link> }]
       : []),
-    // Пункты только для продавца
+    // Пункты для продавца
     ...(token && user?.role === 'seller'
       ? [
           { key: 'my-products', label: <Link to="/my-products">Мои товары</Link> },
