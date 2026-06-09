@@ -3,28 +3,26 @@ import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import authRoutes from './routes/auth.routes';
+import productRoutes from './routes/product.routes';
 
 const app = Fastify({ logger: true });
 
 app.register(cors, { origin: true });
 app.register(jwt, { secret: process.env.JWT_SECRET || 'supersecretkey' });
 
-// Декоратор authenticate
 app.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
   try {
-    await request.jwtVerify();
+    const payload = await request.jwtVerify<{ id: number; email: string; role: string }>();
+    request.user = payload;
   } catch {
     reply.status(401).send({ error: 'Unauthorized' });
   }
 });
 
-// Маршруты
 app.register(authRoutes, { prefix: '/auth' });
+app.register(productRoutes, { prefix: '/products' });
 
-// Health check
-app.get('/health', async () => {
-  return { status: 'ok' };
-});
+app.get('/health', async () => ({ status: 'ok' }));
 
 const start = async () => {
   try {
