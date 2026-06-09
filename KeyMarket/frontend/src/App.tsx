@@ -6,6 +6,8 @@ import ProductPage from './pages/ProductPage';
 import CabinetPage from './pages/CabinetPage';
 import LoginPage from './pages/registration/LoginPage';
 import RegisterPage from './pages/registration/RegisterPage';
+import MyProductsPage from './pages/MyProductsPage';
+import CreateEditProductPage from './pages/CreateEditProductPage';
 
 function App() {
   return (
@@ -17,6 +19,9 @@ function App() {
         <Route path="/cabinet" element={<CabinetPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/my-products" element={<MyProductsPage />} />
+        <Route path="/create-product" element={<CreateEditProductPage />} />
+        <Route path="/edit-product/:id" element={<CreateEditProductPage />} />
       </Route>
     </Routes>
   );

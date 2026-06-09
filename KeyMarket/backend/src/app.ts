@@ -4,11 +4,13 @@ import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import authRoutes from './routes/auth.routes';
 import productRoutes from './routes/product.routes';
+import categoryRoutes from './routes/category.routes';
 
 const app = Fastify({ logger: true });
 
 app.register(cors, { origin: true });
 app.register(jwt, { secret: process.env.JWT_SECRET || 'supersecretkey' });
+app.register(categoryRoutes, { prefix: '/categories' });
 
 app.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
   try {
