@@ -10,4 +10,5 @@ export default async function authRoutes(fastify: FastifyInstance) {
   fastify.post('/register', controller.register);
   fastify.post('/login', controller.login);
   fastify.get('/me', { preHandler: [fastify.authenticate] }, controller.me);
+  fastify.post('/logout', controller.logout);
 }

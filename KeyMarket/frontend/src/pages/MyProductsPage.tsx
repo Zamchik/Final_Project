@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Table, Button, Space, Input, message, Popconfirm } from 'antd';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
+import { useAuthStore } from '../stores/authStore';
 
 interface ProductItem {
   id: number;
@@ -10,18 +11,29 @@ interface ProductItem {
   stock: number;
   status: string;
   category: { id: number; name: string };
-  createdAt: string;
 }
 
 const MyProductsPage = () => {
+  const user = useAuthStore((s) => s.user);
+  const loading = useAuthStore((s) => s.loading);
+  const navigate = useNavigate();
+
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(false);
+
+  // Защита: если нет пользователя после проверки сессии, редиректим на логин
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/login');
+    }
+  }, [user, loading, navigate]);
 
   const fetchProducts = useCallback(async () => {
-    setLoading(true);
+    if (!user) return;
+    setLoadingData(true);
     try {
       const { data } = await apiClient.get('/products/my', {
         params: { page, limit: 10, search },
@@ -31,14 +43,14 @@ const MyProductsPage = () => {
     } catch {
       message.error('Ошибка загрузки товаров');
     } finally {
-      setLoading(false);
+      setLoadingData(false);
     }
-  }, [page, search]);
+  }, [page, search, user]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchProducts(); // Важно: не вызывать setProducts внутри fetchProducts, иначе будет бесконечный цикл. Линтер ругается
-  }, [fetchProducts]); 
+    fetchProducts();
+  }, [fetchProducts]);
 
   const handleDelete = async (id: number) => {
     try {
@@ -82,6 +94,12 @@ const MyProductsPage = () => {
     },
   ];
 
+  // Пока проверяется сессия
+  if (loading) return null;
+
+  // Если пользователя нет (уже редиректим)
+  if (!user) return null;
+
   return (
     <div>
       <h1>Мои товары</h1>
@@ -100,7 +118,7 @@ const MyProductsPage = () => {
         columns={columns}
         dataSource={products}
         rowKey="id"
-        loading={loading}
+        loading={loadingData}
         pagination={{
           current: page,
           total,

@@ -4,12 +4,6 @@ declare module 'fastify' {
   interface FastifyInstance {
     authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
-
-  interface FastifyRequest {
-    user: {
-      id: number;
-      email: string;
-      role: string;
-    };
-  }
 }
+
+// Пока не нужны, но могут пригодиться для типизации в будущем

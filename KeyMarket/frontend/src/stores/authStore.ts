@@ -9,41 +9,39 @@ interface User {
 }
 
 interface AuthState {
-  token: string | null;
   user: User | null;
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   fetchUser: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  token: localStorage.getItem('token'),
   user: null,
+  loading: true,
 
   login: async (email, password) => {
     const { data } = await apiClient.post('/auth/login', { email, password });
-    localStorage.setItem('token', data.token);
-    set({ token: data.token, user: data.user });
+    set({ user: data.user });
   },
 
   register: async (email, password) => {
     const { data } = await apiClient.post('/auth/register', { email, password });
-    localStorage.setItem('token', data.token);
-    set({ token: data.token, user: data.user });
+    set({ user: data.user });
   },
 
-  logout: () => {
-    localStorage.removeItem('token');
-    set({ token: null, user: null });
+  logout: async () => {
+    await apiClient.post('/auth/logout');
+    set({ user: null });
   },
 
   fetchUser: async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    const { data } = await apiClient.get('/auth/me', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    set({ user: data });
+    try {
+      const { data } = await apiClient.get('/auth/me');
+      set({ user: data, loading: false });
+    } catch {
+      set({ user: null, loading: false });
+    }
   },
 }));

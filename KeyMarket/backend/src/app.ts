@@ -1,31 +1,57 @@
 import 'dotenv/config';
 import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
 import cors from '@fastify/cors';
-import jwt from '@fastify/jwt';
+import secureSession from '@fastify/secure-session';
 import authRoutes from './routes/auth.routes';
 import productRoutes from './routes/product.routes';
 import categoryRoutes from './routes/category.routes';
+import crypto from 'crypto';
 
 const app = Fastify({ logger: true });
 
 app.register(cors, {
-  origin: true,
+  origin: 'http://localhost:5173', // фронтенд
+  credentials: true,               // разрешаем передачу кук
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
 });
-app.register(jwt, { secret: process.env.JWT_SECRET || 'supersecretkey' });
-app.register(categoryRoutes, { prefix: '/categories' });
 
+// Генерация ключей для сессий
+const sessionKey = process.env.SESSION_SECRET
+  ? Buffer.from(process.env.SESSION_SECRET, 'hex')
+  : crypto.randomBytes(32);
+
+app.register(secureSession, {
+  key: sessionKey,
+  cookie: {
+    path: '/',
+    httpOnly: true,
+    secure: false,
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60,
+  },
+});
+
+// Декоратор для проверки авторизации
 app.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
-  try {
-    const payload = await request.jwtVerify<{ id: number; email: string; role: string }>();
-    request.user = payload;
-  } catch {
+  if (!request.session.get('user')) {
     reply.status(401).send({ error: 'Unauthorized' });
   }
 });
 
+// типы для сессии
+declare module '@fastify/secure-session' {
+  interface SessionData {
+    user: {
+      id: number;
+      email: string;
+      role: string;
+    };
+  }
+}
+
 app.register(authRoutes, { prefix: '/auth' });
 app.register(productRoutes, { prefix: '/products' });
+app.register(categoryRoutes, { prefix: '/categories' });
 
 app.get('/health', async () => ({ status: 'ok' }));
 

@@ -1,37 +1,45 @@
-import { Outlet, Link } from 'react-router-dom';
-import { Layout as AntLayout, Menu } from 'antd';
-import { useAuthStore } from '../stores/authStore';
 import { useEffect } from 'react';
+import { Outlet, Link } from 'react-router-dom';
+import { Layout as AntLayout, Menu, Spin } from 'antd';
+import { useAuthStore } from '../stores/authStore';
 
 const { Header, Content, Footer } = AntLayout;
 
 const MainLayout = () => {
-  const token = useAuthStore((s) => s.token);
+  // Раньше использовали token, теперь проверяем user и loading
   const user = useAuthStore((s) => s.user);
+  const loading = useAuthStore((s) => s.loading);
   const fetchUser = useAuthStore((s) => s.fetchUser);
 
-  // При монтировании Layout, если есть токен, но нет данных пользователя, загружаем их
+  // При загрузке проверяем сессию (куку)
   useEffect(() => {
-    if (token && !user) {
-      fetchUser();
-    }
-  }, [token, user, fetchUser]);
+    fetchUser();
+  }, [fetchUser]);
 
-  // Собираем пункты меню динамически
+  // Если данные о пользователе еще загружаются, показываем спиннер
+  if (loading) {
+    return <Spin />;
+  }
+
+  // Собираем пункты меню
   const items = [
     { key: 'home', label: <Link to="/">Главная</Link> },
     { key: 'catalog', label: <Link to="/catalog">Каталог</Link> },
-    ...(token
-      ? [{ key: 'cabinet', label: <Link to="/cabinet">Личный кабинет</Link> }]
+    // Если пользователь есть (сессия активна)
+    ...(user
+      ? [
+          { key: 'cabinet', label: <Link to="/cabinet">Личный кабинет</Link> },
+        ]
       : []),
-    // Пункты для продавца
-    ...(token && user?.role === 'seller'
+    // Пункты только для продавца
+    ...(user && user.role === 'seller'
       ? [
           { key: 'my-products', label: <Link to="/my-products">Мои товары</Link> },
           { key: 'create-product', label: <Link to="/create-product">Добавить товар</Link> },
         ]
       : []),
-    ...(!token
+    // Если пользователя нет (гость)
+    ...(!user
       ? [
           { key: 'login', label: <Link to="/login">Войти</Link> },
           { key: 'register', label: <Link to="/register">Регистрация</Link> },

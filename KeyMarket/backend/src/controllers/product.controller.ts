@@ -2,19 +2,13 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { ProductService } from '../services/product.service';
 
-// Интерфейс пользователя, который мы кладём в JWT и затем в request.user
-interface JwtUser {
-  id: number;
-  email: string;
-  role: string;
-}
-
 export class ProductController {
   constructor(private productService: ProductService) {}
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getMyProducts = async (req: FastifyRequest, reply: FastifyReply) => {
-    const user = req.user as JwtUser;
+    // пользователь берётся из сессии
+    const user = req.session.get('user')!; // !!!! означает, что мы уверены в наличии (прошли authenticate)
     const { page = 1, limit = 10, search, categoryId } = req.query as any;
     const result = await this.productService.getMyProducts(
       user.id,
@@ -27,7 +21,7 @@ export class ProductController {
   };
 
   createProduct = async (req: FastifyRequest, reply: FastifyReply) => {
-    const user = req.user as JwtUser;
+    const user = req.session.get('user')!;
     const body = req.body as any;
     try {
       const product = await this.productService.createProduct(user.id, body);
@@ -38,7 +32,7 @@ export class ProductController {
   };
 
   updateProduct = async (req: FastifyRequest, reply: FastifyReply) => {
-    const user = req.user as JwtUser;
+    const user = req.session.get('user')!;
     const { id } = req.params as any;
     const body = req.body as any;
     try {
@@ -54,7 +48,7 @@ export class ProductController {
   };
 
   deleteProduct = async (req: FastifyRequest, reply: FastifyReply) => {
-    const user = req.user as JwtUser;
+    const user = req.session.get('user')!;
     const { id } = req.params as any;
     try {
       return this.productService.deleteProduct(Number(id), user.id);
