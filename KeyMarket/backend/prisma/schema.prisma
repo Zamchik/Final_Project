@@ -1,37 +1,7 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-model User {
-  id            Int       @id @default(autoincrement())
-  email         String    @unique
-  password_hash String
-  role          String    @default("buyer")
-  balance       Decimal   @default(0)
-  is_banned     Boolean   @default(false)
-  created_at    DateTime  @default(now())
-  products      Product[] @relation("SellerProducts")
-  // другие связи появятся позже
-}
-
-model Category {
-  id       Int       @id @default(autoincrement())
-  name     String    @unique
-  slug     String    @unique
-  products Product[]
-}
-
 model Product {
   id          Int          @id @default(autoincrement())
   sellerId    Int          @map("seller_id")
-  seller      User         @relation("SellerProducts", fields: [sellerId], references: [id])
   categoryId  Int          @map("category_id")
-  category    Category     @relation(fields: [categoryId], references: [id])
   title       String
   description String       @default("")
   price       Decimal
@@ -40,18 +10,27 @@ model Product {
   status      String       @default("active")
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
+  seller      User         @relation("SellerProducts", fields: [sellerId], references: [id])
+  category    Category     @relation(fields: [categoryId], references: [id])
   keys        ProductKey[]
 }
 
 model ProductKey {
   id        Int      @id @default(autoincrement())
   productId Int      @map("product_id")
-  product   Product  @relation(fields: [productId], references: [id])
   keyValue  String   @map("key_value")
   isSold    Boolean  @default(false) @map("is_sold")
   orderId   Int?     @map("order_id")
   createdAt DateTime @default(now()) @map("created_at")
+  product   Product  @relation(fields: [productId], references: [id])
 
-  @@index([keyValue])       // индекс для быстрого поиска по значению ключа
-  @@map("product_keys")     // имя таблицы в БД
+  @@index([keyValue])
+  @@map("product_keys")
+}
+
+model Category {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  slug     String    @unique
+  products Product[]
 }

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { ProductService } from '../services/product.service';
+import { ProductService } from '../services/product/product.service';
 
 export class ProductController {
   constructor(private productService: ProductService) {}
