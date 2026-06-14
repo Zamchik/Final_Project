@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { ProductController } from '../controllers/product.controller';
-import { ProductService } from '../services/product.service';
+import { ProductService } from '../services/product/product.service';
 import { requireRole } from '../middleware/auth';
 import { prisma } from '../prisma';
 
