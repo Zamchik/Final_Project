@@ -82,4 +82,21 @@ export class ProductService {
     await queries.deleteProductWithKeys(productId);
     return { success: true };
   }
+
+  // В классе ProductService добавь новый метод:
+
+  /**
+   * Получить публичный список товаров (каталог).
+   */
+  async getPublicList(options: {
+    page: number;
+    limit: number;
+    search?: string;
+    categoryId?: number;
+    minPrice?: number;
+    maxPrice?: number;
+    sort?: 'price_asc' | 'price_desc' | 'newest';
+  }) {
+    return queries.findPublicProducts(options);
+  }
 }

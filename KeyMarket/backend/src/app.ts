@@ -8,6 +8,7 @@ import secureSession from '@fastify/secure-session';
 import authRoutes from './routes/auth.routes';
 import productRoutes from './routes/product.routes';
 import categoryRoutes from './routes/category.routes';
+import publicRoutes from './routes/public.routes';
 
 import { corsOptions } from './config/cors';
 import { sessionKey, sessionCookieOptions } from './config/session';
@@ -40,8 +41,9 @@ declare module '@fastify/secure-session' {
 
 // Маршруты
 app.register(authRoutes, { prefix: '/auth' });
-app.register(productRoutes, { prefix: '/products' });
 app.register(categoryRoutes, { prefix: '/categories' });
+app.register(productRoutes, { prefix: '/products' });
+app.register(publicRoutes, { prefix: '/products' });
 
 // Health check
 app.get('/health', async () => ({ status: 'ok' }));

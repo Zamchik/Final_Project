@@ -121,3 +121,56 @@ export const findExistingKeys = async (keys: string[]) => {
     select: { keyValue: true },
   });
 };
+
+/**
+ * Публичный список товаров с фильтрацией и пагинацией.
+ * Показываются только активные товары.
+ */
+export const findPublicProducts = async (options: {
+  page: number;
+  limit: number;
+  search?: string;
+  categoryId?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  sort?: 'price_asc' | 'price_desc' | 'newest';
+}) => {
+  const where: any = { status: 'active' };  // только активные товары
+
+  if (options.search) {
+    where.title = { contains: options.search, mode: 'insensitive' };
+  }
+  if (options.categoryId) {
+    where.categoryId = options.categoryId;
+  }
+  if (options.minPrice !== undefined || options.maxPrice !== undefined) {
+    where.price = {};
+    if (options.minPrice !== undefined) where.price.gte = options.minPrice;
+    if (options.maxPrice !== undefined) where.price.lte = options.maxPrice;
+  }
+
+  let orderBy: any = { createdAt: 'desc' }; // по умолчанию новые
+  if (options.sort === 'price_asc') orderBy = { price: 'asc' };
+  else if (options.sort === 'price_desc') orderBy = { price: 'desc' };
+  else if (options.sort === 'newest') orderBy = { createdAt: 'desc' };
+
+  const [products, total] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        rating: true,
+        category: { select: { id: true, name: true } },
+        createdAt: true,
+      },
+      skip: (options.page - 1) * options.limit,
+      take: options.limit,
+      orderBy,
+    }),
+    prisma.product.count({ where }),
+  ]);
+
+  return { products, total, page: options.page, limit: options.limit };
+};
