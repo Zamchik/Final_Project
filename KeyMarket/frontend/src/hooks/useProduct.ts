@@ -27,7 +27,8 @@ export const useProduct = (
     const fetchProduct = async () => {
       setLoading(true);
       try {
-        const { data } = await apiClient.get(`/products/${id}`);
+        // Запрашиваем товар через защищённый маршрут продавца
+        const { data } = await apiClient.get(`/products/my/${id}`);
         form.setFieldsValue({
           title: data.title,
           description: data.description,

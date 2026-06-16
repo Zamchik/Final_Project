@@ -44,10 +44,10 @@ export class ProductService {
     const product = await queries.findProductById(productId, sellerId);
     if (!product) throw new Error('Товар не найден или нет доступа');
 
-    const ops: any[] = [];
+    // Используем более строгие типы вместо any
+    const ops: unknown[] = [];
+    const updateData: Record<string, unknown> = {};
 
-    // Поля для обновления
-    const updateData: any = {};
     if (data.title !== undefined) updateData.title = data.title;
     if (data.description !== undefined) updateData.description = data.description;
     if (data.price !== undefined) updateData.price = data.price;
@@ -55,10 +55,10 @@ export class ProductService {
     if (data.status !== undefined) updateData.status = data.status;
 
     if (Object.keys(updateData).length > 0) {
-      ops.push(queries.updateProductFields(productId, updateData));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ops.push(queries.updateProductFields(productId, updateData as any));
     }
 
-    // Новые ключи
     if (data.newKeys?.length) {
       const uniqueNewKeys = validators.ensureNoDuplicates(data.newKeys);
       await validators.ensureGlobalUniqueness(uniqueNewKeys);
@@ -67,7 +67,8 @@ export class ProductService {
     }
 
     if (ops.length > 0) {
-      await prisma.$transaction(ops);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await prisma.$transaction(ops as any);
     }
 
     return queries.getProductWithDetails(productId);
@@ -81,5 +82,20 @@ export class ProductService {
     if (!product) throw new Error('Товар не найден или нет доступа');
     await queries.deleteProductWithKeys(productId);
     return { success: true };
+  }
+
+  /**
+ * Получить публичный список товаров (каталог).
+ */
+  async getPublicList(options: {
+    page: number;
+    limit: number;
+    search?: string;
+    categoryId?: number;
+    minPrice?: number;
+    maxPrice?: number;
+    sort?: 'price_asc' | 'price_desc' | 'newest';
+  }) {
+    return queries.findPublicProducts(options);
   }
 }

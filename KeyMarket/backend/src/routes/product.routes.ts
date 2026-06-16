@@ -9,8 +9,9 @@ export default async function productRoutes(fastify: FastifyInstance) {
   const controller = new ProductController(new ProductService());
 
   // Все маршруты защищены:
-  // 1. fastify.authenticate — проверяет JWT токен и записывает payload в request.user
+  // 1. fastify.authenticate — проверяет сессию и записывает пользователя в request.session
   // 2. requireRole('seller') — пускает только пользователей с ролью 'seller'
+
   fastify.get(
     '/my',
     { preHandler: [fastify.authenticate, requireRole('seller')] },
@@ -24,7 +25,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
   );
 
   fastify.put(
-    '/:id', // :id — динамический параметр, например, /products/5
+    '/:id',
     { preHandler: [fastify.authenticate, requireRole('seller')] },
     controller.updateProduct
   );
@@ -35,18 +36,22 @@ export default async function productRoutes(fastify: FastifyInstance) {
     controller.deleteProduct
   );
 
-  // Новый маршрут для получения одного товара (для редактирования)
+  // Новый маршрут для получения одного товара (для редактирования продавцом)
+  // Используем путь /my/:id, чтобы не конфликтовать с публичным GET /:id
   fastify.get<{ Params: { id: string } }>(
-    '/:id',
+    '/my/:id',
     { preHandler: [fastify.authenticate, requireRole('seller')] },
     async (req, reply) => {
-      const id = Number(req.params.id);
-      const product = await prisma.product.findUnique({
-        where: { id },
+      const productId = Number(req.params.id);
+      const sellerId = req.session.get('user')?.id; // продавец из сессии
+
+      const product = await prisma.product.findFirst({
+        where: { id: productId, sellerId }, // проверяем владельца
         include: { category: true, keys: true },
       });
+
       if (!product) {
-        reply.status(404).send({ error: 'Товар не найден' });
+        reply.status(404).send({ error: 'Товар не найден или нет доступа' });
         return;
       }
       return product;
