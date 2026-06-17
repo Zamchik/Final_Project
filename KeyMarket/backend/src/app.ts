@@ -10,6 +10,7 @@ import productRoutes from './routes/product.routes';
 import categoryRoutes from './routes/category.routes';
 import publicRoutes from './routes/public.routes';
 import walletRoutes from './routes/wallet.routes';
+import orderRoutes from './routes/order.routes';
 
 import { corsOptions } from './config/cors';
 import { sessionKey, sessionCookieOptions } from './config/session';
@@ -46,6 +47,7 @@ app.register(categoryRoutes, { prefix: '/categories' });
 app.register(productRoutes, { prefix: '/products' });
 app.register(publicRoutes, { prefix: '/products' });
 app.register(walletRoutes, { prefix: '/wallet' });
+app.register(orderRoutes, { prefix: '/orders' });
 
 // Health check
 app.get('/health', async () => ({ status: 'ok' }));

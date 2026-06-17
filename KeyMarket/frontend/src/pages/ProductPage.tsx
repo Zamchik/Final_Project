@@ -1,13 +1,13 @@
 // Страница карточки товара (публичная)
 // Отображает детальную информацию о товаре и кнопку "Купить".
-
+// После покупки показывает заказ и ключ.
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Descriptions, Button, Spin, Result, Typography, message } from 'antd';
+import { Card, Descriptions, Button, Spin, Result, Typography, message, Modal, Radio } from 'antd';
 import apiClient from '../api/client';
 import { useAuthStore } from '../stores/authStore';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 // Тип для данных товара с бэкенда (без ключей)
 interface ProductDetails {
@@ -21,7 +21,19 @@ interface ProductDetails {
   status: string;
 }
 
+// Тип для результата заказа (то, что вернёт бэкенд)
+interface OrderResult {
+  id: number;
+  totalPrice: string;
+  items: Array<{
+    product: { title: string };
+    productKey: { keyValue: string };
+  }>;
+}
+
+
 // Компонент ProductPage
+
 
 const ProductPage = () => {
   // Параметры URL
@@ -39,8 +51,13 @@ const ProductPage = () => {
   const [fetching, setFetching] = useState(true);                     // загрузка данных товара
   const [error, setError] = useState(false);                          // флаг ошибки загрузки
 
-  // Загрузка товара по ID
+  // Состояние для оформления покупки
+  const [isModalOpen, setIsModalOpen] = useState(false);              // модальное окно оплаты
+  const [paymentMethod, setPaymentMethod] = useState('balance');      // выбранный способ оплаты (пока все = баланс)
+  const [submitting, setSubmitting] = useState(false);                // индикатор отправки заказа
+  const [orderResult, setOrderResult] = useState<OrderResult | null>(null); // результат покупки
 
+  // Загрузка товара по ID
   useEffect(() => {
     const fetchProduct = async () => {
       setFetching(true);
@@ -60,17 +77,34 @@ const ProductPage = () => {
     if (id) fetchProduct();
   }, [id]);
 
-  // Обработчик нажатия кнопки "Купить"
+  // Обработчики покупки
+
+  // Открывает модальное окно оформления заказа.
   const handleBuy = () => {
-    // Если пользователь не авторизован — направляем на страницу входа
     if (!user) {
       message.info('Войдите, чтобы совершать покупки');
       navigate('/login');
       return;
     }
+    setIsModalOpen(true);
+  };
 
-    // TODO: Здесь будет логика покупки
-    message.info('Функция покупки появится в ближайшее время');
+
+  // Отправляет запрос на создание заказа (оплата балансом).
+  const handlePayment = async () => {
+    if (!product) return;
+    setSubmitting(true);
+    try {
+      const { data } = await apiClient.post('/orders', { productId: product.id });
+      setOrderResult(data);       // сохраняем результат для отображения ключа
+      setIsModalOpen(false);      // закрываем модальное окно
+      message.success('Покупка совершена!');
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: { error?: string } } };
+      message.error(axiosError.response?.data?.error || 'Ошибка оплаты');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Рендер: состояния загрузки и ошибок
@@ -85,7 +119,7 @@ const ProductPage = () => {
     return <Result status="404" title="Товар не найден" />;
   }
 
-  // Рендер: карточка товара
+  // Рендер: карточка товара и результаты покупки
   return (
     <div style={{ maxWidth: 800, margin: '0 auto' }}>
       <Title level={2}>{product.title}</Title>
@@ -112,6 +146,58 @@ const ProductPage = () => {
           )}
         </div>
       </Card>
+
+      {/* Модальное окно оформления заказа  */}
+      <Modal
+        title="Оформление заказа"
+        open={isModalOpen}
+        onOk={handlePayment}
+        onCancel={() => setIsModalOpen(false)}
+        confirmLoading={submitting}
+        okText="Оплатить"
+        cancelText="Отмена"
+      >
+        <p>
+          Вы покупаете: <Text strong>{product.title}</Text>
+        </p>
+        <p>
+          Сумма: <Text strong>{product.price} ₽</Text>
+        </p>
+
+        {/* Выбор способа оплаты (пока все списывают с баланса)  */}
+        <Radio.Group
+          onChange={(e) => setPaymentMethod(e.target.value)}
+          value={paymentMethod}
+        >
+          <Radio value="balance">Баланс</Radio>
+          <Radio value="card">Карта (эмуляция)</Radio>
+          <Radio value="sbp">СБП (эмуляция)</Radio>
+        </Radio.Group>
+
+        <p style={{ marginTop: 16, color: '#888' }}>
+          Сейчас все способы списывают средства с вашего баланса.
+        </p>
+      </Modal>
+
+      {/* Результат покупки (показывается после успешного заказа)  */}
+      {orderResult && (
+        <Card style={{ marginTop: 20 }}>
+          <Title level={4}>Заказ #{orderResult.id} успешно оформлен!</Title>
+          <Descriptions column={1}>
+            <Descriptions.Item label="Товар">
+              {orderResult.items[0].product.title}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ключ">
+              <Text copyable code>
+                {orderResult.items[0].productKey.keyValue}
+              </Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Сумма">
+              {orderResult.totalPrice} ₽
+            </Descriptions.Item>
+          </Descriptions>
+        </Card>
+      )}
     </div>
   );
 };
