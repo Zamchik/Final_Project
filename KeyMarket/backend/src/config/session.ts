@@ -9,7 +9,7 @@ import crypto from 'crypto';
  */
 export const sessionKey = process.env.SESSION_SECRET
   ? Buffer.from(process.env.SESSION_SECRET, 'hex')
-  : crypto.randomBytes(32);
+  : crypto.randomBytes(32); // fallback только для разработки
 
 /**
  * Настройки куки сессии.

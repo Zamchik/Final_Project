@@ -87,7 +87,7 @@ export class OrderService {
           {
             userId: buyerId,
             type: 'purchase',
-            amount: totalPrice.negated(), // отрицательная сумма
+            amount: totalPrice.negated(),
             orderId: newOrder.id,
           },
           {
@@ -96,10 +96,9 @@ export class OrderService {
             amount: sellerAmount,
             orderId: newOrder.id,
           },
-          // комиссию пока не записал, чтобы не было ошибки внешнего ключа
+          // комиссию временно не записываю, чтобы избежать ошибки внешнего ключа
         ],
       });
-
       return newOrder;
     });
 
