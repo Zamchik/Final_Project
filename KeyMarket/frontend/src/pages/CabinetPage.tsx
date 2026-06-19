@@ -16,14 +16,20 @@ const CabinetPage = () => {
   const [amount, setAmount] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Проверка сессии
+  // Защита маршрута и однократная загрузка данных
   useEffect(() => {
+    // Если сессия не загружается и пользователь не авторизован – редирект на логин
     if (!loading && !user) {
       navigate('/login');
-    } else if (user) {
-      fetchUser(); // актуализируем данные пользователя (баланс)
+      return;
     }
-  }, [user, loading, navigate, fetchUser]);
+
+    // Загружаем актуальные данные пользователя (баланс, роль) только один раз при первом входе
+    // user.balance будет undefined до первой загрузки – это признак, что данные ещё не получены
+    if (!loading && user && !user.balance) {
+      fetchUser();
+    }
+  }, [loading, user, navigate, fetchUser]);
 
   // Обработчик пополнения баланса
   const handleReplenish = async () => {
@@ -38,7 +44,7 @@ const CabinetPage = () => {
       message.success(`Баланс пополнен на ${amount} ₽`);
       setIsModalOpen(false);
       setAmount(null);
-      // Обновляем пользователя в сторе, чтобы отобразился новый баланс
+      // Обновляем данные пользователя, чтобы баланс отобразился сразу
       fetchUser();
     } catch (err) {
       // Типизируем ошибку как AxiosError
@@ -49,12 +55,14 @@ const CabinetPage = () => {
     }
   };
 
-  // Пока загружается сессия
+  // Рендер
+
+  // Пока проверяется сессия – показываем спиннер
   if (loading) {
     return <Spin style={{ display: 'block', marginTop: 40 }} />;
   }
 
-  // Если не авторизован (уже редиректим)
+  // Если не авторизован (уже должны были редиректнуть) – ничего не рендерим
   if (!user) return null;
 
   return (

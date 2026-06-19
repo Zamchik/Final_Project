@@ -1,3 +1,5 @@
+// Главный Layout приложения (шапка, контент, футер)
+// При монтировании проверяет сессию и управляет видимостью меню
 import { useEffect } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { Layout as AntLayout, Menu, Spin } from 'antd';
@@ -6,39 +8,45 @@ import { useAuthStore } from '../stores/authStore';
 const { Header, Content, Footer } = AntLayout;
 
 const MainLayout = () => {
-  // Раньше использовали token, теперь проверяем user и loading
   const user = useAuthStore((s) => s.user);
   const loading = useAuthStore((s) => s.loading);
+  const fetched = useAuthStore((s) => s.fetched);
   const fetchUser = useAuthStore((s) => s.fetchUser);
 
-  // При загрузке проверяем сессию (куку)
+  // Загружаем данные пользователя один раз при старте
+  
   useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
+    // Если ещё не загружали и нет активной загрузки – стартуем проверку
+    if (!fetched && !loading) {
+      fetchUser();
+    }
+  }, [fetched, loading, fetchUser]);
 
-  // Если данные о пользователе еще загружаются, показываем спиннер
-  if (loading) {
-    return <Spin />;
+  // Пока проверяется сессия – показываем спиннер
+  // (loading = true и fetched = false означает, что запрос ещё не завершился)
+  
+  if (loading && !fetched) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <Spin size="large" />
+      </div>
+    );
   }
-
-  // Собираем пункты меню
+  
+  // Пункты меню (зависят от авторизации и роли)
+  
   const items = [
     { key: 'home', label: <Link to="/">Главная</Link> },
     { key: 'catalog', label: <Link to="/catalog">Каталог</Link> },
-    // Если пользователь есть (сессия активна)
     ...(user
-      ? [
-          { key: 'cabinet', label: <Link to="/cabinet">Личный кабинет</Link> },
-        ]
+      ? [{ key: 'cabinet', label: <Link to="/cabinet">Личный кабинет</Link> }]
       : []),
-    // Пункты только для продавца
-    ...(user && user.role === 'seller'
+    ...(user?.role === 'seller'
       ? [
           { key: 'my-products', label: <Link to="/my-products">Мои товары</Link> },
           { key: 'create-product', label: <Link to="/create-product">Добавить товар</Link> },
         ]
       : []),
-    // Если пользователя нет (гость)
     ...(!user
       ? [
           { key: 'login', label: <Link to="/login">Войти</Link> },
