@@ -36,9 +36,9 @@ const RegisterPage = () => {
           </Form.Item>
           <Form.Item
             name="password"
-            rules={[{ required: true, min: 6, message: 'Минимум 6 символов' }]}
+            rules={[{ required: true, message: 'Введите пароль' }]}
           >
-            <Input.Password placeholder="Пароль" />
+            <Input.Password placeholder="Пароль" autoComplete="current-password" />
           </Form.Item>
           <Button type="primary" htmlType="submit" block>
             Зарегистрироваться

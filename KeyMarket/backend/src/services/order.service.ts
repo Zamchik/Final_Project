@@ -82,6 +82,7 @@ export class OrderService {
       });
 
       // Записываем транзакции
+      const systemUserId = 5;
       await tx.transaction.createMany({
         data: [
           {
@@ -96,7 +97,12 @@ export class OrderService {
             amount: sellerAmount,
             orderId: newOrder.id,
           },
-          // комиссию временно не записываю, чтобы избежать ошибки внешнего ключа
+           {
+            userId: systemUserId,
+            type: 'commission',
+            amount: totalPrice.minus(sellerAmount),
+            orderId: newOrder.id,
+          },
         ],
       });
       return newOrder;

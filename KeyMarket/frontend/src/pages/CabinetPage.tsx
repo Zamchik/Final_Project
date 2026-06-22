@@ -24,10 +24,10 @@ const CabinetPage = () => {
       return;
     }
 
-    // Загружаем актуальные данные пользователя (баланс, роль) только один раз при первом входе
-    // user.balance будет undefined до первой загрузки – это признак, что данные ещё не получены
-    if (!loading && user && !user.balance) {
-      fetchUser();
+    // Если пользователь уже есть, но баланс ещё не был загружен (undefined)
+    // Вызываем fetchUser с принудительным обновлением, чтобы получить актуальные данные
+    if (!loading && user && user.balance === undefined) {
+      fetchUser(true);
     }
   }, [loading, user, navigate, fetchUser]);
 
@@ -45,7 +45,7 @@ const CabinetPage = () => {
       setIsModalOpen(false);
       setAmount(null);
       // Обновляем данные пользователя, чтобы баланс отобразился сразу
-      fetchUser();
+      fetchUser(true);
     } catch (err) {
       // Типизируем ошибку как AxiosError
       const error = err as AxiosError<{ error: string }>;

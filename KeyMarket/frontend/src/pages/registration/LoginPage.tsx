@@ -33,7 +33,7 @@ const LoginPage = () => {
             name="password"
             rules={[{ required: true, message: 'Введите пароль' }]}
           >
-            <Input.Password placeholder="Пароль" />
+            <Input.Password placeholder="Пароль" autoComplete="current-password" />
           </Form.Item>
           <Button type="primary" htmlType="submit" block>
             Войти

@@ -17,7 +17,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  fetchUser: () => Promise<void>;
+  fetchUser: (force?: boolean) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -50,9 +50,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   // Проверка сессии (запрос /auth/me)
 
-  fetchUser: async () => {
+  fetchUser: async (force = false) => {
     // Если данные уже загружены – не делаем повторный запрос
-    if (get().fetched) return;
+    if (get().fetched && !force) return;
     // Показываем, что идёт загрузка
     set({ loading: true });
     try {
