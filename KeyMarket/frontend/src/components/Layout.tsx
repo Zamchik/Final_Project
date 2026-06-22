@@ -33,13 +33,16 @@ const MainLayout = () => {
     );
   }
   
-  // Пункты меню (зависят от авторизации и роли)
-  
+    // Пункты меню
   const items = [
     { key: 'home', label: <Link to="/">Главная</Link> },
     { key: 'catalog', label: <Link to="/catalog">Каталог</Link> },
     ...(user
       ? [{ key: 'cabinet', label: <Link to="/cabinet">Личный кабинет</Link> }]
+      : []),
+    // Админ-панель
+    ...(user?.role === 'admin'
+      ? [{ key: 'admin', label: <Link to="/admin">Админ-панель</Link> }]
       : []),
     ...(user?.role === 'seller'
       ? [
