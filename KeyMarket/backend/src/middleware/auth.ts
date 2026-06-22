@@ -1,3 +1,4 @@
+// Middleware для проверки роли пользователя
 import { FastifyRequest, FastifyReply } from 'fastify';
 
 export const requireRole = (role: string) => {

@@ -1,5 +1,4 @@
 // Главный файл приложения Fastify
-
 import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
@@ -11,6 +10,7 @@ import categoryRoutes from './routes/category.routes';
 import publicRoutes from './routes/public.routes';
 import walletRoutes from './routes/wallet.routes';
 import orderRoutes from './routes/order.routes';
+import adminRoutes from './routes/admin.routes';
 
 import { corsOptions } from './config/cors';
 import { sessionKey, sessionCookieOptions } from './config/session';
@@ -48,6 +48,7 @@ app.register(productRoutes, { prefix: '/products' });
 app.register(publicRoutes, { prefix: '/products' });
 app.register(walletRoutes, { prefix: '/wallet' });
 app.register(orderRoutes, { prefix: '/orders' });
+app.register(adminRoutes, { prefix: '/admin' });
 
 // Health check
 app.get('/health', async () => ({ status: 'ok' }));
