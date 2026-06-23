@@ -1,5 +1,5 @@
 // Страница личного кабинета
-// Показывает профиль, баланс и позволяет пополнить счёт (mock)
+// Показывает профиль, баланс, позволяет пополнить счёт и вывести средства (mock)
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { useNavigate } from 'react-router-dom';
@@ -15,6 +15,11 @@ const CabinetPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [amount, setAmount] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Состояния для модального окна вывода средств
+  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState<number | null>(null);
+  const [withdrawSubmitting, setWithdrawSubmitting] = useState(false);
 
   // Защита маршрута и однократная загрузка данных
   useEffect(() => {
@@ -55,6 +60,28 @@ const CabinetPage = () => {
     }
   };
 
+  // Обработчик вывода средств (имитация)
+  const handleWithdraw = async () => {
+    if (!withdrawAmount || withdrawAmount <= 0) {
+      message.warning('Введите сумму вывода');
+      return;
+    }
+    setWithdrawSubmitting(true);
+    try {
+      const { data } = await apiClient.post('/wallet/withdraw', { amount: withdrawAmount });
+      message.success(`Заявка на вывод ${withdrawAmount} ₽ создана. Баланс: ${data.balance} ₽`);
+      setIsWithdrawModalOpen(false);
+      setWithdrawAmount(null);
+      // Обновляем данные пользователя, чтобы баланс отобразился сразу
+      fetchUser(true);
+    } catch (err) {
+      const error = err as AxiosError<{ error: string }>;
+      message.error(error.response?.data?.error || 'Ошибка вывода');
+    } finally {
+      setWithdrawSubmitting(false);
+    }
+  };
+
   // Рендер
 
   // Пока проверяется сессия – показываем спиннер
@@ -79,6 +106,15 @@ const CabinetPage = () => {
           Пополнить баланс
         </Button>
       </div>
+
+      {/* Кнопка вывода средств – видна только продавцам */}
+      {user.role === 'seller' && (
+        <div style={{ marginTop: 16 }}>
+          <Button onClick={() => setIsWithdrawModalOpen(true)}>
+            Вывести средства
+          </Button>
+        </div>
+      )}
 
       <div style={{ marginTop: 16 }}>
         <Button
@@ -112,6 +148,29 @@ const CabinetPage = () => {
           placeholder="Сумма в рублях"
           value={amount}
           onChange={(val) => setAmount(val)}
+        />
+      </Modal>
+
+      {/* Модальное окно вывода средств */}
+      <Modal
+        title="Вывод средств"
+        open={isWithdrawModalOpen}
+        onOk={handleWithdraw}
+        onCancel={() => {
+          setIsWithdrawModalOpen(false);
+          setWithdrawAmount(null);
+        }}
+        confirmLoading={withdrawSubmitting}
+        okText="Вывести"
+        cancelText="Отмена"
+      >
+        <p>Введите сумму для вывода (эмуляция):</p>
+        <InputNumber
+          style={{ width: '100%' }}
+          min={1}
+          placeholder="Сумма в рублях"
+          value={withdrawAmount}
+          onChange={(val) => setWithdrawAmount(val)}
         />
       </Modal>
     </div>

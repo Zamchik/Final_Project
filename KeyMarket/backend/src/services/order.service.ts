@@ -4,8 +4,8 @@ import { prisma } from '../prisma';
 const PLATFORM_FEE = 0.05; // комиссия площадки 5%
 
 export class OrderService {
-  // Создать заказ, списать баланс покупателя, выдать ключ.
-  // Возвращает созданный заказ с ключом.
+   // Создать заказ, списать баланс покупателя, выдать ключ.
+   // Возвращает созданный заказ с ключом в виде, готовом для JSON.
   async createOrder(buyerId: number, productId: number) {
     // Проверяем товар и наличие ключей
     const product = await prisma.product.findUnique({
@@ -27,9 +27,7 @@ export class OrderService {
     if (!buyer) {
       throw new Error('Пользователь не найден');
     }
-    // Сравниваем Decimal с помощью Prisma.Decimal
-    const buyerBalance = buyer.balance;
-    if (buyerBalance.lessThan(totalPrice)) {
+    if (buyer.balance.lessThan(totalPrice)) {
       throw new Error('Недостаточно средств на балансе');
     }
 
@@ -81,8 +79,22 @@ export class OrderService {
         },
       });
 
+      // Получаем или создаём системного пользователя для учёта комиссии
+      let systemUser = await tx.user.findUnique({
+        where: { email: 'system@keymarket.local' },
+      });
+      if (!systemUser) {
+        systemUser = await tx.user.create({
+          data: {
+            email: 'system@keymarket.local',
+            password_hash: 'not_a_real_hash',
+            role: 'admin',
+            balance: 0,
+          },
+        });
+      }
+
       // Записываем транзакции
-      const systemUserId = 5;
       await tx.transaction.createMany({
         data: [
           {
@@ -97,16 +109,17 @@ export class OrderService {
             amount: sellerAmount,
             orderId: newOrder.id,
           },
-           {
-            userId: systemUserId,
+          {
+            userId: systemUser.id,
             type: 'commission',
             amount: totalPrice.minus(sellerAmount),
             orderId: newOrder.id,
           },
         ],
       });
+
       return newOrder;
-    });
+    }); // конец транзакции
 
     // Преобразуем Decimal в строки для безопасного JSON
     return {
@@ -114,7 +127,12 @@ export class OrderService {
       totalPrice: order.totalPrice.toString(),
       status: order.status,
       createdAt: order.createdAt,
-      items: order.items.map(item => ({
+      items: order.items.map((item: {
+        id: number;
+        price: { toString: () => string };
+        productKey: { id: number; keyValue: string };
+        product: { id: number; title: string; price: { toString: () => string } };
+      }) => ({
         id: item.id,
         price: item.price.toString(),
         productKey: {

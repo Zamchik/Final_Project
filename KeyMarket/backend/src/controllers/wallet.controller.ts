@@ -28,4 +28,19 @@ export class WalletController {
             reply.status(400).send({ error: (err as Error).message });
         }
     };
+
+
+    // POST /wallet/withdraw — запрос на вывод средств (mock)
+    withdraw = async (req: FastifyRequest<{ Body: { amount: number } }>, reply: FastifyReply) => {
+        const userId = req.session.get('user')?.id;
+        if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+
+        const { amount } = req.body;
+        try {
+            const result = await this.walletService.withdraw(userId, Number(amount));
+            return result;
+        } catch (err) {
+            reply.status(400).send({ error: (err as Error).message });
+        }
+    };
 }
