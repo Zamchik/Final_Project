@@ -1,4 +1,4 @@
-// Маршруты кошелька (пополнение, вывод, баланс)
+// Маршруты кошелька (вывод, баланс)
 import { FastifyInstance } from 'fastify';
 import { WalletController } from '../controllers/wallet.controller';
 import { WalletService } from '../services/wallet.service';
@@ -17,13 +17,6 @@ export default async function walletRoutes(fastify: FastifyInstance) {
     '/',
     { preHandler: [fastify.authenticate] },
     controller.getBalance
-  );
-
-  // POST /wallet/replenish — пополнение (доступно всем авторизованным)
-  fastify.post<{ Body: AmountBody }>(
-    '/replenish',
-    { preHandler: [fastify.authenticate] },
-    controller.replenish
   );
 
   // POST /wallet/withdraw — вывод средств (только для продавца)

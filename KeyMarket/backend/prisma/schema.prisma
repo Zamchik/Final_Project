@@ -18,6 +18,7 @@ model User {
   products      Product[]     @relation("SellerProducts")
   orders        Order[]       @relation("BuyerOrders")
   transactions  Transaction[]
+  payments      Payment[]  
 }
 
 model Category {
@@ -69,6 +70,7 @@ model Order {
   updatedAt    DateTime      @updatedAt @map("updated_at")
   items        OrderItem[]
   transactions Transaction[]
+  payments     Payment[] 
 
   @@map("orders")
 }
@@ -97,4 +99,19 @@ model Transaction {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("transactions")
+}
+
+model Payment {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  user       User     @relation(fields: [userId], references: [id])
+  amount     Decimal
+  status     String   @default("pending")   // pending, completed, failed, cancelled
+  externalId String   @unique @map("external_id")  // ID в платёжном шлюзе (UUID)
+  orderId    Int?     @map("order_id")      // связь с заказом (null при пополнении баланса)
+  order      Order?   @relation(fields: [orderId], references: [id])
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("payments")
 }

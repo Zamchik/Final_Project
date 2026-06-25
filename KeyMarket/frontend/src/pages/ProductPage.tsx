@@ -1,19 +1,16 @@
 // Страница карточки товара (публичная)
 // Отображает детальную информацию о товаре и кнопку "Купить".
-// После создания заказа показывает кнопки "Оплатить" и "Отменить"
-import { useEffect, useState } from 'react';
+// После создания заказа показывает блок с кнопками "Оплатить" и "Отменить".
+// Опрос статуса заказа запускается сразу, после оплаты появляется ключ.
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Card, Descriptions, Button, Spin, Result, Typography, message,
-  Space,
-} from 'antd';
+import { Card, Descriptions, Button, Spin, Result, Typography, message, Space } from 'antd';
 import apiClient from '../api/client';
 import { useAuthStore } from '../stores/authStore';
 import { AxiosError } from 'axios';
 
 const { Title, Text } = Typography;
 
-// Тип для данных товара с бэкенда (без ключей)
 interface ProductDetails {
   id: number;
   title: string;
@@ -25,20 +22,6 @@ interface ProductDetails {
   status: string;
 }
 
-// Тип созданного заказа (до оплаты)
-interface CreatedOrder {
-  id: number;
-  totalPrice: string;
-  status: string;
-  createdAt: string;
-  items: {
-    id: number;
-    price: string;
-    product: { id: number; title: string; price: string };
-  }[];
-}
-
-// Тип оплаченного заказа (с ключом)
 interface PaidOrder {
   id: number;
   totalPrice: string;
@@ -47,7 +30,7 @@ interface PaidOrder {
   items: {
     id: number;
     price: string;
-    productKey: { id: number; keyValue: string };
+    productKey?: { id: number; keyValue: string };
     product: { id: number; title: string; price: string };
   }[];
 }
@@ -63,9 +46,13 @@ const ProductPage = () => {
   const [error, setError] = useState(false);
 
   // Состояния для заказа
-  const [order, setOrder] = useState<CreatedOrder | null>(null);
-  const [paidOrder, setPaidOrder] = useState<PaidOrder | null>(null);
   const [orderLoading, setOrderLoading] = useState(false);
+  const [orderId, setOrderId] = useState<number | null>(null);
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+  const [paidOrder, setPaidOrder] = useState<PaidOrder | null>(null);
+
+  // useRef для интервала опроса
+  const pollInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Загрузка товара
   useEffect(() => {
@@ -83,8 +70,15 @@ const ProductPage = () => {
     if (id) fetchProduct();
   }, [id]);
 
-  // Создание заказа (статус 'created') 
-  const handleCreateOrder = async () => {
+  // Очистка интервала при размонтировании
+  useEffect(() => {
+    return () => {
+      if (pollInterval.current) clearInterval(pollInterval.current);
+    };
+  }, []);
+
+  // Создание заказа и запуск опроса
+  const handleBuy = async () => {
     if (!user) {
       message.info('Войдите, чтобы совершать покупки');
       navigate('/login');
@@ -94,11 +88,44 @@ const ProductPage = () => {
 
     setOrderLoading(true);
     try {
-      const { data } = await apiClient.post('/orders', {
+      // 1. Создаём заказ
+      const { data: orderData } = await apiClient.post('/orders', {
         productId: product.id,
       });
-      setOrder(data);
-      message.success('Заказ создан. Теперь оплатите его.');
+      const newOrderId = orderData.id;
+      setOrderId(newOrderId);
+
+      // 2. Создаём платёж
+      const { data: paymentData } = await apiClient.post(
+        `/payments/orders/${newOrderId}/create-payment`
+      );
+      setPaymentUrl(paymentData.paymentUrl);
+
+      // 3. Открываем страницу оплаты
+      window.open(paymentData.paymentUrl, '_blank');
+      message.success('Перейдите на открывшуюся страницу для оплаты');
+
+      // 4. Запускаем опрос статуса заказа каждые 2 секунды
+      pollInterval.current = setInterval(async () => {
+        try {
+          const { data: updatedOrder } = await apiClient.get(`/orders/${newOrderId}`);
+          if (updatedOrder.status === 'delivered') {
+            if (pollInterval.current) {
+              clearInterval(pollInterval.current);
+              pollInterval.current = null;
+            }
+            setPaidOrder(updatedOrder);
+            message.success('Заказ оплачен! Ключ готов.');
+            // Копируем первый ключ в буфер обмена
+            const keyValue = updatedOrder.items[0]?.productKey?.keyValue;
+            if (keyValue) {
+              await navigator.clipboard.writeText(keyValue);
+            }
+          }
+        } catch {
+          // Игнорируем ошибки опроса, чтобы не мешать пользователю
+        }
+      }, 2000);
     } catch (err) {
       const error = err as AxiosError<{ error: string }>;
       message.error(error.response?.data?.error || 'Ошибка создания заказа');
@@ -107,47 +134,34 @@ const ProductPage = () => {
     }
   };
 
-  // Оплата заказа
-  const handlePayOrder = async () => {
-    if (!order) return;
-    setOrderLoading(true);
-    try {
-      const { data } = await apiClient.post(`/orders/${order.id}/pay`);
-      setPaidOrder(data);
-      setOrder(null); // убираем неоплаченный заказ
-      message.success('Заказ оплачен! Ключ скопирован в буфер обмена.');
-      // Копируем первый ключ в буфер обмена
-      const keyValue = data.items[0]?.productKey?.keyValue;
-      if (keyValue) {
-        await navigator.clipboard.writeText(keyValue);
-      }
-    } catch (err) {
-      const error = err as AxiosError<{ error: string }>;
-      message.error(error.response?.data?.error || 'Ошибка оплаты');
-    } finally {
-      setOrderLoading(false);
+  // Повторно открыть страницу оплаты
+  const handleOpenPayment = () => {
+    if (paymentUrl) {
+      window.open(paymentUrl, '_blank');
+      message.info('Страница оплаты открыта повторно');
     }
   };
 
-  // Отмена заказа
+  // Отменить заказ
   const handleCancelOrder = async () => {
-    if (!order) return;
-    setOrderLoading(true);
+    if (!orderId) return;
     try {
-      await apiClient.post(`/orders/${order.id}/cancel`);
-      setOrder(null);
+      await apiClient.post(`/orders/${orderId}/cancel`);
+      // Останавливаем опрос
+      if (pollInterval.current) {
+        clearInterval(pollInterval.current);
+        pollInterval.current = null;
+      }
+      setOrderId(null);
+      setPaymentUrl(null);
       message.success('Заказ отменён');
     } catch (err) {
       const error = err as AxiosError<{ error: string }>;
       message.error(error.response?.data?.error || 'Ошибка отмены');
-    } finally {
-      setOrderLoading(false);
     }
   };
 
-
-  // Рендер: загрузка и ошибки
-
+  // Рендер
   if (fetching || loading) {
     return <Spin style={{ display: 'block', marginTop: 40 }} />;
   }
@@ -155,7 +169,6 @@ const ProductPage = () => {
     return <Result status="404" title="Товар не найден" />;
   }
 
-  // Рендер: карточка товара
   return (
     <div style={{ maxWidth: 800, margin: '0 auto' }}>
       <Title level={2}>{product.title}</Title>
@@ -168,75 +181,63 @@ const ProductPage = () => {
           <Descriptions.Item label="Описание">{product.description || '—'}</Descriptions.Item>
         </Descriptions>
 
+        {/* Кнопка "Купить" видна, если ещё не создавали заказ и нет оплаченного */}
         <div style={{ marginTop: 20 }}>
-          {product.stock > 0 ? (
-            !order && !paidOrder && (
-              <Button
-                type="primary"
-                size="large"
-                onClick={handleCreateOrder}
-                loading={orderLoading}
-              >
-                Купить
-              </Button>
-            )
-          ) : (
+          {product.stock > 0 && !orderId && !paidOrder && (
+            <Button
+              type="primary"
+              size="large"
+              onClick={handleBuy}
+              loading={orderLoading}
+            >
+              Купить
+            </Button>
+          )}
+          {product.stock === 0 && !paidOrder && (
             <Button disabled size="large">Нет в наличии</Button>
           )}
         </div>
       </Card>
 
-      {/* Блок неоплаченного заказа */}
-      {order && (
+      {/* Блок ожидания оплаты (если заказ создан, но не оплачен) */}
+      {orderId && !paidOrder && (
         <Card style={{ marginTop: 20 }}>
-          <Title level={4}>Заказ №{order.id} ожидает оплаты</Title>
-          <Descriptions bordered column={1}>
-            <Descriptions.Item label="Сумма">{order.totalPrice} ₽</Descriptions.Item>
-            <Descriptions.Item label="Статус">
-              <Text type="warning">Создан</Text>
-            </Descriptions.Item>
-            <Descriptions.Item label="Товар">
-              {order.items[0]?.product.title}
-            </Descriptions.Item>
-          </Descriptions>
-          <Space style={{ marginTop: 16 }}>
-            <Button
-              type="primary"
-              size="large"
-              onClick={handlePayOrder}
-              loading={orderLoading}
-            >
+          <Title level={4}>Заказ ожидает оплаты</Title>
+          <Space size="middle">
+            <Button type="primary" size="large" onClick={handleOpenPayment}>
               Оплатить
             </Button>
-            <Button
-              size="large"
-              onClick={handleCancelOrder}
-              loading={orderLoading}
-            >
-              Отменить
+            <Button size="large" danger onClick={handleCancelOrder}>
+              Отменить заказ
             </Button>
           </Space>
         </Card>
       )}
 
-      {/* Блок оплаченного заказа (ключ) */}
+      {/* Блок оплаченного заказа (ключ и благодарность) */}
       {paidOrder && (
         <Card style={{ marginTop: 20 }}>
-          <Title level={4}>Заказ №{paidOrder.id} оплачен</Title>
+          <Title level={4}>Спасибо за покупку!</Title>
           <Descriptions bordered column={1}>
+            <Descriptions.Item label="Заказ №">{paidOrder.id}</Descriptions.Item>
             <Descriptions.Item label="Сумма">{paidOrder.totalPrice} ₽</Descriptions.Item>
-            <Descriptions.Item label="Статус">
-              <Text type="success">Оплачен</Text>
-            </Descriptions.Item>
             <Descriptions.Item label="Товар">
               {paidOrder.items[0]?.product.title}
             </Descriptions.Item>
             <Descriptions.Item label="Ключ">
               <Text copyable code>
-                {paidOrder.items[0]?.productKey.keyValue}
+                {paidOrder.items[0]?.productKey?.keyValue}
               </Text>
             </Descriptions.Item>
           </Descriptions>
+          <Space style={{ marginTop: 16 }}>
+            <Button type="primary" onClick={() => navigate('/cabinet')}>
+              В личный кабинет
+            </Button>
+            <Button onClick={() => navigate('/catalog')}>
+              Продолжить покупки
+            </Button>
+          </Space>
         </Card>
       )}
     </div>

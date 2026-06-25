@@ -78,7 +78,11 @@ export class OrderService {
     };
   }
 
-  // Оплатить заказ: списать баланс, начислить продавцу и комиссии, выдать ключ.
+  /**
+ * Закрыть заказ после успешной оплаты (вызывается из PaymentService).
+ * Начисляет деньги продавцу, комиссию платформе, меняет статус на 'delivered'.
+ * БАЛАНС ПОКУПАТЕЛЯ НЕ ТРОГАЕТ (оплата прошла через шлюз).
+ */
   async payOrder(orderId: number, buyerId: number) {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -96,20 +100,8 @@ export class OrderService {
     const sellerId = order.items[0].product.sellerId;
     const sellerAmount = totalPrice.mul(1 - PLATFORM_FEE);
 
-    // Финансовые операции и смена статуса
+    // Финансовые операции и смена статуса (без списания с покупателя)
     await prisma.$transaction(async (tx) => {
-      // Проверяем баланс покупателя
-      const buyer = await tx.user.findUnique({ where: { id: buyerId } });
-      if (!buyer || buyer.balance.lessThan(totalPrice)) {
-        throw new Error('Недостаточно средств на балансе');
-      }
-
-      // Списываем с покупателя
-      await tx.user.update({
-        where: { id: buyerId },
-        data: { balance: { decrement: totalPrice } },
-      });
-
       // Начисляем продавцу
       await tx.user.update({
         where: { id: sellerId },
@@ -134,12 +126,6 @@ export class OrderService {
       // Записываем транзакции
       await tx.transaction.createMany({
         data: [
-          {
-            userId: buyerId,
-            type: 'purchase',
-            amount: totalPrice.negated(),
-            orderId: order.id,
-          },
           {
             userId: sellerId,
             type: 'sale',
@@ -181,7 +167,7 @@ export class OrderService {
       totalPrice: updatedOrder!.totalPrice.toString(),
       status: updatedOrder!.status,
       createdAt: updatedOrder!.createdAt,
-      items: updatedOrder!.items.map((item: OrderItemWithDetails) => ({
+      items: updatedOrder!.items.map((item) => ({
         id: item.id,
         price: item.price.toString(),
         productKey: {
@@ -295,7 +281,7 @@ export class OrderService {
     if (ids.length === 0) {
       return { orders: [], total: 0, page, limit };
     }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {
       items: { some: { productId: { in: ids } } },
     };

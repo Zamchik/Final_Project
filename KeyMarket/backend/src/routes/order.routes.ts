@@ -25,13 +25,6 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     controller.create
   );
 
-  // Оплата заказа
-  fastify.post<{ Params: { id: string } }>(
-    '/:id/pay',
-    { preHandler: [fastify.authenticate] },
-    controller.pay
-  );
-
   // Отмена заказа
   fastify.post<{ Params: { id: string } }>(
     '/:id/cancel',
@@ -51,5 +44,12 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     '/sales',
     { preHandler: [fastify.authenticate] },
     controller.getMySales
+  );
+
+  // Получение одного заказа
+  fastify.get<{ Params: { id: string } }>(
+    '/:id',
+    { preHandler: [fastify.authenticate] },
+    controller.getOrder
   );
 }

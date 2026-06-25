@@ -34,22 +34,23 @@ const CabinetPage = () => {
     }
   }, [loading, user, navigate, fetchUser]);
 
-  // Обработчик пополнения
-  const handleReplenish = async () => {
+    const handleReplenish = async () => {
     if (!amount || amount <= 0) {
       message.warning('Введите сумму пополнения');
       return;
     }
     setSubmitting(true);
     try {
-      await apiClient.post('/wallet/replenish', { amount });
-      message.success(`Баланс пополнен на ${amount} ₽`);
+      const { data } = await apiClient.post('/payments/replenish', { amount });
+      // Перенаправляем на страницу имитации оплаты
+      window.open(data.paymentUrl, '_blank');
+      message.success('Перейдите на открывшуюся страницу для оплаты');
       setIsModalOpen(false);
       setAmount(null);
-      fetchUser(true);
+      // После оплаты пользователь должен обновить баланс вручную (пока так)
     } catch (err) {
       const error = err as AxiosError<{ error: string }>;
-      message.error(error.response?.data?.error || 'Ошибка пополнения');
+      message.error(error.response?.data?.error || 'Ошибка создания платежа');
     } finally {
       setSubmitting(false);
     }
@@ -121,7 +122,7 @@ const CabinetPage = () => {
     },
   ];
 
-  // Вкладка «Продажи» только для продавцов
+  // Вкладка Продажи только для продавцов
   if (user.role === 'seller') {
     tabItems.push({
       key: 'sales',

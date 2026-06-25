@@ -1,9 +1,10 @@
 // Компонент списка заказов (покупки или продажи)
 // Принимает fetchUrl – эндпоинт для загрузки данных
 import { useEffect, useState, useCallback } from 'react';
-import { Table, Tag, Typography, message } from 'antd';
+import { Table, Tag, Typography, message, Button, Popconfirm, Space } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import apiClient from '../api/client';
+import { AxiosError } from 'axios';
 
 const { Text } = Typography;
 
@@ -18,12 +19,12 @@ interface OrderItem {
         product: { id: number; title: string };
         productKey?: { id: number; keyValue: string };
     }[];
-    buyer?: { id: number; email: string }; // только для продавца
+    buyer?: { id: number; email: string };
 }
 
 interface OrdersListProps {
-    fetchUrl: string;   // например, '/orders/my' или '/orders/sales'
-    emptyText?: string; // текст, если заказов нет
+    fetchUrl: string;
+    emptyText?: string;
 }
 
 const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersListProps) => {
@@ -53,14 +54,33 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
         fetchOrders();
     }, [fetchOrders]);
 
+    // Оплатить заказ (создать платёж и открыть ссылку)
+    const handlePayOrder = async (orderId: number) => {
+        try {
+            const { data } = await apiClient.post(`/payments/orders/${orderId}/create-payment`);
+            window.open(data.paymentUrl, '_blank');
+            message.success('Перейдите на открывшуюся страницу для оплаты');
+        } catch (err) {
+            const error = err as AxiosError<{ error: string }>;
+            message.error(error.response?.data?.error || 'Ошибка создания платежа');
+        }
+    };
+
+    // Отменить заказ (только для статуса 'created')
+    const handleCancelOrder = async (orderId: number) => {
+        try {
+            await apiClient.post(`/orders/${orderId}/cancel`);
+            message.success('Заказ отменён');
+            fetchOrders(); // обновить список после отмены
+        } catch (err) {
+            const error = err as AxiosError<{ error: string }>;
+            message.error(error.response?.data?.error || 'Ошибка отмены');
+        }
+    };
+
     // Колонки таблицы
     const columns: ColumnsType<OrderItem> = [
-        {
-            title: 'ID заказа',
-            dataIndex: 'id',
-            key: 'id',
-            width: 80,
-        },
+        { title: 'ID заказа', dataIndex: 'id', key: 'id', width: 80 },
         {
             title: 'Сумма',
             dataIndex: 'totalPrice',
@@ -108,6 +128,30 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
                         </Text>
                     ) : null
                 );
+            },
+        },
+        {
+            title: 'Действия',
+            key: 'actions',
+            render: (_, record) => {
+                if (record.status === 'created') {
+                    return (
+                        <Space>
+                            <Button type="primary" size="small" onClick={() => handlePayOrder(record.id)}>
+                                Оплатить
+                            </Button>
+                            <Popconfirm
+                                title="Отменить заказ?"
+                                onConfirm={() => handleCancelOrder(record.id)}
+                            >
+                                <Button type="link" danger size="small">
+                                    Отменить
+                                </Button>
+                            </Popconfirm>
+                        </Space>
+                    );
+                }
+                return null;
             },
         },
     ];
