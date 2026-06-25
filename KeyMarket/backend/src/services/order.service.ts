@@ -3,11 +3,19 @@ import { prisma } from '../prisma';
 
 const PLATFORM_FEE = 0.05; // комиссия площадки 5%
 
+// Вспомогательный тип для элемента заказа с ключом и товаром
+interface OrderItemWithDetails {
+  id: number;
+  price: { toString: () => string };
+  productKey: { id: number; keyValue: string };
+  product: { id: number; title: string; price: { toString: () => string } };
+}
+
 export class OrderService {
-   // Создать заказ, списать баланс покупателя, выдать ключ.
-   // Возвращает созданный заказ с ключом в виде, готовом для JSON.
+  // Создать заказ (статус 'created') и зарезервировать ключ.
+  // Баланс НЕ списывается.
   async createOrder(buyerId: number, productId: number) {
-    // Проверяем товар и наличие ключей
+    // Проверяем товар и наличие свободных ключей
     const product = await prisma.product.findUnique({
       where: { id: productId },
       include: { keys: true },
@@ -20,55 +28,25 @@ export class OrderService {
       throw new Error('Нет доступных ключей');
     }
 
-    const totalPrice = product.price;
-
-    // Проверяем баланс покупателя
-    const buyer = await prisma.user.findUnique({ where: { id: buyerId } });
-    if (!buyer) {
-      throw new Error('Пользователь не найден');
-    }
-    if (buyer.balance.lessThan(totalPrice)) {
-      throw new Error('Недостаточно средств на балансе');
-    }
-
-    // Выполняем в транзакции:
+    // Создаём заказ и резервируем ключ в одной транзакции
     const order = await prisma.$transaction(async (tx) => {
-      // Списываем с покупателя
-      await tx.user.update({
-        where: { id: buyerId },
-        data: { balance: { decrement: totalPrice } },
-      });
-
-      // Начисляем продавцу с учётом комиссии
-      const sellerAmount = totalPrice.mul(1 - PLATFORM_FEE);
-      await tx.user.update({
-        where: { id: product.sellerId },
-        data: { balance: { increment: sellerAmount } },
-      });
-
-      // Помечаем ключ как проданный
+      // Помечаем ключ как проданный (резервируем)
       await tx.productKey.update({
         where: { id: availableKey.id },
         data: { isSold: true },
       });
 
-      // Уменьшаем сток товара
-      await tx.product.update({
-        where: { id: productId },
-        data: { stock: { decrement: 1 } },
-      });
-
-      // Создаём заказ
+      // Создаём заказ со статусом 'created'
       const newOrder = await tx.order.create({
         data: {
           buyerId,
-          totalPrice,
-          status: 'delivered',
+          totalPrice: product.price,
+          status: 'created',
           items: {
             create: {
               productId,
               productKeyId: availableKey.id,
-              price: totalPrice,
+              price: product.price,
             },
           },
         },
@@ -79,7 +57,66 @@ export class OrderService {
         },
       });
 
-      // Получаем или создаём системного пользователя для учёта комиссии
+      return newOrder;
+    });
+
+    // Возвращаем информацию о заказе (без ключа, т.к. ещё не оплачен)
+    return {
+      id: order.id,
+      totalPrice: order.totalPrice.toString(),
+      status: order.status,
+      createdAt: order.createdAt,
+      items: order.items.map((item: OrderItemWithDetails) => ({
+        id: item.id,
+        price: item.price.toString(),
+        product: {
+          id: item.product.id,
+          title: item.product.title,
+          price: item.product.price.toString(),
+        },
+      })),
+    };
+  }
+
+  // Оплатить заказ: списать баланс, начислить продавцу и комиссии, выдать ключ.
+  async payOrder(orderId: number, buyerId: number) {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: { include: { productKey: true, product: true } } },
+    });
+
+    if (!order || order.buyerId !== buyerId) {
+      throw new Error('Заказ не найден или не принадлежит вам');
+    }
+    if (order.status !== 'created') {
+      throw new Error('Заказ уже оплачен или отменён');
+    }
+
+    const totalPrice = order.totalPrice;
+    const sellerId = order.items[0].product.sellerId;
+    const sellerAmount = totalPrice.mul(1 - PLATFORM_FEE);
+
+    // Финансовые операции и смена статуса
+    await prisma.$transaction(async (tx) => {
+      // Проверяем баланс покупателя
+      const buyer = await tx.user.findUnique({ where: { id: buyerId } });
+      if (!buyer || buyer.balance.lessThan(totalPrice)) {
+        throw new Error('Недостаточно средств на балансе');
+      }
+
+      // Списываем с покупателя
+      await tx.user.update({
+        where: { id: buyerId },
+        data: { balance: { decrement: totalPrice } },
+      });
+
+      // Начисляем продавцу
+      await tx.user.update({
+        where: { id: sellerId },
+        data: { balance: { increment: sellerAmount } },
+      });
+
+      // Получаем или создаём системного пользователя для комиссии
       let systemUser = await tx.user.findUnique({
         where: { email: 'system@keymarket.local' },
       });
@@ -101,38 +138,50 @@ export class OrderService {
             userId: buyerId,
             type: 'purchase',
             amount: totalPrice.negated(),
-            orderId: newOrder.id,
+            orderId: order.id,
           },
           {
-            userId: product.sellerId,
+            userId: sellerId,
             type: 'sale',
             amount: sellerAmount,
-            orderId: newOrder.id,
+            orderId: order.id,
           },
           {
             userId: systemUser.id,
             type: 'commission',
             amount: totalPrice.minus(sellerAmount),
-            orderId: newOrder.id,
+            orderId: order.id,
           },
         ],
       });
 
-      return newOrder;
-    }); // конец транзакции
+      // Меняем статус заказа и уменьшаем сток товара
+      await tx.order.update({
+        where: { id: orderId },
+        data: { status: 'delivered' },
+      });
 
-    // Преобразуем Decimal в строки для безопасного JSON
+      const productId = order.items[0].product.id;
+      await tx.product.update({
+        where: { id: productId },
+        data: { stock: { decrement: 1 } },
+      });
+    });
+
+    // Возвращаем обновлённый заказ с ключом
+    const updatedOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: { include: { productKey: true, product: true } },
+      },
+    });
+
     return {
-      id: order.id,
-      totalPrice: order.totalPrice.toString(),
-      status: order.status,
-      createdAt: order.createdAt,
-      items: order.items.map((item: {
-        id: number;
-        price: { toString: () => string };
-        productKey: { id: number; keyValue: string };
-        product: { id: number; title: string; price: { toString: () => string } };
-      }) => ({
+      id: updatedOrder!.id,
+      totalPrice: updatedOrder!.totalPrice.toString(),
+      status: updatedOrder!.status,
+      createdAt: updatedOrder!.createdAt,
+      items: updatedOrder!.items.map((item: OrderItemWithDetails) => ({
         id: item.id,
         price: item.price.toString(),
         productKey: {
@@ -145,6 +194,157 @@ export class OrderService {
           price: item.product.price.toString(),
         },
       })),
+    };
+  }
+
+  // Отменить заказ (если ещё не оплачен) и вернуть ключ в пул.
+  async cancelOrder(orderId: number, buyerId: number) {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: { include: { productKey: true } } },
+    });
+
+    if (!order || order.buyerId !== buyerId) {
+      throw new Error('Заказ не найден или не принадлежит вам');
+    }
+    if (order.status !== 'created') {
+      throw new Error('Нельзя отменить оплаченный или уже отменённый заказ');
+    }
+
+    const productKey = order.items[0].productKey;
+
+    await prisma.$transaction(async (tx) => {
+      // Возвращаем ключ в пул
+      await tx.productKey.update({
+        where: { id: productKey.id },
+        data: { isSold: false },
+      });
+
+      // Меняем статус заказа
+      await tx.order.update({
+        where: { id: orderId },
+        data: { status: 'cancelled' },
+      });
+    });
+
+    return { success: true };
+  }
+
+  // Получить список заказов текущего пользователя (как покупателя).
+  // Поддерживает пагинацию и фильтр по статусу.
+  async getMyOrders(userId: number, page: number, limit: number, status?: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: any = { buyerId: userId };
+    if (status) where.status = status;
+
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        include: {
+          items: {
+            include: { product: true, productKey: true },
+          },
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.order.count({ where }),
+    ]);
+
+    return {
+      orders: orders.map((order) => ({
+        id: order.id,
+        totalPrice: order.totalPrice.toString(),
+        status: order.status,
+        createdAt: order.createdAt,
+        items: order.items.map((item) => ({
+          id: item.id,
+          price: item.price.toString(),
+          product: {
+            id: item.product.id,
+            title: item.product.title,
+            price: item.product.price.toString(),
+          },
+          // Ключ показываем только для оплаченных заказов
+          ...(order.status === 'delivered' && item.productKey
+            ? {
+              productKey: {
+                id: item.productKey.id,
+                keyValue: item.productKey.keyValue,
+              },
+            }
+            : {}),
+        })),
+      })),
+      total,
+      page,
+      limit,
+    };
+  }
+
+  // Получить список заказов, где пользователь является продавцом.
+  async getMySales(sellerId: number, page: number, limit: number, status?: string) {
+    // Находим все товары этого продавца
+    const productIds = await prisma.product.findMany({
+      where: { sellerId },
+      select: { id: true },
+    });
+    const ids = productIds.map((p) => p.id);
+
+    if (ids.length === 0) {
+      return { orders: [], total: 0, page, limit };
+    }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: any = {
+      items: { some: { productId: { in: ids } } },
+    };
+    if (status) where.status = status;
+
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        include: {
+          buyer: { select: { id: true, email: true } },
+          items: {
+            include: { product: true, productKey: true },
+          },
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.order.count({ where }),
+    ]);
+
+    return {
+      orders: orders.map((order) => ({
+        id: order.id,
+        totalPrice: order.totalPrice.toString(),
+        status: order.status,
+        createdAt: order.createdAt,
+        buyer: order.buyer,
+        items: order.items.map((item) => ({
+          id: item.id,
+          price: item.price.toString(),
+          product: {
+            id: item.product.id,
+            title: item.product.title,
+            price: item.product.price.toString(),
+          },
+          ...(order.status === 'delivered' && item.productKey
+            ? {
+              productKey: {
+                id: item.productKey.id,
+                keyValue: item.productKey.keyValue,
+              },
+            }
+            : {}),
+        })),
+      })),
+      total,
+      page,
+      limit,
     };
   }
 }

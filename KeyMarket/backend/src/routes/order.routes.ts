@@ -1,3 +1,4 @@
+// Маршруты для заказов
 import { FastifyInstance } from 'fastify';
 import { OrderController } from '../controllers/order.controller';
 import { OrderService } from '../services/order.service';
@@ -7,12 +8,48 @@ interface CreateOrderBody {
   productId: number;
 }
 
+// Тип query-параметров для списков заказов
+interface OrderListQuery {
+  page?: number;
+  limit?: number;
+  status?: string;
+}
+
 export default async function orderRoutes(fastify: FastifyInstance) {
   const controller = new OrderController(new OrderService());
 
+  // Создание заказа (статус 'created')
   fastify.post<{ Body: CreateOrderBody }>(
     '/',
     { preHandler: [fastify.authenticate] },
     controller.create
+  );
+
+  // Оплата заказа
+  fastify.post<{ Params: { id: string } }>(
+    '/:id/pay',
+    { preHandler: [fastify.authenticate] },
+    controller.pay
+  );
+
+  // Отмена заказа
+  fastify.post<{ Params: { id: string } }>(
+    '/:id/cancel',
+    { preHandler: [fastify.authenticate] },
+    controller.cancel
+  );
+
+  // Мои покупки (любой авторизованный)
+  fastify.get<{ Querystring: OrderListQuery }>(
+    '/my',
+    { preHandler: [fastify.authenticate] },
+    controller.getMyOrders
+  );
+
+  // Мои продажи (доступно всем, но данные вернутся только для seller)
+  fastify.get<{ Querystring: OrderListQuery }>(
+    '/sales',
+    { preHandler: [fastify.authenticate] },
+    controller.getMySales
   );
 }
