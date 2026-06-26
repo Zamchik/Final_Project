@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { Layout as AntLayout, Menu, Spin } from 'antd';
 import { useAuthStore } from '../stores/authStore';
+import NotificationBell from './NotificationBell';
 
 const { Header, Content, Footer } = AntLayout;
 
@@ -14,17 +15,13 @@ const MainLayout = () => {
   const fetchUser = useAuthStore((s) => s.fetchUser);
 
   // Загружаем данные пользователя один раз при старте
-  
   useEffect(() => {
-    // Если ещё не загружали и нет активной загрузки – стартуем проверку
     if (!fetched && !loading) {
       fetchUser();
     }
   }, [fetched, loading, fetchUser]);
 
   // Пока проверяется сессия – показываем спиннер
-  // (loading = true и fetched = false означает, что запрос ещё не завершился)
-  
   if (loading && !fetched) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
@@ -32,8 +29,8 @@ const MainLayout = () => {
       </div>
     );
   }
-  
-    // Пункты меню
+
+  // Пункты меню
   const items = [
     { key: 'home', label: <Link to="/">Главная</Link> },
     { key: 'catalog', label: <Link to="/catalog">Каталог</Link> },
@@ -60,8 +57,15 @@ const MainLayout = () => {
 
   return (
     <AntLayout style={{ minHeight: '100vh' }}>
-      <Header>
+      <Header
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <Menu theme="dark" mode="horizontal" items={items} />
+        <NotificationBell />
       </Header>
       <Content style={{ padding: '20px' }}>
         <Outlet />

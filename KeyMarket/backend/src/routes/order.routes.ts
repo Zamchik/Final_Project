@@ -2,6 +2,7 @@
 import { FastifyInstance } from 'fastify';
 import { OrderController } from '../controllers/order.controller';
 import { OrderService } from '../services/order.service';
+import { NotificationService } from '../services/notification.service';
 
 // Тип тела запроса на создание заказа
 interface CreateOrderBody {
@@ -16,7 +17,9 @@ interface OrderListQuery {
 }
 
 export default async function orderRoutes(fastify: FastifyInstance) {
-  const controller = new OrderController(new OrderService());
+  const notificationService = fastify.notificationService;
+  const orderService = new OrderService(notificationService);
+  const controller = new OrderController(orderService);
 
   // Создание заказа (статус 'created')
   fastify.post<{ Body: CreateOrderBody }>(

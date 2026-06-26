@@ -1,5 +1,9 @@
+// ============================================================================
 // Сервис заказов — основной процесс покупки
+// ============================================================================
+
 import { prisma } from '../prisma';
+import { NotificationService } from '../services/notification.service'; // правильный импорт
 
 const PLATFORM_FEE = 0.05; // комиссия площадки 5%
 
@@ -12,8 +16,14 @@ interface OrderItemWithDetails {
 }
 
 export class OrderService {
-  // Создать заказ (статус 'created') и зарезервировать ключ.
-  // Баланс НЕ списывается.
+  constructor(
+    private notificationService?: NotificationService // опционально, чтобы не ломать старые вызовы
+  ) { }
+
+  /**
+   * Создать заказ (статус 'created') и зарезервировать ключ.
+   * Баланс НЕ списывается.
+   */
   async createOrder(buyerId: number, productId: number) {
     // Проверяем товар и наличие свободных ключей
     const product = await prisma.product.findUnique({
@@ -79,10 +89,10 @@ export class OrderService {
   }
 
   /**
- * Закрыть заказ после успешной оплаты (вызывается из PaymentService).
- * Начисляет деньги продавцу, комиссию платформе, меняет статус на 'delivered'.
- * БАЛАНС ПОКУПАТЕЛЯ НЕ ТРОГАЕТ (оплата прошла через шлюз).
- */
+   * Закрыть заказ после успешной оплаты (вызывается из PaymentService).
+   * Начисляет деньги продавцу, комиссию платформе, меняет статус на 'delivered'.
+   * БАЛАНС ПОКУПАТЕЛЯ НЕ ТРОГАЕТ (оплата прошла через шлюз).
+   */
   async payOrder(orderId: number, buyerId: number) {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -183,7 +193,10 @@ export class OrderService {
     };
   }
 
-  // Отменить заказ (если ещё не оплачен) и вернуть ключ в пул.
+    /**
+   * Отменить заказ (если ещё не оплачен) и вернуть ключ в пул.
+   * Создаёт уведомление об отмене, если notificationService передан.
+   */
   async cancelOrder(orderId: number, buyerId: number) {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -200,24 +213,48 @@ export class OrderService {
     const productKey = order.items[0].productKey;
 
     await prisma.$transaction(async (tx) => {
-      // Возвращаем ключ в пул
+      // 1. Удаляем все OrderItem для этого заказа (освобождаем unique constraint)
+      await tx.orderItem.deleteMany({
+        where: { orderId: orderId },
+      });
+
+      // 2. Возвращаем ключ в пул
       await tx.productKey.update({
         where: { id: productKey.id },
         data: { isSold: false },
       });
 
-      // Меняем статус заказа
+      // 3. Меняем статус заказа
       await tx.order.update({
         where: { id: orderId },
         data: { status: 'cancelled' },
       });
     });
 
+    // Создаём in-app уведомление об отмене
+    if (this.notificationService) {
+      try {
+        await this.notificationService.create(
+          buyerId,
+          'order_cancelled',
+          `Заказ №${orderId} отменён.`
+        );
+      } catch (err) {
+        console.error('Ошибка создания уведомления:', err);
+      }
+    }
+
     return { success: true };
   }
+  
+  // ---------------------------------------------------------------------------
+  // Методы для истории заказов (добавлены, чтобы исправить ошибку 500)
+  // ---------------------------------------------------------------------------
 
-  // Получить список заказов текущего пользователя (как покупателя).
-  // Поддерживает пагинацию и фильтр по статусу.
+  /**
+   * Получить список заказов текущего пользователя (как покупателя).
+   * Поддерживает пагинацию и фильтр по статусу.
+   */
   async getMyOrders(userId: number, page: number, limit: number, status?: string) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = { buyerId: userId };
@@ -269,7 +306,9 @@ export class OrderService {
     };
   }
 
-  // Получить список заказов, где пользователь является продавцом.
+  /**
+   * Получить список заказов, где пользователь является продавцом.
+   */
   async getMySales(sellerId: number, page: number, limit: number, status?: string) {
     // Находим все товары этого продавца
     const productIds = await prisma.product.findMany({
@@ -281,6 +320,7 @@ export class OrderService {
     if (ids.length === 0) {
       return { orders: [], total: 0, page, limit };
     }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {
       items: { some: { productId: { in: ids } } },

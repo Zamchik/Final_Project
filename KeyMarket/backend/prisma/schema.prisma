@@ -18,7 +18,8 @@ model User {
   products      Product[]     @relation("SellerProducts")
   orders        Order[]       @relation("BuyerOrders")
   transactions  Transaction[]
-  payments      Payment[]  
+  payments      Payment[]
+  notifications Notification[] 
 }
 
 model Category {
@@ -114,4 +115,16 @@ model Payment {
   updatedAt  DateTime @updatedAt @map("updated_at")
 
   @@map("payments")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   // order_paid, order_cancelled, welcome, etc.
+  message   String
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("notifications")
 }
