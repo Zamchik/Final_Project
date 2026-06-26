@@ -14,6 +14,7 @@ import adminRoutes from './routes/admin.routes';
 import paymentRoutes from './routes/payment.routes';
 import mockPaymentRoutes from './routes/mock-payment.routes';
 import notificationRoutes from './routes/notification.routes';
+import reviewRoutes from './routes/review.routes';
 
 import { corsOptions } from './config/cors';
 import { sessionKey, sessionCookieOptions } from './config/session';
@@ -65,6 +66,7 @@ async function setup() {
   app.register(paymentRoutes, { prefix: '/payments' });
   app.register(mockPaymentRoutes, { prefix: '/mock-payment' });
   app.register(notificationRoutes, { prefix: '/notifications' });
+  app.register(reviewRoutes, { prefix: '/products' })
 
   // Health check
   app.get('/health', async () => ({ status: 'ok' }));

@@ -5,6 +5,7 @@ import { Table, Tag, Typography, message, Button, Popconfirm, Space } from 'antd
 import type { ColumnsType } from 'antd/es/table';
 import apiClient from '../api/client';
 import { AxiosError } from 'axios';
+import ReviewForm from '../components/ReviewForm'; // форма отзыва
 
 const { Text } = Typography;
 
@@ -32,6 +33,13 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(false);
+
+    // Состояние для модального окна отзыва
+    const [reviewModal, setReviewModal] = useState<{
+        visible: boolean;
+        productId: number | null;
+        orderId: number | null;
+    }>({ visible: false, productId: null, orderId: null });
 
     // Загрузка заказов
     const fetchOrders = useCallback(async () => {
@@ -134,6 +142,7 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
             title: 'Действия',
             key: 'actions',
             render: (_, record) => {
+                // Для созданных заказов – оплатить и отменить
                 if (record.status === 'created') {
                     return (
                         <Space>
@@ -149,6 +158,24 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
                                 </Button>
                             </Popconfirm>
                         </Space>
+                    );
+                }
+                // Для выполненных заказов – кнопка "Оставить отзыв"
+                if (record.status === 'delivered') {
+                    return (
+                        <Button
+                            type="link"
+                            size="small"
+                            onClick={() =>
+                                setReviewModal({
+                                    visible: true,
+                                    productId: record.items[0]?.product.id,
+                                    orderId: record.id,
+                                })
+                            }
+                        >
+                            Оставить отзыв
+                        </Button>
                     );
                 }
                 return null;
@@ -167,20 +194,31 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
 
     // Рендер
     return (
-        <Table
-            columns={columns}
-            dataSource={orders}
-            rowKey="id"
-            loading={loading}
-            pagination={{
-                current: page,
-                total,
-                pageSize: 10,
-                onChange: (p) => setPage(p),
-                showTotal: (t) => `Всего ${t} заказов`,
-            }}
-            locale={{ emptyText }}
-        />
+        <>
+            <Table
+                columns={columns}
+                dataSource={orders}
+                rowKey="id"
+                loading={loading}
+                pagination={{
+                    current: page,
+                    total,
+                    pageSize: 10,
+                    onChange: (p) => setPage(p),
+                    showTotal: (t) => `Всего ${t} заказов`,
+                }}
+                locale={{ emptyText }}
+            />
+
+            {/* Модальное окно отзыва */}
+            <ReviewForm
+                productId={reviewModal.productId!}
+                orderId={reviewModal.orderId!}
+                visible={reviewModal.visible}
+                onClose={() => setReviewModal({ visible: false, productId: null, orderId: null })}
+                onSuccess={fetchOrders} // обновить список заказов после отправки отзыва
+            />
+        </>
     );
 };
 

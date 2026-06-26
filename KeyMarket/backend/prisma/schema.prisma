@@ -20,6 +20,7 @@ model User {
   transactions  Transaction[]
   payments      Payment[]
   notifications Notification[] 
+  reviews Review[]
 }
 
 model Category {
@@ -44,7 +45,8 @@ model Product {
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
   keys        ProductKey[]
-  orderItems  OrderItem[]   // обратная связь для OrderItem
+  orderItems  OrderItem[]
+  reviews Review[]
 }
 
 model ProductKey {
@@ -72,6 +74,7 @@ model Order {
   items        OrderItem[]
   transactions Transaction[]
   payments     Payment[] 
+  reviews Review[]
 
   @@map("orders")
 }
@@ -127,4 +130,19 @@ model Notification {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("notifications")
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId Int      @map("product_id")
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderId   Int      @unique @map("order_id")   // один отзыв на заказ
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  rating    Int      // от 1 до 5
+  comment   String   @default("")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("reviews")
 }

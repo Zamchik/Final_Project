@@ -8,6 +8,7 @@ import { Card, Descriptions, Button, Spin, Result, Typography, message, Space } 
 import apiClient from '../api/client';
 import { useAuthStore } from '../stores/authStore';
 import { AxiosError } from 'axios';
+import ReviewList from '../components/ReviewList'; // список отзывов
 
 const { Title, Text } = Typography;
 
@@ -240,6 +241,9 @@ const ProductPage = () => {
           </Space>
         </Card>
       )}
+
+      {/* Список отзывов о товаре */}
+      <ReviewList productId={product.id} />
     </div>
   );
 };

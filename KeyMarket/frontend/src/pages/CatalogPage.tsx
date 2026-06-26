@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Card, Input, Select, InputNumber, Row, Col, Pagination, Spin, Empty, Typography } from 'antd';
+import { Card, Input, Select, InputNumber, Row, Col, Pagination, Spin, Empty, Typography, Rate } from 'antd';
 import { Link } from 'react-router-dom';
 import apiClient from '../api/client';
 
@@ -113,6 +113,17 @@ const CatalogPage = () => {
                           <Text>{product.price} ₽</Text>
                           <br />
                           <Text type="secondary">{product.category.name}</Text>
+                          <br />
+                          {/* Отображение рейтинга */}
+                          <Rate
+                            value={Number(product.rating)}
+                            disabled
+                            allowHalf
+                            style={{ fontSize: 14 }}
+                          />
+                          <Text type="secondary" style={{ fontSize: 12, marginLeft: 4 }}>
+                            {product.rating ? Number(product.rating).toFixed(1) : ''}
+                          </Text>
                         </>
                       }
                     />
