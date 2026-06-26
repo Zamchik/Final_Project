@@ -1,3 +1,4 @@
+// Компонент "Колокольчик" для отображения уведомлений
 import { useEffect, useState } from 'react';
 import { Badge, Popover, Typography, Button } from 'antd';
 import { BellOutlined } from '@ant-design/icons';
@@ -6,6 +7,7 @@ import { useAuthStore } from '../stores/authStore';
 
 const { Text } = Typography;
 
+// Тип уведомления с сервера
 interface Notification {
   id: number;
   type: string;
@@ -15,11 +17,12 @@ interface Notification {
 }
 
 const NotificationBell = () => {
-  const user = useAuthStore((s) => s.user);
+  const user = useAuthStore((s) => s.user); // текущий пользователь
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [open, setOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0); // количество непрочитанных
+  const [open, setOpen] = useState(false); // открыт ли поповер
 
+  // Запрос непрочитанных уведомлений
   const fetchNotifications = async () => {
     if (!user) return;
     try {
@@ -27,16 +30,18 @@ const NotificationBell = () => {
       setNotifications(data);
       setUnreadCount(data.length);
     } catch (err) {
-      // тихо
+      // тихо игнорируем ошибки, чтобы не мешать пользователю
     }
   };
 
+  // Первый запрос при монтировании и далее опрос каждые 10 секунд
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 10000); // опрос каждые 10 секунд
+    const interval = setInterval(fetchNotifications, 10000);
     return () => clearInterval(interval);
   }, [user]);
 
+  // Отметить все уведомления как прочитанные
   const handleMarkAllRead = async () => {
     const ids = notifications.map((n) => n.id);
     if (ids.length === 0) return;
@@ -49,7 +54,8 @@ const NotificationBell = () => {
     }
   };
 
-    const content = (
+  // Содержимое поповера (список уведомлений)
+  const content = (
     <div style={{ maxWidth: 300 }}>
       {notifications.length === 0 ? (
         <Text type="secondary">Нет новых уведомлений</Text>
@@ -68,10 +74,17 @@ const NotificationBell = () => {
     </div>
   );
 
+  // Неавторизованным колокольчик не показываем
   if (!user) return null;
 
   return (
-    <Popover content={content} title="Уведомления" trigger="click" open={open} onOpenChange={setOpen}>
+    <Popover
+      content={content}
+      title="Уведомления"
+      trigger="click"
+      open={open}
+      onOpenChange={setOpen}
+    >
       <Badge count={unreadCount} size="small" offset={[-2, 2]}>
         <BellOutlined style={{ fontSize: 20, cursor: 'pointer', color: '#fff' }} />
       </Badge>

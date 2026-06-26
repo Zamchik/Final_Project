@@ -1,7 +1,5 @@
-// ============================================================================
 // Контроллер аутентификации
-// ============================================================================
-
+// Обрабатывает регистрацию, вход, получение профиля и выход
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { AuthService } from '../services/auth.service';
 
@@ -13,6 +11,7 @@ interface AuthBody {
 export class AuthController {
   constructor(private authService: AuthService) { }
 
+   // POST /auth/register — регистрация нового пользователя
   register = async (req: FastifyRequest<{ Body: AuthBody }>, reply: FastifyReply) => {
     try {
       const { email, password } = req.body;
@@ -21,14 +20,14 @@ export class AuthController {
       // Сохраняем пользователя в сессии
       req.session.set('user', user);
 
-      // Создаём in-app уведомление
+      // Создаём in-app уведомление о регистрации
       try {
         await req.server.notificationService.create(user.id, 'welcome', 'Добро пожаловать в KeyMarket!');
       } catch (err) {
         console.error('Ошибка создания уведомления:', err);
       }
 
-      // Отправляем приветственное письмо (emailService доступен через декоратор Fastify)
+      // Отправляем приветственное письмо на email
       try {
         await req.server.emailService.send(
           email,
@@ -46,6 +45,7 @@ export class AuthController {
     }
   };
 
+   // POST /auth/login — вход в систему
   login = async (req: FastifyRequest<{ Body: AuthBody }>, reply: FastifyReply) => {
     try {
       const { email, password } = req.body;
@@ -57,6 +57,7 @@ export class AuthController {
     }
   };
 
+   // GET /auth/me — получить данные текущего пользователя
   me = async (req: FastifyRequest, reply: FastifyReply) => {
     const user = req.session.get('user');
     if (!user) {
@@ -67,6 +68,7 @@ export class AuthController {
     return fullUser;
   };
 
+   // POST /auth/logout — выход из системы
   logout = async (req: FastifyRequest, reply: FastifyReply) => {
     req.session.delete();
     return { success: true };

@@ -37,24 +37,24 @@ declare module '@fastify/secure-session' {
 
 // Асинхронная функция инициализации всего приложения
 async function setup() {
-  // --- Email ---
+  // Email
   const mailTransport = await createTestTransport();
   const emailService = new EmailService(mailTransport);
   const notificationService = new NotificationService();
   app.decorate('emailService', emailService);
   app.decorate('notificationService', notificationService);
 
-  // --- Плагины ---
+  // Плагины
   app.register(cors, corsOptions);
   app.register(secureSession, {
     key: sessionKey,
     cookie: sessionCookieOptions,
   });
 
-  // --- Декоратор authenticate ---
+  // Декоратор authenticate
   app.decorate('authenticate', authenticate);
 
-  // --- Маршруты ---
+  // Маршруты
   app.register(authRoutes, { prefix: '/auth' });
   app.register(categoryRoutes, { prefix: '/categories' });
   app.register(productRoutes, { prefix: '/products' });

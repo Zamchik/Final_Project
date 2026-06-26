@@ -1,6 +1,16 @@
+// Сервис управления товарами
+// Содержит бизнес-логику для CRUD операций с товарами и ключами
 import { prisma } from '../prisma';
 
 export class ProductService {
+  /**
+   * Получить список товаров продавца с пагинацией и поиском.
+   * @param sellerId - ID продавца
+   * @param page - текущая страница
+   * @param limit - количество товаров на странице
+   * @param search - строка поиска по названию (опционально)
+   * @param categoryId - фильтр по категории (опционально)
+   */
   async getMyProducts(sellerId: number, page: number, limit: number, search?: string, categoryId?: number) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = { sellerId };
@@ -20,6 +30,12 @@ export class ProductService {
     return { products, total, page, limit };
   }
 
+  /**
+   * Создать новый товар вместе с ключами.
+   * Выполняет проверку уникальности ключей внутри запроса и глобально в базе.
+   * @param sellerId - ID продавца
+   * @param data - данные товара и массив ключей
+   */
   async createProduct(
     sellerId: number,
     data: {
@@ -79,6 +95,13 @@ export class ProductService {
     return product;
   }
 
+  /**
+   * Обновить товар: изменить поля и/или добавить новые ключи.
+   * Также проверяет уникальность новых ключей.
+   * @param productId - ID товара
+   * @param sellerId - ID продавца (для проверки владения)
+   * @param data - поля для обновления и/или массив новых ключей
+   */
   async updateProduct(
     productId: number,
     sellerId: number,
@@ -157,18 +180,23 @@ export class ProductService {
     });
   }
 
+  /**
+   * Удалить товар и все связанные с ним ключи.
+   * @param productId - ID товара
+   * @param sellerId - ID продавца (для проверки владения)
+   */
   async deleteProduct(productId: number, sellerId: number) {
-  const product = await prisma.product.findFirst({
-    where: { id: productId, sellerId },
-  });
-  if (!product) throw new Error('Товар не найден или нет доступа');
+    const product = await prisma.product.findFirst({
+      where: { id: productId, sellerId },
+    });
+    if (!product) throw new Error('Товар не найден или нет доступа');
 
-  // Транзакция: сначала удаляем все ключи товара, потом сам товар
-  await prisma.$transaction([
-    prisma.productKey.deleteMany({ where: { productId } }),
-    prisma.product.delete({ where: { id: productId } }),
-  ]);
+    // Транзакция: сначала удаляем все ключи товара, потом сам товар
+    await prisma.$transaction([
+      prisma.productKey.deleteMany({ where: { productId } }),
+      prisma.product.delete({ where: { id: productId } }),
+    ]);
 
-  return { success: true };
-}
+    return { success: true };
+  }
 }

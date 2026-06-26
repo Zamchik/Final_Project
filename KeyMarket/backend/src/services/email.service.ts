@@ -1,13 +1,9 @@
-// ============================================================================
 // Сервис отправки email-уведомлений
-// ============================================================================
-
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 
 export class EmailService {
   constructor(private transporter: Transporter) {}
-
   /**
    * Отправить письмо.
    * @param to - адрес получателя

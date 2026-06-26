@@ -99,7 +99,7 @@ export class PaymentService {
     });
 
     if (payment.orderId) {
-      // === Оплата заказа ===
+      // Оплата заказа
       const paidOrder = await this.orderService.payOrder(payment.orderId, payment.userId);
 
       // Создаём in-app уведомление
@@ -137,7 +137,7 @@ export class PaymentService {
         console.error('Ошибка отправки письма о покупке:', mailErr);
       }
     } else {
-      // === Пополнение баланса ===
+      // Пополнение баланса
       await prisma.user.update({
         where: { id: payment.userId },
         data: { balance: { increment: payment.amount } },

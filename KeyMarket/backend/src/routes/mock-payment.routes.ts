@@ -1,7 +1,4 @@
-// ============================================================================
 // Маршрут для имитации страницы оплаты (Mock)
-// ============================================================================
-
 import { FastifyInstance } from 'fastify';
 import { MockPaymentGateway } from '../services/payment/mock-payment-gateway';
 import { PaymentService } from '../services/payment/payment.service';

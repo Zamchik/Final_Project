@@ -1,7 +1,4 @@
-// ============================================================================
 // Маршруты для уведомлений
-// ============================================================================
-
 import { FastifyInstance } from 'fastify';
 import { NotificationController } from '../controllers/notification.controller';
 import { NotificationService } from '../services/notification.service';

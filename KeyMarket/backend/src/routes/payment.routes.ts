@@ -1,7 +1,4 @@
-// ============================================================================
 // Маршруты для платежей
-// ============================================================================
-
 import { FastifyInstance } from 'fastify';
 import { PaymentController } from '../controllers/payment.controller';
 import { PaymentService } from '../services/payment/payment.service';
@@ -14,7 +11,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   const emailService = fastify.emailService;
   const notificationService = fastify.notificationService;
   const paymentService = new PaymentService(mockGateway, orderService, emailService, notificationService);
-  const controller = new PaymentController(paymentService); // ← добавлено
+  const controller = new PaymentController(paymentService);
 
   // Пополнение баланса
   fastify.post<{ Body: { amount: number } }>(
