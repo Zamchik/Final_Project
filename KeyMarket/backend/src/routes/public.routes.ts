@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ProductService } from '../services/product/product.service';
+import { ReviewService } from '../services/review.service'; // добавлен импорт
 import { prisma } from '../prisma';
 
 interface PublicQuery {
@@ -18,6 +19,7 @@ interface ProductParams {
 
 export default async function publicRoutes(fastify: FastifyInstance) {
   const productService = new ProductService();
+  const reviewService = new ReviewService(); // экземпляр ReviewService
 
   // GET /products — публичный каталог
   fastify.get('/', async (request: FastifyRequest<{ Querystring: PublicQuery }>) => {
@@ -54,5 +56,24 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       ...rest,
       stock: keys.filter((k) => !k.isSold).length,
     };
+  });
+
+  // GET /products/:id/reviews — отзывы о товаре (публичный)
+  fastify.get('/:id/reviews', async (
+    request: FastifyRequest<{ Params: { id: string }; Querystring: { page?: number; limit?: number } }>,
+    reply: FastifyReply
+  ) => {
+    const productId = Number(request.params.id);
+    const { page = 1, limit = 10 } = request.query;
+    return reviewService.getByProduct(productId, Number(page), Number(limit));
+  });
+
+  // GET /products/:id/rating — рейтинг товара (публичный)
+  fastify.get('/:id/rating', async (
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply
+  ) => {
+    const productId = Number(request.params.id);
+    return reviewService.getAverageRating(productId);
   });
 }

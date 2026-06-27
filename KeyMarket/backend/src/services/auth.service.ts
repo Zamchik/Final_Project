@@ -27,4 +27,24 @@ export class AuthService {
     if (!user) throw new Error('User not found');
     return { id: user.id, email: user.email, role: user.role, balance: user.balance };
   }
+
+   // Cменить пароль пользователя.
+   // Проверяет старый пароль, хеширует новый и сохраняет.
+  async changePassword(userId: number, oldPassword: string, newPassword: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new Error('Пользователь не найден');
+
+    // Проверяем старый пароль
+    const isValid = await bcrypt.compare(oldPassword, user.password_hash);
+    if (!isValid) throw new Error('Неверный текущий пароль');
+
+    // Хешируем новый пароль и сохраняем
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password_hash: newHash },
+    });
+
+    return { success: true };
+  }
 }

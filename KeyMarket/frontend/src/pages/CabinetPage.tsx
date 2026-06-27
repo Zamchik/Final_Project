@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { useNavigate } from 'react-router-dom';
-import { Button, Descriptions, Spin, Modal, InputNumber, message, Tabs } from 'antd';
+import { Button, Descriptions, Spin, Modal, InputNumber, Input, message, Tabs } from 'antd';
 import apiClient from '../api/client';
 import { AxiosError } from 'axios';
 import OrdersList from '../components/OrdersList';
@@ -23,6 +23,13 @@ const CabinetPage = () => {
   const [withdrawAmount, setWithdrawAmount] = useState<number | null>(null);
   const [withdrawSubmitting, setWithdrawSubmitting] = useState(false);
 
+  // Состояния для смены пароля
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+
   // Защита маршрута и однократная загрузка данных
   useEffect(() => {
     if (!loading && !user) {
@@ -34,7 +41,7 @@ const CabinetPage = () => {
     }
   }, [loading, user, navigate, fetchUser]);
 
-    const handleReplenish = async () => {
+  const handleReplenish = async () => {
     if (!amount || amount <= 0) {
       message.warning('Введите сумму пополнения');
       return;
@@ -77,6 +84,40 @@ const CabinetPage = () => {
     }
   };
 
+  // Обработчик смены пароля
+  const handleChangePassword = async () => {
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      message.warning('Заполните все поля');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      message.error('Новый пароль и подтверждение не совпадают');
+      return;
+    }
+    if (newPassword.length < 6) {
+      message.error('Новый пароль должен быть не менее 6 символов');
+      return;
+    }
+
+    setPasswordSubmitting(true);
+    try {
+      await apiClient.post('/auth/change-password', {
+        oldPassword,
+        newPassword,
+      });
+      message.success('Пароль успешно изменён');
+      setIsPasswordModalOpen(false);
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      const error = err as AxiosError<{ error: string }>;
+      message.error(error.response?.data?.error || 'Ошибка смены пароля');
+    } finally {
+      setPasswordSubmitting(false);
+    }
+  };
+
   // Рендер
   if (loading) {
     return <Spin style={{ display: 'block', marginTop: 40 }} />;
@@ -107,6 +148,11 @@ const CabinetPage = () => {
               </Button>
             </div>
           )}
+          <div style={{ marginTop: 16 }}>
+            <Button onClick={() => setIsPasswordModalOpen(true)}>
+              Сменить пароль
+            </Button>
+          </div>
           <div style={{ marginTop: 16 }}>
             <Button danger onClick={() => { logout(); navigate('/login'); }}>
               Выйти
@@ -173,6 +219,42 @@ const CabinetPage = () => {
           placeholder="Сумма в рублях"
           value={withdrawAmount}
           onChange={(val) => setWithdrawAmount(val)}
+        />
+      </Modal>
+
+      {/* Модальное окно смены пароля */}
+      <Modal
+        title="Смена пароля"
+        open={isPasswordModalOpen}
+        onOk={handleChangePassword}
+        onCancel={() => {
+          setIsPasswordModalOpen(false);
+          setOldPassword('');
+          setNewPassword('');
+          setConfirmPassword('');
+        }}
+        confirmLoading={passwordSubmitting}
+        okText="Сменить"
+        cancelText="Отмена"
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Input.Password
+            placeholder="Текущий пароль"
+            value={oldPassword}
+            onChange={(e) => setOldPassword(e.target.value)}
+          />
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <Input.Password
+            placeholder="Новый пароль"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+          />
+        </div>
+        <Input.Password
+          placeholder="Подтвердите новый пароль"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
         />
       </Modal>
     </div>

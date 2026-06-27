@@ -66,7 +66,7 @@ async function setup() {
   app.register(paymentRoutes, { prefix: '/payments' });
   app.register(mockPaymentRoutes, { prefix: '/mock-payment' });
   app.register(notificationRoutes, { prefix: '/notifications' });
-  app.register(reviewRoutes, { prefix: '/products' })
+  app.register(reviewRoutes, { prefix: '/reviews' });
 
   // Health check
   app.get('/health', async () => ({ status: 'ok' }));
