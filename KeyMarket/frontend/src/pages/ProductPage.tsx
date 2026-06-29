@@ -5,10 +5,11 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Descriptions, Button, Spin, Result, Typography, message, Space } from 'antd';
+import { ShoppingCartOutlined, GiftOutlined } from '@ant-design/icons';
 import apiClient from '../api/client';
 import { useAuthStore } from '../stores/authStore';
 import { AxiosError } from 'axios';
-import ReviewList from '../components/ReviewList'; // список отзывов
+import ReviewList from '../components/ReviewList';
 
 const { Title, Text } = Typography;
 
@@ -172,24 +173,45 @@ const ProductPage = () => {
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto' }}>
+      {/* Обложка товара (заглушка) */}
+      <div
+        style={{
+          height: 200,
+          background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: 12,
+          marginBottom: 24,
+        }}
+      >
+        <ShoppingCartOutlined style={{ fontSize: 72, color: '#722ed1' }} />
+      </div>
+
       <Title level={2}>{product.title}</Title>
       <Card>
         <Descriptions bordered column={1}>
           <Descriptions.Item label="Категория">{product.category.name}</Descriptions.Item>
-          <Descriptions.Item label="Цена">{product.price} ₽</Descriptions.Item>
+          <Descriptions.Item label="Цена">
+            <Text strong style={{ fontSize: 24, color: '#fff' }}>
+              {product.price} ₽
+            </Text>
+          </Descriptions.Item>
           <Descriptions.Item label="В наличии">{product.stock} шт.</Descriptions.Item>
           <Descriptions.Item label="Рейтинг">{product.rating ?? 0}</Descriptions.Item>
           <Descriptions.Item label="Описание">{product.description || '—'}</Descriptions.Item>
         </Descriptions>
 
-        {/* Кнопка "Купить" видна, если ещё не создавали заказ и нет оплаченного */}
+        {/* Кнопка "Купить" */}
         <div style={{ marginTop: 20 }}>
           {product.stock > 0 && !orderId && !paidOrder && (
             <Button
               type="primary"
               size="large"
+              icon={<ShoppingCartOutlined />}
               onClick={handleBuy}
               loading={orderLoading}
+              style={{ height: 48, paddingLeft: 32, paddingRight: 32 }}
             >
               Купить
             </Button>
@@ -200,7 +222,7 @@ const ProductPage = () => {
         </div>
       </Card>
 
-      {/* Блок ожидания оплаты (если заказ создан, но не оплачен) */}
+      {/* Блок ожидания оплаты */}
       {orderId && !paidOrder && (
         <Card style={{ marginTop: 20 }}>
           <Title level={4}>Заказ ожидает оплаты</Title>
@@ -217,16 +239,17 @@ const ProductPage = () => {
 
       {/* Блок оплаченного заказа (ключ и благодарность) */}
       {paidOrder && (
-        <Card style={{ marginTop: 20 }}>
-          <Title level={4}>Спасибо за покупку!</Title>
-          <Descriptions bordered column={1}>
+        <Card style={{ marginTop: 20, textAlign: 'center' }}>
+          <GiftOutlined style={{ fontSize: 48, color: '#722ed1', marginBottom: 16 }} />
+          <Title level={3}>Спасибо за покупку!</Title>
+          <Descriptions bordered column={1} style={{ marginTop: 16 }}>
             <Descriptions.Item label="Заказ №">{paidOrder.id}</Descriptions.Item>
             <Descriptions.Item label="Сумма">{paidOrder.totalPrice} ₽</Descriptions.Item>
             <Descriptions.Item label="Товар">
               {paidOrder.items[0]?.product.title}
             </Descriptions.Item>
             <Descriptions.Item label="Ключ">
-              <Text copyable code>
+              <Text copyable code style={{ fontSize: 16 }}>
                 {paidOrder.items[0]?.productKey?.keyValue}
               </Text>
             </Descriptions.Item>
@@ -242,7 +265,7 @@ const ProductPage = () => {
         </Card>
       )}
 
-      {/* Список отзывов о товаре */}
+      {/* Список отзывов */}
       <ReviewList productId={product.id} />
     </div>
   );

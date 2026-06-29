@@ -19,7 +19,7 @@ export class OrderService {
 
    // Создать заказ (статус 'created') и зарезервировать ключ.
    // Баланс НЕ списывается.
-  async createOrder(buyerId: number, productId: number) {
+    async createOrder(buyerId: number, productId: number) {
     // Проверяем товар и наличие свободных ключей
     const product = await prisma.product.findUnique({
       where: { id: productId },
@@ -34,36 +34,43 @@ export class OrderService {
     }
 
     // Создаём заказ и резервируем ключ в одной транзакции
-    const order = await prisma.$transaction(async (tx) => {
-      // Помечаем ключ как проданный (резервируем)
-      await tx.productKey.update({
-        where: { id: availableKey.id },
-        data: { isSold: true },
-      });
+    let order;
+    try {
+      order = await prisma.$transaction(async (tx) => {
+        // Помечаем ключ как проданный (резервируем)
+        await tx.productKey.update({
+          where: { id: availableKey.id },
+          data: { isSold: true },
+        });
 
-      // Создаём заказ со статусом 'created'
-      const newOrder = await tx.order.create({
-        data: {
-          buyerId,
-          totalPrice: product.price,
-          status: 'created',
-          items: {
-            create: {
-              productId,
-              productKeyId: availableKey.id,
-              price: product.price,
+        // Создаём заказ со статусом 'created'
+        const newOrder = await tx.order.create({
+          data: {
+            buyerId,
+            totalPrice: product.price,
+            status: 'created',
+            items: {
+              create: {
+                productId,
+                productKeyId: availableKey.id,
+                price: product.price,
+              },
             },
           },
-        },
-        include: {
-          items: {
-            include: { productKey: true, product: true },
+          include: {
+            items: {
+              include: { productKey: true, product: true },
+            },
           },
-        },
-      });
+        });
 
-      return newOrder;
-    });
+        return newOrder;
+      });
+    } catch (err) {
+      // Выводим полную ошибку Prisma, чтобы увидеть, какое поле нарушено
+      console.error('Полная ошибка создания заказа:', JSON.stringify(err, null, 2));
+      throw err;
+    }
 
     // Возвращаем информацию о заказе (без ключа, т.к. ещё не оплачен)
     return {

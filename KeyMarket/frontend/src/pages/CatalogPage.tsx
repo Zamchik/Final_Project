@@ -1,11 +1,16 @@
+// Страница каталога товаров
+// Отображает публичный список товаров с поиском, фильтрами и пагинацией.
+// В будущем карточки будут содержать изображения от продавцов.
 import { useEffect, useState, useCallback } from 'react';
 import { Card, Input, Select, InputNumber, Row, Col, Pagination, Spin, Empty, Typography, Rate } from 'antd';
+import { KeyOutlined } from '@ant-design/icons'; // иконка‑заглушка для обложки товара
 import { Link } from 'react-router-dom';
 import apiClient from '../api/client';
 
 const { Meta } = Card;
 const { Text } = Typography;
 
+// Тип данных товара, приходящих с сервера для каталога
 interface Product {
   id: number;
   title: string;
@@ -16,16 +21,22 @@ interface Product {
 }
 
 const CatalogPage = () => {
+  // Состояния для списка товаров и пагинации
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [categoryId, setCategoryId] = useState<number | undefined>(undefined);
-  const [minPrice, setMinPrice] = useState<number | undefined>(undefined);
-  const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
+
+  // Фильтры
+  const [search, setSearch] = useState('');                           // поисковая строка
+  const [categoryId, setCategoryId] = useState<number | undefined>(undefined); // выбранная категория
+  const [minPrice, setMinPrice] = useState<number | undefined>(undefined);     // минимальная цена
+  const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);     // максимальная цена
+
+  // Список всех категорий (подтягивается с сервера)
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
 
+  // Загрузка товаров с учётом текущих фильтров и страницы
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
@@ -41,19 +52,21 @@ const CatalogPage = () => {
     }
   }, [page, search, categoryId, minPrice, maxPrice]);
 
+  // Перезапрашиваем товары при изменении зависимостей
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProducts();
   }, [fetchProducts]);
 
+  // Загружаем категории один раз при монтировании
   useEffect(() => {
     apiClient.get('/categories').then(({ data }) => setCategories(data)).catch(() => {});
   }, []);
 
+  // Рендер
   return (
     <div style={{ padding: '0 20px' }}>
       <h1>Каталог товаров</h1>
-
+      {/* Фильтры: поиск, категория, цена от/до                              */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} md={6}>
           <Input.Search
@@ -68,7 +81,7 @@ const CatalogPage = () => {
             allowClear
             style={{ width: '100%' }}
             value={categoryId}
-            onChange={(val) => { setCategoryId(val); setPage(1); }}
+            onChange={(val: number | undefined) => { setCategoryId(val); setPage(1); }}
             options={categories.map(c => ({ value: c.id, label: c.name }))}
           />
         </Col>
@@ -78,7 +91,7 @@ const CatalogPage = () => {
             min={0}
             style={{ width: '100%' }}
             value={minPrice}
-            onChange={(val) => { setMinPrice(val ?? undefined); setPage(1); }}
+            onChange={(val: number | undefined) => { setMinPrice(val ?? undefined); setPage(1); }}
           />
         </Col>
         <Col xs={12} sm={6} md={3}>
@@ -87,11 +100,12 @@ const CatalogPage = () => {
             min={0}
             style={{ width: '100%' }}
             value={maxPrice}
-            onChange={(val) => { setMaxPrice(val ?? undefined); setPage(1); }}
+            onChange={(val: number | undefined) => { setMaxPrice(val ?? undefined); setPage(1); }}
           />
         </Col>
       </Row>
 
+      {/* Отображение: загрузка, пустота или список товаров                   */}
       {loading ? (
         <Spin style={{ display: 'block', marginTop: 40 }} />
       ) : products.length === 0 ? (
@@ -104,17 +118,34 @@ const CatalogPage = () => {
                 <Link to={`/product/${product.id}`}>
                   <Card
                     hoverable
-                    cover={<div style={{ height: 140, background: '#f0f2f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🛒</div>}
+                    cover={
+                      // Заглушка обложки — позже заменю на изображение от продавца
+                      <div
+                        style={{
+                          height: 160,
+                          background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <KeyOutlined style={{ fontSize: 48, color: '#722ed1' }} />
+                      </div>
+                    }
                   >
                     <Meta
                       title={product.title}
                       description={
                         <>
-                          <Text>{product.price} ₽</Text>
+                          {/* Цена */}
+                          <Text strong style={{ fontSize: 16, color: '#fff' }}>
+                            {product.price} ₽
+                          </Text>
                           <br />
+                          {/* Категория */}
                           <Text type="secondary">{product.category.name}</Text>
                           <br />
-                          {/* Отображение рейтинга */}
+                          {/* Рейтинг */}
                           <Rate
                             value={Number(product.rating)}
                             disabled
@@ -132,6 +163,8 @@ const CatalogPage = () => {
               </Col>
             ))}
           </Row>
+
+          {/* Пагинация */}
           <div style={{ marginTop: 24, textAlign: 'center' }}>
             <Pagination
               current={page}
