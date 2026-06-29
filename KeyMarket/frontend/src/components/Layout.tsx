@@ -37,21 +37,20 @@ const MainLayout = () => {
     ...(user
       ? [{ key: 'cabinet', label: <Link to="/cabinet">Личный кабинет</Link> }]
       : []),
-    // Админ-панель
     ...(user?.role === 'admin'
       ? [{ key: 'admin', label: <Link to="/admin">Админ-панель</Link> }]
       : []),
     ...(user?.role === 'seller'
       ? [
-          { key: 'my-products', label: <Link to="/my-products">Мои товары</Link> },
-          { key: 'create-product', label: <Link to="/create-product">Добавить товар</Link> },
-        ]
+        { key: 'my-products', label: <Link to="/my-products">Мои товары</Link> },
+        { key: 'create-product', label: <Link to="/create-product">Добавить товар</Link> },
+      ]
       : []),
     ...(!user
       ? [
-          { key: 'login', label: <Link to="/login">Войти</Link> },
-          { key: 'register', label: <Link to="/register">Регистрация</Link> },
-        ]
+        { key: 'login', label: <Link to="/login">Войти</Link> },
+        { key: 'register', label: <Link to="/register">Регистрация</Link> },
+      ]
       : []),
   ];
 
@@ -60,16 +59,52 @@ const MainLayout = () => {
       <Header
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
           alignItems: 'center',
+          justifyContent: 'space-between',
         }}
       >
-        <Menu theme="dark" mode="horizontal" items={items} />
+        {/* Логотип KeyMarket */}
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', marginRight: 24 }}>
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {/* Фиолетовый квадратный фон */}
+            <rect width="40" height="40" rx="8" fill="#722ed1" />
+
+            {/* Вертикальная стойка буквы K */}
+            <line x1="16" y1="6" x2="16" y2="32" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" />
+
+            {/* Верхняя диагональ */}
+            <line x1="16" y1="20" x2="30" y2="10" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" />
+
+            {/* Нижняя диагональ */}
+            <line x1="16" y1="20" x2="30" y2="30" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" />
+
+            {/* Головка ключа — обводка стала жирнее (2.5 вместо 1.5) */}
+            <circle cx="16" cy="7" r="3.75" fill="#722ed1" stroke="#fff" strokeWidth="2.5" />
+
+            {/* Коронки (зубцы) */}
+            <line x1="16" y1="29" x2="8" y2="29" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
+            <line x1="16" y1="33" x2="8" y2="33" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
+          </svg>
+
+          {/* Текст */}
+          <span style={{ color: '#fff', fontSize: 23, fontWeight: 700, letterSpacing: 1, marginLeft: 4 }}>
+            eyMarket
+          </span>
+        </Link>
+        <Menu
+          theme="dark"
+          mode="horizontal"
+          items={items}
+          style={{ flex: 1, borderBottom: 'none' }}
+        />
+
         <NotificationBell />
       </Header>
+
       <Content style={{ padding: '20px' }}>
         <Outlet />
       </Content>
+
       <Footer style={{ textAlign: 'center' }}>KeyMarket ©2026</Footer>
     </AntLayout>
   );

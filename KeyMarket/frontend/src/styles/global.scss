@@ -1,0 +1,14 @@
+@use 'variables' as *;
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: $bg-body;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: $text-primary;
+}
+
+#root {
+  min-height: 100vh;
+}
