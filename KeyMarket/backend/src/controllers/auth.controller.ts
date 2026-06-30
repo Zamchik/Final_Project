@@ -1,8 +1,5 @@
-// ============================================================================
 // Контроллер аутентификации
 // Обрабатывает регистрацию, вход, получение профиля, выход, смену пароля и подтверждение email
-// ============================================================================
-
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { AuthService } from '../services/auth.service';
 
@@ -14,11 +11,10 @@ interface AuthBody {
 export class AuthController {
   constructor(private authService: AuthService) { }
 
-  /**
-   * POST /auth/register — регистрация нового пользователя
-   * После успешной регистрации отправляет письмо с подтверждением email.
-   * Сессия НЕ создаётся до подтверждения.
-   */
+  // POST /auth/register — регистрация нового пользователя
+  // После успешной регистрации отправляет письмо с подтверждением email.
+  // Сессия НЕ создаётся до подтверждения.
+
   register = async (req: FastifyRequest<{ Body: AuthBody }>, reply: FastifyReply) => {
     try {
       const { email, password } = req.body;
@@ -55,9 +51,7 @@ export class AuthController {
     }
   };
 
-  /**
-   * GET /auth/verify-email — подтверждение email по токену
-   */
+  // GET /auth/verify-email — подтверждение email по токену
   verifyEmail = async (req: FastifyRequest<{ Querystring: { token: string } }>, reply: FastifyReply) => {
     const { token } = req.query;
     const success = await this.authService.verifyEmail(token);
@@ -68,9 +62,7 @@ export class AuthController {
     }
   };
 
-  /**
-   * POST /auth/login — вход в систему
-   */
+  // POST /auth/login — вход в систему
   login = async (req: FastifyRequest<{ Body: AuthBody }>, reply: FastifyReply) => {
     try {
       const { email, password } = req.body;
@@ -82,9 +74,7 @@ export class AuthController {
     }
   };
 
-  /**
-   * GET /auth/me — получить данные текущего пользователя
-   */
+  // GET /auth/me — получить данные текущего пользователя
   me = async (req: FastifyRequest, reply: FastifyReply) => {
     const user = req.session.get('user');
     if (!user) {
@@ -95,26 +85,22 @@ export class AuthController {
     return fullUser;
   };
 
-  /**
-   * POST /auth/logout — выход из системы
-   */
+  // POST / auth / logout — выход из системы
   logout = async (req: FastifyRequest, reply: FastifyReply) => {
     req.session.delete();
     return { success: true };
   };
 
-  /**
-   * POST /auth/change-password — смена пароля
-   */
-  changePassword = async (req: FastifyRequest<{ Body: { oldPassword: string; newPassword: string } }>, reply: FastifyReply) => {
-    const userId = req.session.get('user')?.id;
-    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+  // POST / auth / change - password — смена пароля
+changePassword = async (req: FastifyRequest<{ Body: { oldPassword: string; newPassword: string } }>, reply: FastifyReply) => {
+  const userId = req.session.get('user')?.id;
+  if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
 
-    try {
-      const result = await this.authService.changePassword(userId, req.body.oldPassword, req.body.newPassword);
-      return result;
-    } catch (err) {
-      reply.status(400).send({ error: (err as Error).message });
-    }
-  };
+  try {
+    const result = await this.authService.changePassword(userId, req.body.oldPassword, req.body.newPassword);
+    return result;
+  } catch (err) {
+    reply.status(400).send({ error: (err as Error).message });
+  }
+};
 }
