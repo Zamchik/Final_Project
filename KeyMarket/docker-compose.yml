@@ -1,4 +1,8 @@
+# Docker Compose для KeyMarket
+# Запускает PostgreSQL, бэкенд (Fastify + Prisma) и фронтенд (React + Nginx)
+
 services:
+  # База данных PostgreSQL
   postgres:
     image: postgres:15-alpine
     container_name: keymarket-db
@@ -7,11 +11,44 @@ services:
       POSTGRES_USER: keymarket
       POSTGRES_PASSWORD: keymarket123
       POSTGRES_DB: keymarket
-      POSTGRES_INITDB_ARGS: "--auth-host=md5 --auth-local=trust"
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keymarket -d keymarket"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
+  # Бэкенд (Fastify + Prisma)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: keymarket-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://keymarket:keymarket123@postgres:5432/keymarket
+      SESSION_SECRET: ${SESSION_SECRET}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Фронтенд (React + Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: keymarket-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+# Volumes
 volumes:
   pgdata:
