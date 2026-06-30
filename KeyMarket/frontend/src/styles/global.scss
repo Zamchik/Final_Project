@@ -1,5 +1,7 @@
 @use 'variables' as *;
+// Глобальные стили KeyMarket
 
+// Сброс отступов и базовые настройки
 html,
 body {
   margin: 0;
@@ -11,4 +13,41 @@ body {
 
 #root {
   min-height: 100vh;
+}
+
+// Исправление фона при автозаполнении — такой же цвет, как у обычного поля
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #141414 inset !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.85) !important;
+  caret-color: rgba(255, 255, 255, 0.85) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+// Плавные переходы для карточек
+.ant-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(114, 46, 209, 0.2);
+  }
+}
+
+// Анимация появления модальных окон
+.ant-modal {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }

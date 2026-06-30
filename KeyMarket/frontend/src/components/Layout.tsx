@@ -2,25 +2,29 @@
 // При монтировании проверяет сессию и управляет видимостью меню
 import { useEffect } from 'react';
 import { Outlet, Link } from 'react-router-dom';
-import { Layout as AntLayout, Menu, Spin } from 'antd';
+import { Layout as AntLayout, Menu, Spin, Row, Col, Typography } from 'antd';
+import {
+  HomeOutlined, AppstoreOutlined, UserOutlined, LoginOutlined,
+  FormOutlined, PlusSquareOutlined, SettingOutlined, ShopOutlined,
+  DashboardOutlined,
+} from '@ant-design/icons';
 import { useAuthStore } from '../stores/authStore';
 import NotificationBell from './NotificationBell';
 
 const { Header, Content, Footer } = AntLayout;
+const { Text } = Typography;
 
 const MainLayout = () => {
   const user = useAuthStore((s) => s.user);
   const loading = useAuthStore((s) => s.loading);
   const fetched = useAuthStore((s) => s.fetched);
   const fetchUser = useAuthStore((s) => s.fetchUser);
-
   // Загружаем данные пользователя один раз при старте
   useEffect(() => {
     if (!fetched && !loading) {
       fetchUser();
     }
   }, [fetched, loading, fetchUser]);
-
   // Пока проверяется сессия – показываем спиннер
   if (loading && !fetched) {
     return (
@@ -30,30 +34,31 @@ const MainLayout = () => {
     );
   }
 
-  // Пункты меню
+  // Пункты меню с иконками
   const items = [
-    { key: 'home', label: <Link to="/">Главная</Link> },
-    { key: 'catalog', label: <Link to="/catalog">Каталог</Link> },
+    { key: 'home', label: <Link to="/"><HomeOutlined /> Главная</Link> },
+    { key: 'catalog', label: <Link to="/catalog"><AppstoreOutlined /> Каталог</Link> },
     ...(user
-      ? [{ key: 'cabinet', label: <Link to="/cabinet">Личный кабинет</Link> }]
+      ? [{ key: 'cabinet', label: <Link to="/cabinet"><UserOutlined /> Личный кабинет</Link> }]
       : []),
     ...(user?.role === 'admin'
-      ? [{ key: 'admin', label: <Link to="/admin">Админ-панель</Link> }]
+      ? [{ key: 'admin', label: <Link to="/admin"><DashboardOutlined /> Админ-панель</Link> }]
       : []),
     ...(user?.role === 'seller'
       ? [
-        { key: 'my-products', label: <Link to="/my-products">Мои товары</Link> },
-        { key: 'create-product', label: <Link to="/create-product">Добавить товар</Link> },
+        { key: 'my-products', label: <Link to="/my-products"><ShopOutlined /> Мои товары</Link> },
+        { key: 'create-product', label: <Link to="/create-product"><PlusSquareOutlined /> Добавить товар</Link> },
       ]
       : []),
     ...(!user
       ? [
-        { key: 'login', label: <Link to="/login">Войти</Link> },
-        { key: 'register', label: <Link to="/register">Регистрация</Link> },
+        { key: 'login', label: <Link to="/login"><LoginOutlined /> Войти</Link> },
+        { key: 'register', label: <Link to="/register"><FormOutlined /> Регистрация</Link> },
       ]
       : []),
   ];
 
+  // Рендер
   return (
     <AntLayout style={{ minHeight: '100vh' }}>
       <Header
@@ -78,7 +83,7 @@ const MainLayout = () => {
             {/* Нижняя диагональ */}
             <line x1="16" y1="20" x2="30" y2="30" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" />
 
-            {/* Головка ключа — обводка стала жирнее (2.5 вместо 1.5) */}
+            {/* Головка ключа */}
             <circle cx="16" cy="7" r="3.75" fill="#722ed1" stroke="#fff" strokeWidth="2.5" />
 
             {/* Коронки (зубцы) */}
@@ -86,11 +91,12 @@ const MainLayout = () => {
             <line x1="16" y1="33" x2="8" y2="33" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
           </svg>
 
-          {/* Текст */}
+          {/* Текстовая часть логотипа */}
           <span style={{ color: '#fff', fontSize: 23, fontWeight: 700, letterSpacing: 1, marginLeft: 4 }}>
             eyMarket
           </span>
         </Link>
+
         <Menu
           theme="dark"
           mode="horizontal"
@@ -105,7 +111,35 @@ const MainLayout = () => {
         <Outlet />
       </Content>
 
-      <Footer style={{ textAlign: 'center' }}>KeyMarket ©2026</Footer>
+      {/* Улучшенный футер с ссылками и описанием платформы                     */}
+      <Footer
+        style={{
+          textAlign: 'center',
+          background: '#141414',
+          padding: '24px 50px',
+          color: '#b0b0b0',
+        }}
+      >
+        <Row gutter={[16, 16]} justify="center">
+          <Col>
+            <Link to="/" style={{ color: '#b0b0b0' }}>Главная</Link>
+          </Col>
+          <Col>
+            <Link to="/catalog" style={{ color: '#b0b0b0' }}>Каталог</Link>
+          </Col>
+          <Col>
+            <Text type="secondary">|</Text>
+          </Col>
+          <Col>
+            <Text type="secondary">© 2026 KeyMarket. Все права защищены.</Text>
+          </Col>
+        </Row>
+        <div style={{ marginTop: 8 }}>
+          <Text type="secondary">
+            Маркетплейс цифровых товаров. Безопасные сделки, низкая комиссия, мгновенная выдача.
+          </Text>
+        </div>
+      </Footer>
     </AntLayout>
   );
 };

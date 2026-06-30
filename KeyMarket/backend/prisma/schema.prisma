@@ -21,6 +21,7 @@ model User {
   payments      Payment[]
   notifications Notification[] 
   reviews Review[]
+  email_verified Boolean @default(false) @map("email_verified")
 }
 
 model Category {

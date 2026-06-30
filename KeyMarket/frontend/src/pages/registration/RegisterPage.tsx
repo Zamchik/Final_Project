@@ -15,12 +15,11 @@ const RegisterPage = () => {
   const onFinish = async (values: RegisterFormValues) => {
     try {
       await register(values.email, values.password);
-      message.success('Регистрация успешна');
-      navigate('/cabinet');
+      message.success('Регистрация успешна! Проверьте почту для подтверждения.');
+      navigate('/login');
     } catch (err) {
       const error = err as AxiosError<{ error: string }>;
-      const msg = error.response?.data?.error || 'Ошибка регистрации';
-      message.error(msg);
+      message.error(error.response?.data?.error || 'Ошибка регистрации');
     }
   };
 

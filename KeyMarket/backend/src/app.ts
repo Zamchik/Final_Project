@@ -3,6 +3,8 @@ import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import secureSession from '@fastify/secure-session';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
 
 import authRoutes from './routes/auth.routes';
 import productRoutes from './routes/product.routes';
@@ -25,7 +27,7 @@ import { NotificationService } from './services/notification.service';
 
 const app = Fastify({ logger: true });
 
-// Расширение типов для сессии (можно вынести в types/session.d.ts)
+// Расширение типов для сессии
 declare module '@fastify/secure-session' {
   interface SessionData {
     user: {
@@ -36,14 +38,60 @@ declare module '@fastify/secure-session' {
   }
 }
 
+// Расширение типов Fastify для декораторов
+declare module 'fastify' {
+  interface FastifyInstance {
+    emailService: import('./services/email.service').EmailService;
+    notificationService: import('./services/notification.service').NotificationService;
+  }
+}
+
 // Асинхронная функция инициализации всего приложения
 async function setup() {
-  // Email
+  // Email и уведомления
   const mailTransport = await createTestTransport();
   const emailService = new EmailService(mailTransport);
   const notificationService = new NotificationService();
   app.decorate('emailService', emailService);
   app.decorate('notificationService', notificationService);
+
+  // Swagger-документация
+  app.register(swagger, {
+  openapi: {
+    info: {
+      title: 'KeyMarket API',
+      description: 'Документация API для маркетплейса цифровых товаров KeyMarket',
+      version: '1.0.0',
+    },
+    servers: [
+      { url: 'http://localhost:3000', description: 'Локальный сервер' },
+    ],
+    tags: [
+      { name: 'auth', description: 'Аутентификация и пользователи' },
+      { name: 'products', description: 'Товары' },
+      { name: 'orders', description: 'Заказы' },
+      { name: 'wallet', description: 'Кошелёк' },
+      { name: 'payments', description: 'Платежи' },
+      { name: 'admin', description: 'Администрирование' },
+      { name: 'notifications', description: 'Уведомления' },
+    ],
+    // Добавляем схему безопасности для cookie-сессий
+    components: {
+      securitySchemes: {
+        cookieAuth: {
+          type: 'apiKey',
+          in: 'cookie',
+          name: 'session',
+          description: 'Сессионная кука для аутентификации',
+        },
+      },
+    },
+  },
+});
+
+  app.register(swaggerUi, {
+    routePrefix: '/docs',
+  });
 
   // Плагины
   app.register(cors, corsOptions);
@@ -75,17 +123,10 @@ async function setup() {
   try {
     await app.listen({ port: 3000, host: '0.0.0.0' });
     console.log('Server running on http://localhost:3000');
+    console.log('Swagger docs: http://localhost:3000/docs');
   } catch (err) {
     app.log.error(err);
     process.exit(1);
-  }
-}
-
-// Расширение типов Fastify
-declare module 'fastify' {
-  interface FastifyInstance {
-    emailService: import('./services/email.service').EmailService;
-    notificationService: import('./services/notification.service').NotificationService;
   }
 }
 
