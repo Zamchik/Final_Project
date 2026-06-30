@@ -1,24 +1,54 @@
-// Маршруты для создания отзывов
+// Маршруты для создания отзыва (префикс /reviews в app.ts)
 import { FastifyInstance } from 'fastify';
 import { ReviewController } from '../controllers/review.controller';
 import { ReviewService } from '../services/review.service';
 
 // Тип тела запроса для создания отзыва
 interface CreateReviewBody {
-    productId: number;
-    orderId: number;
-    rating: number;
-    comment?: string;
+  productId: number;
+  orderId: number;
+  rating: number;
+  comment?: string;
 }
 
 export default async function reviewRoutes(fastify: FastifyInstance) {
-    const reviewService = new ReviewService();
-    const controller = new ReviewController(reviewService);
+  const reviewService = new ReviewService();
+  const controller = new ReviewController(reviewService);
 
-    // POST /reviews – создать отзыв (доступно только авторизованным)
-    fastify.post<{ Body: CreateReviewBody }>(
-        '/',
-        { preHandler: [fastify.authenticate] },
-        controller.create
-    );
+  // POST /reviews — создать отзыв
+  fastify.post<{ Body: CreateReviewBody }>('/', {
+    preHandler: [fastify.authenticate],
+    schema: {
+      tags: ['products'],
+      summary: 'Оставить отзыв о товаре (только после успешной покупки)',
+      security: [{ cookieAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['productId', 'orderId', 'rating'],
+        properties: {
+          productId: { type: 'number', description: 'ID товара' },
+          orderId: { type: 'number', description: 'ID завершённого заказа' },
+          rating: { type: 'number', minimum: 1, maximum: 5, description: 'Оценка от 1 до 5' },
+          comment: { type: 'string', description: 'Текст отзыва (опционально)' },
+        },
+      },
+      response: {
+        201: {
+          type: 'object',
+          properties: {
+            id: { type: 'number' },
+            rating: { type: 'number' },
+            comment: { type: 'string' },
+            createdAt: { type: 'string' },
+          },
+        },
+        400: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+          },
+        },
+      },
+    },
+  }, controller.create);
 }
