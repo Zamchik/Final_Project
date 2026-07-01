@@ -1,9 +1,4 @@
-// ============================================================================
 // Страница создания и редактирования товара
-// Используется как для добавления нового товара, так и для изменения существующего.
-// Режим определяется по URL: /create-product (создание) или /edit-product/:id (редактирование).
-// ============================================================================
-
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -12,88 +7,101 @@ import {
   InputNumber,
   Select,
   Button,
+  Upload,
   message,
   Space,
   Card,
   Typography,
+  Tag,
 } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 import apiClient from '../api/client';
 import { useAuthStore } from '../stores/authStore';
 import { AxiosError } from 'axios';
 
-// Вынесенные модули
-import { FormValues } from '../types/product';                // Типы формы
-import { KEY_PATTERN } from '../constants/validation';        // Константа формата ключа
-import { validateKeys } from '../utils/validateKeys';         // Валидатор ключей
-import { useCategories } from '../hooks/useCategories';       // Хук загрузки категорий
-import { useProduct } from '../hooks/useProduct';             // Хук загрузки товара
-import { KeyPreviewList } from '../components/KeyPreviewList';// Визуальный список ключей
+import { FormValues } from '../types/product';
+import { validateKeys } from '../utils/validateKeys';
+import { useCategories } from '../hooks/useCategories';
+import { useProduct } from '../hooks/useProduct';
+import { KeyPreviewList } from '../components/KeyPreviewList';
 
-// Компоненты Ant Design
 const { TextArea } = Input;
 const { Text } = Typography;
 
-// ============================================================================
-// Компонент
-// ============================================================================
-
 const CreateEditProductPage = () => {
-  // --- Получаем параметры из URL и определяем режим работы ---
-  const { id } = useParams();                       // ID товара (только при редактировании)
+  const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const isEdit = location.pathname.includes('/edit-product');  // true = редактирование, false = создание
+  const isEdit = location.pathname.includes('/edit-product');
 
-  // --- Сессия пользователя ---
   const user = useAuthStore((s) => s.user);
-  const loading = useAuthStore((s) => s.loading);
+  const authLoading = useAuthStore((s) => s.loading);
 
-  // --- Локальное состояние ---
-  const [form] = Form.useForm<FormValues>();        // экземпляр формы Ant Design
-  const [loadingForm, setLoadingForm] = useState(false);         // индикатор отправки формы
-  const [keysPreview, setKeysPreview] = useState<string[]>([]);  // ключи для визуальной валидации
+  const [form] = Form.useForm<FormValues>();
+  const [loadingForm, setLoadingForm] = useState(false);
+  const [keysPreview, setKeysPreview] = useState<string[]>([]);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
-  // --- Кастомные хуки (вынесли логику загрузки данных) ---
-  const categories = useCategories(!!user);                    // список категорий
-  const productLoading = useProduct(id, isEdit, form, !!user);  // загрузка товара при редактировании
+  const categories = useCategories(!!user);
+  const { productData, loading: productLoading } = useProduct(id, isEdit, !!user);
 
-  // =========================================================================
-  // Эффекты
-  // =========================================================================
-
-  /**
-   * Защита маршрута: если сессия невалидна — редирект на логин.
-   * Ждём окончания проверки сессии (loading === false), чтобы не моргать.
-   */
+  // Защита маршрута
   useEffect(() => {
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       navigate('/login');
     }
-  }, [user, loading, navigate]);
+  }, [user, authLoading, navigate]);
 
-  // =========================================================================
+  // Заполняем форму, когда загружены товар и категории
+  useEffect(() => {
+    if (isEdit && productData && categories.length > 0) {
+      form.setFieldsValue({
+        title: productData.title,
+        description: productData.description,
+        price: Number(productData.price),
+        categoryId: productData.categoryId,
+        status: productData.status,
+      });
+      if (productData.imageUrl) {
+        setImageUrl(productData.imageUrl);
+      }
+    }
+  }, [isEdit, productData, categories, form]);
+
+  // Загрузка изображения
+  const handleUpload = async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    setUploading(true);
+    try {
+      const { data } = await apiClient.post('/upload/product-image', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setImageUrl(data.imageUrl);
+      message.success('Изображение загружено');
+    } catch {
+      message.error('Ошибка загрузки изображения');
+    } finally {
+      setUploading(false);
+    }
+    return false; // предотвращаем автоматическую отправку формы
+  };
+
   // Отправка формы
-  // =========================================================================
-
-  /**
-   * Обработчик успешной отправки формы.
-   * В зависимости от режима вызывает создание или обновление товара.
-   */
   const onFinish = async (values: FormValues) => {
     setLoadingForm(true);
     try {
-      // Базовый payload — поля, общие для создания и редактирования
       const payload: Record<string, unknown> = {
         title: values.title,
         description: values.description,
         price: values.price,
         categoryId: values.categoryId,
+        imageUrl,
       };
 
       if (isEdit && id) {
-        // --- Редактирование ---
         if (values.newKeys) {
-          // Преобразуем текст ключей в массив строк
           payload.newKeys = values.newKeys
             .split('\n')
             .map((k) => k.trim())
@@ -103,7 +111,6 @@ const CreateEditProductPage = () => {
         await apiClient.put(`/products/${id}`, payload);
         message.success('Товар обновлён');
       } else {
-        // --- Создание ---
         payload.keys = (values.keys ?? '')
           .split('\n')
           .map((k) => k.trim())
@@ -111,7 +118,6 @@ const CreateEditProductPage = () => {
         await apiClient.post('/products', payload);
         message.success('Товар создан');
       }
-      // После успеха возвращаемся к списку товаров
       navigate('/my-products');
     } catch (err) {
       const error = err as AxiosError<{ error: string }>;
@@ -121,23 +127,14 @@ const CreateEditProductPage = () => {
     }
   };
 
-  // =========================================================================
-  // Рендер
-  // =========================================================================
-
-  // Пока проверяется сессия — ничего не показываем
-  if (loading) return null;
-
-  // Если пользователь не авторизован (уже должны были редиректнуть) — ничего не рендерим
+  if (authLoading) return null;
   if (!user) return null;
 
   return (
     <div style={{ maxWidth: 600, margin: '0 auto' }}>
       <h1>{isEdit ? 'Редактирование товара' : 'Добавить товар'}</h1>
       <Card>
-        {/* Форма на основе Ant Design */}
         <Form form={form} layout="vertical" onFinish={onFinish}>
-          {/* ---------- Название ---------- */}
           <Form.Item
             name="title"
             label="Название"
@@ -146,12 +143,10 @@ const CreateEditProductPage = () => {
             <Input />
           </Form.Item>
 
-          {/* ---------- Описание ---------- */}
           <Form.Item name="description" label="Описание">
             <TextArea rows={4} />
           </Form.Item>
 
-          {/* ---------- Категория ---------- */}
           <Form.Item
             name="categoryId"
             label="Категория"
@@ -166,7 +161,6 @@ const CreateEditProductPage = () => {
             />
           </Form.Item>
 
-          {/* ---------- Цена ---------- */}
           <Form.Item
             name="price"
             label="Цена"
@@ -175,7 +169,6 @@ const CreateEditProductPage = () => {
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
 
-          {/* ---------- Статус (только при редактировании) ---------- */}
           {isEdit && (
             <Form.Item name="status" label="Статус">
               <Select
@@ -187,7 +180,24 @@ const CreateEditProductPage = () => {
             </Form.Item>
           )}
 
-          {/* ---------- Ключи (только при создании) ---------- */}
+          <Form.Item label="Изображение товара">
+            <Upload
+              listType="picture-card"
+              showUploadList={false}
+              beforeUpload={handleUpload}
+              accept="image/*"
+            >
+              {imageUrl ? (
+                <img src={imageUrl} alt="Товар" style={{ width: '100%' }} />
+              ) : (
+                <div>
+                  <PlusOutlined />
+                  <div style={{ marginTop: 8 }}>Загрузить</div>
+                </div>
+              )}
+            </Upload>
+          </Form.Item>
+
           {!isEdit && (
             <Form.Item
               name="keys"
@@ -212,42 +222,58 @@ const CreateEditProductPage = () => {
             </Form.Item>
           )}
 
-          {/* ---------- Новые ключи (только при редактировании) ---------- */}
           {isEdit && (
-            <Form.Item
-              name="newKeys"
-              label="Новые ключи (по одному на строку)"
-              rules={[
-                {
-                  validator: (_: unknown, value: string | undefined) => {
-                    if (!value || !value.trim()) return Promise.resolve();
-                    return validateKeys(_, value);
+            <>
+              <Form.Item
+                name="newKeys"
+                label="Новые ключи (по одному на строку)"
+                rules={[
+                  {
+                    validator: (_: unknown, value: string | undefined) => {
+                      if (!value || !value.trim()) return Promise.resolve();
+                      return validateKeys(_, value);
+                    },
                   },
-                },
-              ]}
-              extra={
-                <Text type="secondary">
-                  Необязательно. Формат ключа: XXXXX-XXXXX-XXXXX (Steam).
-                </Text>
-              }
-            >
-              <TextArea
-                rows={4}
-                placeholder="XXXXX-XXXXX-XXXXX"
-                onChange={(e) => {
-                  const lines = e.target.value
-                    .split('\n')
-                    .filter((line) => line.trim().length > 0);
-                  setKeysPreview(lines);
-                }}
-              />
-            </Form.Item>
+                ]}
+                extra={
+                  <Text type="secondary">
+                    Необязательно. Формат ключа: XXXXX-XXXXX-XXXXX (Steam).
+                  </Text>
+                }
+              >
+                <TextArea
+                  rows={4}
+                  placeholder="XXXXX-XXXXX-XXXXX"
+                  onChange={(e) => {
+                    const lines = e.target.value
+                      .split('\n')
+                      .filter((line) => line.trim().length > 0);
+                    setKeysPreview(lines);
+                  }}
+                />
+              </Form.Item>
+
+              {/* Текущие ключи товара */}
+              {productData && productData.keys.length > 0 && (
+                <Form.Item label="Текущие ключи">
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {productData.keys.map((key) => (
+                      <Tag
+                        key={key.id}
+                        color={key.isSold ? 'red' : 'green'}
+                        style={{ fontFamily: 'monospace' }}
+                      >
+                        {key.keyValue} {key.isSold ? '(продан)' : '(в наличии)'}
+                      </Tag>
+                    ))}
+                  </div>
+                </Form.Item>
+              )}
+            </>
           )}
 
-          {/* ---------- Визуальная обратная связь по ключам ---------- */}
           <KeyPreviewList keys={keysPreview} />
 
-          {/* ---------- Кнопки ---------- */}
           <Form.Item>
             <Space>
               <Button type="primary" htmlType="submit" loading={loadingForm || productLoading}>

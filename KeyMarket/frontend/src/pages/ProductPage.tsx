@@ -22,6 +22,7 @@ interface ProductDetails {
   stock: number;
   category: { id: number; name: string };
   status: string;
+  imageUrl: string | null;
 }
 
 interface PaidOrder {
@@ -173,20 +174,35 @@ const ProductPage = () => {
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto' }}>
-      {/* Обложка товара (заглушка) */}
-      <div
-        style={{
-          height: 200,
-          background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: 12,
-          marginBottom: 24,
-        }}
-      >
-        <ShoppingCartOutlined style={{ fontSize: 72, color: '#722ed1' }} />
-      </div>
+            {/* Изображение товара или заглушка */}
+      {product.imageUrl ? (
+        <div style={{ marginBottom: 24, textAlign: 'center' }}>
+          <img
+            src={`http://localhost:3000${product.imageUrl}`}
+            alt={product.title}
+            style={{
+              maxWidth: '100%',
+              maxHeight: 300,
+              objectFit: 'contain',
+              borderRadius: 12,
+            }}
+          />
+        </div>
+      ) : (
+        <div
+          style={{
+            height: 200,
+            background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 12,
+            marginBottom: 24,
+          }}
+        >
+          <ShoppingCartOutlined style={{ fontSize: 72, color: '#722ed1' }} />
+        </div>
+      )}
 
       <Title level={2}>{product.title}</Title>
       <Card>

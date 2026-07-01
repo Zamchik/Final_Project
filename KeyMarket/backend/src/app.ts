@@ -5,6 +5,9 @@ import cors from '@fastify/cors';
 import secureSession from '@fastify/secure-session';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import multipart from '@fastify/multipart';
+import fastifyStatic from '@fastify/static';
+import path from 'path';
 
 import authRoutes from './routes/auth.routes';
 import productRoutes from './routes/product.routes';
@@ -17,6 +20,7 @@ import paymentRoutes from './routes/payment.routes';
 import mockPaymentRoutes from './routes/mock-payment.routes';
 import notificationRoutes from './routes/notification.routes';
 import reviewRoutes from './routes/review.routes';
+import uploadRoutes from './routes/upload.routes';
 
 import { corsOptions } from './config/cors';
 import { sessionKey, sessionCookieOptions } from './config/session';
@@ -57,44 +61,51 @@ async function setup() {
 
   // Swagger-документация
   app.register(swagger, {
-  openapi: {
-    info: {
-      title: 'KeyMarket API',
-      description: 'Документация API для маркетплейса цифровых товаров KeyMarket',
-      version: '1.0.0',
-    },
-    servers: [
-      { url: 'http://localhost:3000', description: 'Локальный сервер' },
-    ],
-    tags: [
-      { name: 'auth', description: 'Аутентификация и пользователи' },
-      { name: 'products', description: 'Товары' },
-      { name: 'orders', description: 'Заказы' },
-      { name: 'wallet', description: 'Кошелёк' },
-      { name: 'payments', description: 'Платежи' },
-      { name: 'admin', description: 'Администрирование' },
-      { name: 'notifications', description: 'Уведомления' },
-    ],
-    // Добавляем схему безопасности для cookie-сессий
-    components: {
-      securitySchemes: {
-        cookieAuth: {
-          type: 'apiKey',
-          in: 'cookie',
-          name: 'session',
-          description: 'Сессионная кука для аутентификации',
+    openapi: {
+      info: {
+        title: 'KeyMarket API',
+        description: 'Документация API для маркетплейса цифровых товаров KeyMarket',
+        version: '1.0.0',
+      },
+      servers: [
+        { url: 'http://localhost:3000', description: 'Локальный сервер' },
+      ],
+      tags: [
+        { name: 'auth', description: 'Аутентификация и пользователи' },
+        { name: 'products', description: 'Товары' },
+        { name: 'orders', description: 'Заказы' },
+        { name: 'wallet', description: 'Кошелёк' },
+        { name: 'payments', description: 'Платежи' },
+        { name: 'admin', description: 'Администрирование' },
+        { name: 'notifications', description: 'Уведомления' },
+      ],
+      components: {
+        securitySchemes: {
+          cookieAuth: {
+            type: 'apiKey',
+            in: 'cookie',
+            name: 'session',
+            description: 'Сессионная кука для аутентификации',
+          },
         },
       },
     },
-  },
-});
+  });
 
   app.register(swaggerUi, {
     routePrefix: '/docs',
   });
 
   // Плагины
+  app.register(multipart, { limits: { fileSize: 5 * 1024 * 1024 } }); // до 5 МБ
   app.register(cors, corsOptions);
+
+  // раздача статических файлов (изображения товаров)
+  app.register(fastifyStatic, {
+    root: path.join(__dirname, '..', 'uploads'), // папка uploads в корне backend/
+    prefix: '/uploads/',
+  });
+
   app.register(secureSession, {
     key: sessionKey,
     cookie: sessionCookieOptions,
@@ -115,6 +126,7 @@ async function setup() {
   app.register(mockPaymentRoutes, { prefix: '/mock-payment' });
   app.register(notificationRoutes, { prefix: '/notifications' });
   app.register(reviewRoutes, { prefix: '/reviews' });
+  app.register(uploadRoutes, { prefix: '/upload' });
 
   // Health check
   app.get('/health', async () => ({ status: 'ok' }));

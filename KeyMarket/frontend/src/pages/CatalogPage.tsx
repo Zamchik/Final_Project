@@ -1,6 +1,6 @@
 // Страница каталога товаров
 // Отображает публичный список товаров с поиском, фильтрами и пагинацией.
-// В будущем карточки будут содержать изображения от продавцов.
+// Карточки содержат изображения от продавцов (или заглушку, если фото нет).
 import { useEffect, useState, useCallback } from 'react';
 import { Card, Input, Select, InputNumber, Row, Col, Pagination, Spin, Empty, Typography, Rate } from 'antd';
 import { KeyOutlined } from '@ant-design/icons'; // иконка‑заглушка для обложки товара
@@ -16,6 +16,7 @@ interface Product {
   title: string;
   price: string;
   rating: string;
+  imageUrl: string | null; // ссылка на изображение
   category: { id: number; name: string };
   createdAt: string;
 }
@@ -59,13 +60,14 @@ const CatalogPage = () => {
 
   // Загружаем категории один раз при монтировании
   useEffect(() => {
-    apiClient.get('/categories').then(({ data }) => setCategories(data)).catch(() => {});
+    apiClient.get('/categories').then(({ data }) => setCategories(data)).catch(() => { });
   }, []);
 
   // Рендер
   return (
     <div style={{ padding: '0 20px' }}>
       <h1>Каталог товаров</h1>
+
       {/* Фильтры: поиск, категория, цена от/до                              */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} md={6}>
@@ -91,7 +93,7 @@ const CatalogPage = () => {
             min={0}
             style={{ width: '100%' }}
             value={minPrice}
-            onChange={(val: number | undefined) => { setMinPrice(val ?? undefined); setPage(1); }}
+            onChange={(val: number | null) => { setMinPrice(val ?? undefined); setPage(1); }}
           />
         </Col>
         <Col xs={12} sm={6} md={3}>
@@ -100,12 +102,12 @@ const CatalogPage = () => {
             min={0}
             style={{ width: '100%' }}
             value={maxPrice}
-            onChange={(val: number | undefined) => { setMaxPrice(val ?? undefined); setPage(1); }}
+            onChange={(val: number | null) => { setMaxPrice(val ?? undefined); setPage(1); }}
           />
         </Col>
       </Row>
 
-      {/* Отображение: загрузка, пустота или список товаров                   */}
+      {/* Отображение: загрузка, пустота или список товаров*/}
       {loading ? (
         <Spin style={{ display: 'block', marginTop: 40 }} />
       ) : products.length === 0 ? (
@@ -119,18 +121,26 @@ const CatalogPage = () => {
                   <Card
                     hoverable
                     cover={
-                      // Заглушка обложки — позже заменю на изображение от продавца
-                      <div
-                        style={{
-                          height: 160,
-                          background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <KeyOutlined style={{ fontSize: 48, color: '#722ed1' }} />
-                      </div>
+                      // Если есть изображение — показываем его, иначе заглушку
+                      product.imageUrl ? (
+                        <img
+                          src={`http://localhost:3000${product.imageUrl}`}
+                          alt={product.title}
+                          style={{ height: 160, width: '100%', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            height: 160,
+                            background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <KeyOutlined style={{ fontSize: 48, color: '#722ed1' }} />
+                        </div>
+                      )
                     }
                   >
                     <Meta
