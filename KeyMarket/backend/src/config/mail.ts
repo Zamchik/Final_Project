@@ -1,25 +1,35 @@
-// Конфигурация тестового почтового сервера (Ethereal)
-// Для продакшена заменить на реальный SMTP (Mailgun, SendGrid, Яндекс.Почта и т.д.)
+// backend/src/config/mail.ts
+// Конфигурация тестового почтового сервера (Ethereal) с fallback-режимом.
+// Для продакшена заменить на реальный SMTP
 import nodemailer from 'nodemailer';
 
- // Создаёт тестовый транспорт Nodemailer через Ethereal.
- // При каждом запуске генерируется новый тестовый аккаунт.
-export const createTestTransport = async () => {
-  // Генерируем тестовый аккаунт Ethereal (не требует регистрации)
-  const testAccount = await nodemailer.createTestAccount();
+ // Создаёт транспорт Nodemailer.
+ // Пытается подключиться к Ethereal; при неудаче включает режим вывода писем в JSON (консоль).
+ // Возвращает готовый transporter.
+export const createTestTransport = async (): Promise<nodemailer.Transporter> => {
+  try {
+    // Генерируем тестовый аккаунт Ethereal (требует доступ к api.nodemailer.com)
+    const testAccount = await nodemailer.createTestAccount();
+    console.log('Ethereal test account created:', testAccount.user);
 
-  console.log('Ethereal test account created (user, pass):', testAccount.user);
+    // Создаём SMTP-транспорт с полученными учётными данными
+    return nodemailer.createTransport({
+      host: 'smtp.ethereal.email',
+      port: 587,
+      secure: false, // true для 465, false для остальных
+      auth: {
+        user: testAccount.user,
+        pass: testAccount.pass,
+      },
+    });
+  } catch (error) {
+    // Если сеть недоступна (ошибка TLS, DNS и т.п.) — не крашим сервер,
+    // а используем транспорт, который пишет письма в лог.
+    console.warn('Не удалось создать Ethereal аккаунт. Письма будут выводиться в консоль.');
+    console.warn('Ошибка:', (error as Error).message);
 
-  // Создаём транспорт, используя сгенерированные учётные данные
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.ethereal.email',
-    port: 587,
-    secure: false, // true для 465 порта, false для остальных
-    auth: {
-      user: testAccount.user,
-      pass: testAccount.pass,
-    },
-  });
-
-  return transporter;
+    return nodemailer.createTransport({
+      jsonTransport: true, // письма попадают в стандартный вывод
+    });
+  }
 };

@@ -35,6 +35,9 @@ COPY --from=backend-builder /app/tsconfig.json ./
 COPY --from=backend-builder /app/prisma ./prisma
 COPY --from=backend-builder /app/src ./src
 
+# Создаём папку для загружаемых изображений
+RUN mkdir -p /app/uploads
+
 # Переменные окружения
 ENV NODE_ENV=production
 ENV DATABASE_URL=postgresql://keymarket:keymarket123@postgres:5432/keymarket

@@ -91,7 +91,7 @@ model OrderItem {
   productKeyId Int        @unique @map("product_key_id")
   productKey   ProductKey @relation(fields: [productKeyId], references: [id])
   price        Decimal
-
+  
   @@map("order_items")
 }
 
