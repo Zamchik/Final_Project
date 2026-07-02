@@ -1,6 +1,5 @@
 // Маршруты для загрузки изображений товаров
 import { FastifyInstance } from 'fastify';
-import { prisma } from '../prisma';
 import { requireRole } from '../middleware/auth';
 import fs from 'fs';
 import path from 'path';
@@ -10,6 +9,35 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
   // POST /upload/product-image — загрузить изображение для товара
   fastify.post('/product-image', {
     preHandler: [fastify.authenticate, requireRole('seller')],
+    schema: {
+  tags: ['upload'],
+  summary: 'Загрузить изображение товара',
+  description:
+    'Принимает файл в multipart/form-data.\n\n' +
+    'Пример curl:\n\n' +
+    '```\n' +
+    'curl -X POST "http://localhost:3000/upload/product-image" \\\n' +
+    '  -H "accept: application/json" \\\n' +
+    '  -H "Cookie: session=ВАША_КУКА" \\\n' +
+    '  -F "file=@путь_к_файлу.jpg"\n' +
+    '```\n',
+  consumes: ['multipart/form-data'],
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        imageUrl: { type: 'string' },
+      },
+    },
+    400: {
+      type: 'object',
+      properties: {
+        error: { type: 'string' },
+      },
+    },
+  },
+  // ⚠️ body удалён – для multipart не нужен
+},
   }, async (request, reply) => {
     const data = await request.file();
     if (!data) {
@@ -40,11 +68,5 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
     // Возвращаем URL для доступа к файлу
     const imageUrl = `/uploads/${newFileName}`;
     return { imageUrl };
-  });
-
-  // Статическая раздача файлов из папки uploads
-  fastify.register(import('@fastify/static'), {
-    root: path.join(__dirname, '../../uploads'),
-    prefix: '/uploads/',
   });
 }
