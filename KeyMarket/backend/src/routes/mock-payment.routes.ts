@@ -1,16 +1,7 @@
 // Маршрут для имитации страницы оплаты (Mock)
 import { FastifyInstance } from 'fastify';
-import { MockPaymentGateway } from '../services/payment/mock-payment-gateway';
-import { PaymentService } from '../services/payment/payment.service';
-import { OrderService } from '../services/order.service';
 
 export default async function mockPaymentRoutes(fastify: FastifyInstance) {
-  const mockGateway = new MockPaymentGateway();
-  const orderService = new OrderService();
-  const emailService = fastify.emailService;
-  const notificationService = fastify.notificationService;
-  const paymentService = new PaymentService(mockGateway, orderService, emailService, notificationService);
-  
   // Страница имитации оплаты (простой HTML)
   fastify.get('/:externalId', async (request, reply) => {
     const { externalId } = request.params as { externalId: string };
@@ -28,7 +19,11 @@ export default async function mockPaymentRoutes(fastify: FastifyInstance) {
         <p id="result"></p>
         <script>
           document.getElementById('pay-btn').addEventListener('click', async () => {
-            const res = await fetch('/mock-payment/${externalId}/confirm', { method: 'POST' });
+            const res = await fetch('/payments/webhook', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ externalId: '${externalId}' })
+            });
             const data = await res.json();
             document.getElementById('result').textContent = data.success
               ? 'Оплата прошла успешно!'
@@ -38,17 +33,5 @@ export default async function mockPaymentRoutes(fastify: FastifyInstance) {
       </body>
       </html>
     `);
-  });
-
-  // Подтверждение оплаты (имитация)
-  fastify.post('/:externalId/confirm', async (request, reply) => {
-    const { externalId } = request.params as { externalId: string };
-    try {
-      await mockGateway.confirm(externalId);
-      await paymentService.handlePaymentSuccess(externalId);
-      return { success: true };
-    } catch (err) {
-      reply.status(400).send({ error: (err as Error).message });
-    }
   });
 }

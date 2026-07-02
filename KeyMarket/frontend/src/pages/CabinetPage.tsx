@@ -51,7 +51,7 @@ const CabinetPage = () => {
     }
   }, [loading, user, navigate, fetchUser]);
 
-  // 👇 НОВОЕ: обновляем баланс при возвращении на вкладку (после оплаты в другом окне)
+  // обновляем баланс при возвращении на вкладку (после оплаты в другом окне)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && user) {
