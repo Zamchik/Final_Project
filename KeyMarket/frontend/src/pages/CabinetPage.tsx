@@ -51,6 +51,19 @@ const CabinetPage = () => {
     }
   }, [loading, user, navigate, fetchUser]);
 
+  // 👇 НОВОЕ: обновляем баланс при возвращении на вкладку (после оплаты в другом окне)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user) {
+        fetchUser(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user, fetchUser]);
+
   // ОБРАБОТЧИКИ ДЕЙСТВИЙ ПОЛЬЗОВАТЕЛЯ
 
   // Пополнение баланса (через Mock-платёж)
