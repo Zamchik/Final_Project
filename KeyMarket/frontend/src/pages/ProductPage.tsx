@@ -178,7 +178,7 @@ const ProductPage = () => {
       {product.imageUrl ? (
         <div style={{ marginBottom: 24, textAlign: 'center' }}>
           <img
-            src={`http://localhost:3000${product.imageUrl}`}
+            src={product.imageUrl || '/placeholder.png'}
             alt={product.title}
             style={{
               maxWidth: '100%',

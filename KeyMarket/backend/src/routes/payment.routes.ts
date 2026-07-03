@@ -11,7 +11,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   const notificationService = fastify.notificationService;
   const paymentService = new PaymentService(mockGateway, orderService, emailService, notificationService);
 
-  // POST /payments/replenish — создать платёж для пополнения баланса
+  // POST /payments/replenish — пополнение баланса (уже есть)
   fastify.post('/replenish', {
     preHandler: [fastify.authenticate],
     schema: {
@@ -34,32 +34,58 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
             paymentUrl: { type: 'string' },
           },
         },
-        400: {
-          type: 'object',
-          properties: {
-            error: { type: 'string' },
-          },
-        },
-        // добавил статус 401 для случаев когда сессия невалидна
-        401: {
-          type: 'object',
-          properties: {
-            error: { type: 'string' },
-          },
-        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
       },
     },
   }, async (request, reply) => {
     const { amount } = request.body as { amount: number };
-
-    // Проверяем, что пользователь авторизован
     const sessionUser = request.session.user;
     if (!sessionUser) {
       return reply.status(401).send({ error: 'Не авторизован' });
     }
-
     const result = await paymentService.createReplenishment(sessionUser.id, amount);
     return result;
+  });
+
+  // 👇 НОВЫЙ МАРШРУТ: создать платёж для оплаты заказа
+  fastify.post('/orders/:orderId/create-payment', {
+    preHandler: [fastify.authenticate],
+    schema: {
+      tags: ['payments'],
+      summary: 'Создать платёж для оплаты заказа (mock)',
+      security: [{ cookieAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          orderId: { type: 'number' },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            paymentId: { type: 'number' },
+            externalId: { type: 'string' },
+            paymentUrl: { type: 'string' },
+          },
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+      },
+    },
+  }, async (request, reply) => {
+    const { orderId } = request.params as { orderId: number };
+    const sessionUser = request.session.user;
+    if (!sessionUser) {
+      return reply.status(401).send({ error: 'Не авторизован' });
+    }
+    try {
+      const result = await paymentService.createOrderPayment(orderId, sessionUser.id);
+      return result;
+    } catch (err) {
+      reply.status(400).send({ error: (err as Error).message });
+    }
   });
 
   // POST /payments/webhook — имитация callback от платёжного шлюза

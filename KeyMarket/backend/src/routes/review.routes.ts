@@ -1,7 +1,8 @@
-// Маршруты для создания отзыва (префикс /reviews в app.ts)
+// Маршруты для отзывов (префикс /reviews в app.ts)
 import { FastifyInstance } from 'fastify';
 import { ReviewController } from '../controllers/review.controller';
 import { ReviewService } from '../services/review.service';
+import { prisma } from '../prisma';
 
 // Тип тела запроса для создания отзыва
 interface CreateReviewBody {
@@ -19,7 +20,7 @@ export default async function reviewRoutes(fastify: FastifyInstance) {
   fastify.post<{ Body: CreateReviewBody }>('/', {
     preHandler: [fastify.authenticate],
     schema: {
-      tags: ['products'],
+      tags: ['reviews'],
       summary: 'Оставить отзыв о товаре (только после успешной покупки)',
       security: [{ cookieAuth: [] }],
       body: {
@@ -42,13 +43,52 @@ export default async function reviewRoutes(fastify: FastifyInstance) {
             createdAt: { type: 'string' },
           },
         },
-        400: {
-          type: 'object',
-          properties: {
-            error: { type: 'string' },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+      },
+    },
+  }, controller.create);
+
+  // GET /reviews — получить отзывы (с фильтром по productId)
+  fastify.get('/', {
+    schema: {
+      tags: ['reviews'],
+      summary: 'Получить список отзывов',
+      querystring: {
+        type: 'object',
+        properties: {
+          productId: { type: 'number', description: 'ID товара для фильтрации' },
+        },
+      },
+      response: {
+        200: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'number' },
+              rating: { type: 'number' },
+              comment: { type: 'string' },
+              createdAt: { type: 'string' },
+              user: {
+                type: 'object',
+                properties: {
+                  email: { type: 'string' },
+                },
+              },
+            },
           },
         },
       },
     },
-  }, controller.create);
+  }, async (request, reply) => {
+    const { productId } = request.query as { productId?: number };
+    const reviews = await prisma.review.findMany({
+      where: productId ? { productId: Number(productId) } : undefined,
+      include: {
+        user: { select: { email: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return reviews;
+  });
 }

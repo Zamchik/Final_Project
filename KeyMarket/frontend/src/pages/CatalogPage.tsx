@@ -1,43 +1,36 @@
 // Страница каталога товаров
-// Отображает публичный список товаров с поиском, фильтрами и пагинацией.
-// Карточки содержат изображения от продавцов (или заглушку, если фото нет).
 import { useEffect, useState, useCallback } from 'react';
 import { Card, Input, Select, InputNumber, Row, Col, Pagination, Spin, Empty, Typography, Rate } from 'antd';
-import { KeyOutlined } from '@ant-design/icons'; // иконка‑заглушка для обложки товара
+import { KeyOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import apiClient from '../api/client';
 
 const { Meta } = Card;
 const { Text } = Typography;
 
-// Тип данных товара, приходящих с сервера для каталога
 interface Product {
   id: number;
   title: string;
   price: string;
   rating: string;
-  imageUrl: string | null; // ссылка на изображение
+  imageUrl: string | null;
   category: { id: number; name: string };
   createdAt: string;
 }
 
 const CatalogPage = () => {
-  // Состояния для списка товаров и пагинации
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
 
-  // Фильтры
-  const [search, setSearch] = useState('');                           // поисковая строка
-  const [categoryId, setCategoryId] = useState<number | undefined>(undefined); // выбранная категория
-  const [minPrice, setMinPrice] = useState<number | undefined>(undefined);     // минимальная цена
-  const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);     // максимальная цена
+  const [search, setSearch] = useState('');
+  const [categoryId, setCategoryId] = useState<number | undefined>(undefined);
+  const [minPrice, setMinPrice] = useState<number | undefined>(undefined);
+  const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
 
-  // Список всех категорий (подтягивается с сервера)
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
 
-  // Загрузка товаров с учётом текущих фильтров и страницы
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
@@ -53,22 +46,25 @@ const CatalogPage = () => {
     }
   }, [page, search, categoryId, minPrice, maxPrice]);
 
-  // Перезапрашиваем товары при изменении зависимостей
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
-  // Загружаем категории один раз при монтировании
+  // Загружаем категории
   useEffect(() => {
-    apiClient.get('/categories').then(({ data }) => setCategories(data)).catch(() => { });
-  }, []);
+    apiClient.get('/categories')
+      .then(({ data }) => {
+        setCategories(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        setCategories([]);
+      });
+  }, []); // ← пустой массив зависимостей, чтобы выполнилось один раз
 
-  // Рендер
   return (
     <div style={{ padding: '0 20px' }}>
       <h1>Каталог товаров</h1>
 
-      {/* Фильтры: поиск, категория, цена от/до                              */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} md={6}>
           <Input.Search
@@ -84,7 +80,7 @@ const CatalogPage = () => {
             style={{ width: '100%' }}
             value={categoryId}
             onChange={(val: number | undefined) => { setCategoryId(val); setPage(1); }}
-            options={categories.map(c => ({ value: c.id, label: c.name }))}
+            options={(Array.isArray(categories) ? categories : []).map(c => ({ value: c.id, label: c.name }))}
           />
         </Col>
         <Col xs={12} sm={6} md={3}>
@@ -107,7 +103,6 @@ const CatalogPage = () => {
         </Col>
       </Row>
 
-      {/* Отображение: загрузка, пустота или список товаров*/}
       {loading ? (
         <Spin style={{ display: 'block', marginTop: 40 }} />
       ) : products.length === 0 ? (
@@ -121,10 +116,9 @@ const CatalogPage = () => {
                   <Card
                     hoverable
                     cover={
-                      // Если есть изображение — показываем его, иначе заглушку
                       product.imageUrl ? (
                         <img
-                          src={`http://localhost:3000${product.imageUrl}`}
+                          src={product.imageUrl}
                           alt={product.title}
                           style={{ height: 160, width: '100%', objectFit: 'cover' }}
                         />
@@ -147,15 +141,12 @@ const CatalogPage = () => {
                       title={product.title}
                       description={
                         <>
-                          {/* Цена */}
                           <Text strong style={{ fontSize: 16, color: '#fff' }}>
                             {product.price} ₽
                           </Text>
                           <br />
-                          {/* Категория */}
                           <Text type="secondary">{product.category.name}</Text>
                           <br />
-                          {/* Рейтинг */}
                           <Rate
                             value={Number(product.rating)}
                             disabled
@@ -174,7 +165,6 @@ const CatalogPage = () => {
             ))}
           </Row>
 
-          {/* Пагинация */}
           <div style={{ marginTop: 24, textAlign: 'center' }}>
             <Pagination
               current={page}

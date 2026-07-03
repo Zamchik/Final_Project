@@ -1,5 +1,5 @@
 // Компонент "Колокольчик" для отображения уведомлений
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Badge, Popover, Typography, Button } from 'antd';
 import { BellOutlined } from '@ant-design/icons';
 import apiClient from '../api/client';
@@ -7,7 +7,6 @@ import { useAuthStore } from '../stores/authStore';
 
 const { Text } = Typography;
 
-// Тип уведомления с сервера
 interface Notification {
   id: number;
   type: string;
@@ -17,44 +16,45 @@ interface Notification {
 }
 
 const NotificationBell = () => {
-  const user = useAuthStore((s) => s.user); // текущий пользователь
+  const user = useAuthStore((s) => s.user);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0); // количество непрочитанных
-  const [open, setOpen] = useState(false); // открыт ли поповер
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [open, setOpen] = useState(false);
 
-  // Запрос непрочитанных уведомлений
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!user) return;
     try {
       const { data } = await apiClient.get('/notifications');
-      setNotifications(data);
-      setUnreadCount(data.length);
-    } catch (err) {
-      // тихо игнорируем ошибки, чтобы не мешать пользователю
+      // Гарантируем, что работаем с массивом
+      const list = Array.isArray(data) ? data : [];
+      setNotifications(list);
+      setUnreadCount(list.length);
+    } catch {
+      // Игнорируем ошибки, чтобы не мешать интерфейсу
+      setNotifications([]);
+      setUnreadCount(0);
     }
-  };
+  }, [user]);
 
-  // Первый запрос при монтировании и далее опрос каждые 10 секунд
   useEffect(() => {
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 10000);
     return () => clearInterval(interval);
-  }, [user]);
+  }, [fetchNotifications]);
 
-  // Отметить все уведомления как прочитанные
   const handleMarkAllRead = async () => {
+    if (!Array.isArray(notifications) || notifications.length === 0) return;
     const ids = notifications.map((n) => n.id);
-    if (ids.length === 0) return;
     try {
       await apiClient.post('/notifications/read', { ids });
+      // Локально очищаем список
       setNotifications([]);
       setUnreadCount(0);
-    } catch (err) {
+    } catch {
       // тихо
     }
   };
 
-  // Содержимое поповера (список уведомлений)
   const content = (
     <div style={{ maxWidth: 300 }}>
       {notifications.length === 0 ? (
@@ -74,7 +74,6 @@ const NotificationBell = () => {
     </div>
   );
 
-  // Неавторизованным колокольчик не показываем
   if (!user) return null;
 
   return (

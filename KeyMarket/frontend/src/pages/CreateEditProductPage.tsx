@@ -44,6 +44,8 @@ const CreateEditProductPage = () => {
   const [uploading, setUploading] = useState(false);
 
   const categories = useCategories(!!user);
+  const safeCategories = Array.isArray(categories) ? categories : []; // защита
+
   const { productData, loading: productLoading } = useProduct(id, isEdit, !!user);
 
   // Защита маршрута
@@ -55,7 +57,7 @@ const CreateEditProductPage = () => {
 
   // Заполняем форму, когда загружены товар и категории
   useEffect(() => {
-    if (isEdit && productData && categories.length > 0) {
+    if (isEdit && productData && safeCategories.length > 0) {
       form.setFieldsValue({
         title: productData.title,
         description: productData.description,
@@ -67,7 +69,7 @@ const CreateEditProductPage = () => {
         setImageUrl(productData.imageUrl);
       }
     }
-  }, [isEdit, productData, categories, form]);
+  }, [isEdit, productData, safeCategories, form]);
 
   // Загрузка изображения
   const handleUpload = async (file: File) => {
@@ -79,8 +81,10 @@ const CreateEditProductPage = () => {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setImageUrl(data.imageUrl);
+      console.log('✅ imageUrl установлен:', data.imageUrl);
       message.success('Изображение загружено');
-    } catch {
+    } catch (err) {
+      console.error('❌ Ошибка загрузки изображения:', err);
       message.error('Ошибка загрузки изображения');
     } finally {
       setUploading(false);
@@ -154,7 +158,7 @@ const CreateEditProductPage = () => {
           >
             <Select
               placeholder="Выберите категорию"
-              options={categories.map((c) => ({
+              options={safeCategories.map((c) => ({
                 value: c.id,
                 label: c.name,
               }))}
@@ -253,7 +257,6 @@ const CreateEditProductPage = () => {
                 />
               </Form.Item>
 
-              {/* Текущие ключи товара */}
               {productData && productData.keys.length > 0 && (
                 <Form.Item label="Текущие ключи">
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
