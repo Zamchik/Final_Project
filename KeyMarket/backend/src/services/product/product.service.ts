@@ -47,7 +47,10 @@ export class ProductService {
     const product = await queries.findProductById(productId, sellerId);
     if (!product) throw new Error('Товар не найден или нет доступа');
 
+    // Массив для сбора операций, которые будут выполнены в одной транзакции
     const ops: unknown[] = [];
+
+    // Собираем объект с обновляемыми полями
     const updateData: Record<string, unknown> = {};
 
     if (data.title !== undefined) updateData.title = data.title;
@@ -57,23 +60,31 @@ export class ProductService {
     if (data.status !== undefined) updateData.status = data.status;
     if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
 
+    // Если есть что обновлять – добавляем операцию
     if (Object.keys(updateData).length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ops.push(queries.updateProductFields(productId, updateData as any));
     }
 
+    // Если переданы новые ключи – добавляем две операции (НЕ оборачиваем их в транзакцию!)
     if (data.newKeys?.length) {
       const uniqueNewKeys = validators.ensureNoDuplicates(data.newKeys);
       await validators.ensureGlobalUniqueness(uniqueNewKeys);
-      ops.push(queries.addProductKeys(productId, uniqueNewKeys));
-      ops.push(queries.incrementStock(productId, uniqueNewKeys.length));
+
+      // Просто кладём два промиса в ops – без вложенного $transaction
+      ops.push(
+        queries.addProductKeys(productId, uniqueNewKeys),
+        queries.incrementStock(productId, uniqueNewKeys.length)
+      );
     }
 
+    // Выполняем все накопленные операции как одну транзакцию
     if (ops.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      console.log('updateProduct ops count:', ops.length);
+      ops.forEach((op, i) => console.log(`  op[${i}] type:`, typeof op, op?.constructor?.name));
       await prisma.$transaction(ops as any);
     }
 
+    // Возвращаем обновлённый товар со всеми связями
     return queries.getProductWithDetails(productId);
   }
 

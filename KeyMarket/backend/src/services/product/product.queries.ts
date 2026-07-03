@@ -55,19 +55,22 @@ export const createProductWithKeys = async (
 };
 
 // Обновление полей товара.
-export const updateProductFields = async (productId: number, data: Prisma.ProductUpdateInput) => {
+// возвращает PrismaPromise, что необходимо для $transaction.
+export const updateProductFields = (productId: number, data: Prisma.ProductUpdateInput) => {
   return prisma.product.update({ where: { id: productId }, data });
 };
 
 // Добавление новых ключей (createMany).
-export const addProductKeys = async (productId: number, keys: string[]) => {
+// Убрали async – возвращает PrismaPromise.
+export const addProductKeys = (productId: number, keys: string[]) => {
   return prisma.productKey.createMany({
     data: keys.map((key) => ({ productId, keyValue: key })),
   });
 };
 
 // Увеличение стока товара.
-export const incrementStock = async (productId: number, amount: number) => {
+// Убрали async – возвращает PrismaPromise.
+export const incrementStock = (productId: number, amount: number) => {
   return prisma.product.update({
     where: { id: productId },
     data: { stock: { increment: amount } },

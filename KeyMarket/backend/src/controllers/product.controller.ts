@@ -43,6 +43,7 @@ export class ProductController {
       );
       return product;
     } catch (err: any) {
+       console.log('updateProduct error:', err.message);
       reply.status(400).send({ error: err.message });
     }
   };

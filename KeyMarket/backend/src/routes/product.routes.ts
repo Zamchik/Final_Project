@@ -103,6 +103,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
           price: { type: 'number' },
           categoryId: { type: 'number' },
           status: { type: 'string', enum: ['active', 'inactive'] },
+          imageUrl: { type: 'string', description: 'Ссылка на изображение товара' },
           newKeys: {
             type: 'array',
             items: { type: 'string' },

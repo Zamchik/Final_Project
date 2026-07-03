@@ -116,25 +116,57 @@ const CatalogPage = () => {
                   <Card
                     hoverable
                     cover={
-                      product.imageUrl ? (
-                        <img
-                          src={product.imageUrl}
-                          alt={product.title}
-                          style={{ height: 160, width: '100%', objectFit: 'cover' }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            height: 160,
-                            background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <KeyOutlined style={{ fontSize: 48, color: '#722ed1' }} />
-                        </div>
-                      )
+                      // Общий контейнер, внутри которого картинка и запасная заглушка
+                      <div style={{ position: 'relative', height: 160, overflow: 'hidden' }}>
+                        {product.imageUrl ? (
+                          <>
+                            <img
+                              src={product.imageUrl}
+                              alt={product.title}
+                              style={{
+                                height: 160,
+                                width: '100%',
+                                objectFit: 'cover',
+                                position: 'relative',
+                                zIndex: 1,
+                              }}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                            {/* Запасная заглушка, которая видна только после ошибки загрузки */}
+                            <div
+                              style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                zIndex: 0, // под картинкой
+                              }}
+                            >
+                              <KeyOutlined style={{ fontSize: 48, color: '#722ed1' }} />
+                            </div>
+                          </>
+                        ) : (
+                          // Если imageUrl изначально null – сразу заглушка
+                          <div
+                            style={{
+                              height: 160,
+                              background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <KeyOutlined style={{ fontSize: 48, color: '#722ed1' }} />
+                          </div>
+                        )}
+                      </div>
                     }
                   >
                     <Meta

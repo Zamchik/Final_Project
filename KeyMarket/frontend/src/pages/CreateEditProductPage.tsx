@@ -17,7 +17,7 @@ import {
 import { PlusOutlined } from '@ant-design/icons';
 import apiClient from '../api/client';
 import { useAuthStore } from '../stores/authStore';
-import { AxiosError } from 'axios';
+import { AxiosError } from 'axios'; // используется для проверки ошибок запроса
 
 import { FormValues } from '../types/product';
 import { validateKeys } from '../utils/validateKeys';
@@ -34,8 +34,11 @@ const CreateEditProductPage = () => {
   const location = useLocation();
   const isEdit = location.pathname.includes('/edit-product');
 
+  // Состояния и хуки
   const user = useAuthStore((s) => s.user);
   const authLoading = useAuthStore((s) => s.loading);
+  const fetched = useAuthStore((s) => s.fetched);
+  const fetchUser = useAuthStore((s) => s.fetchUser);
 
   const [form] = Form.useForm<FormValues>();
   const [loadingForm, setLoadingForm] = useState(false);
@@ -50,10 +53,13 @@ const CreateEditProductPage = () => {
 
   // Защита маршрута
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!fetched && !authLoading) {
+      fetchUser();
+    }
+    if (fetched && !user) {
       navigate('/login');
     }
-  }, [user, authLoading, navigate]);
+  }, [fetched, authLoading, user, navigate, fetchUser]);
 
   // Сброс формы при переходе в режим создания
   useEffect(() => {
@@ -64,7 +70,7 @@ const CreateEditProductPage = () => {
     }
   }, [isEdit, form]);
 
-  // Заполняем форму при редактировании, когда загружены товар и категории
+  // Заполнение формы при редактировании
   useEffect(() => {
     if (isEdit && productData && safeCategories.length > 0) {
       form.setFieldsValue({
@@ -80,8 +86,15 @@ const CreateEditProductPage = () => {
     }
   }, [isEdit, productData, safeCategories, form]);
 
-  // Загрузка изображения
+  // Загрузка изображения с проверкой размера
   const handleUpload = async (file: File) => {
+    // Проверяем размер файла на клиенте (максимум 5 МБ)
+    const MAX_FILE_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      message.error('Файл слишком большой. Максимальный размер: 5 МБ.');
+      return false; // отменяем автоматическую загрузку
+    }
+
     const formData = new FormData();
     formData.append('file', file);
     setUploading(true);
@@ -91,12 +104,17 @@ const CreateEditProductPage = () => {
       });
       setImageUrl(data.imageUrl);
       message.success('Изображение загружено');
-    } catch {
-      message.error('Ошибка загрузки изображения');
+    } catch (err) {
+      // Если сервер вернул 413 (Payload Too Large) – показываем точное сообщение
+      if (err instanceof AxiosError && err.response?.status === 413) {
+        message.error('Файл слишком большой. Максимальный размер: 5 МБ.');
+      } else {
+        message.error('Ошибка загрузки изображения');
+      }
     } finally {
       setUploading(false);
     }
-    return false;
+    return false; // предотвращаем автоматическую отправку формы
   };
 
   // Отправка формы
@@ -108,7 +126,7 @@ const CreateEditProductPage = () => {
         description: values.description,
         price: values.price,
         categoryId: values.categoryId,
-        imageUrl,
+        imageUrl, // текущее состояние imageUrl
       };
 
       if (isEdit && id) {
@@ -138,7 +156,8 @@ const CreateEditProductPage = () => {
     }
   };
 
-  if (authLoading) return null;
+  // Рендер
+  if (authLoading || !fetched) return null;
   if (!user) return null;
 
   return (
@@ -146,6 +165,7 @@ const CreateEditProductPage = () => {
       <h1>{isEdit ? 'Редактирование товара' : 'Добавить товар'}</h1>
       <Card>
         <Form form={form} layout="vertical" onFinish={onFinish}>
+          {/* Название */}
           <Form.Item
             name="title"
             label="Название"
@@ -154,10 +174,12 @@ const CreateEditProductPage = () => {
             <Input />
           </Form.Item>
 
+          {/* Описание */}
           <Form.Item name="description" label="Описание">
             <TextArea rows={4} />
           </Form.Item>
 
+          {/* Категория */}
           <Form.Item
             name="categoryId"
             label="Категория"
@@ -165,13 +187,11 @@ const CreateEditProductPage = () => {
           >
             <Select
               placeholder="Выберите категорию"
-              options={safeCategories.map((c) => ({
-                value: c.id,
-                label: c.name,
-              }))}
+              options={safeCategories.map((c) => ({ value: c.id, label: c.name }))}
             />
           </Form.Item>
 
+          {/* Цена */}
           <Form.Item
             name="price"
             label="Цена"
@@ -180,6 +200,7 @@ const CreateEditProductPage = () => {
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
 
+          {/* Статус (только при редактировании) */}
           {isEdit && (
             <Form.Item name="status" label="Статус">
               <Select
@@ -191,6 +212,7 @@ const CreateEditProductPage = () => {
             </Form.Item>
           )}
 
+          {/* Изображение товара */}
           <Form.Item label="Изображение товара">
             <Upload
               listType="picture-card"
@@ -209,6 +231,7 @@ const CreateEditProductPage = () => {
             </Upload>
           </Form.Item>
 
+          {/* Поле для ключей (только при создании) */}
           {!isEdit && (
             <Form.Item
               name="keys"
@@ -233,6 +256,7 @@ const CreateEditProductPage = () => {
             </Form.Item>
           )}
 
+          {/* Новые ключи и текущие ключи (только при редактировании) */}
           {isEdit && (
             <>
               <Form.Item
@@ -264,6 +288,7 @@ const CreateEditProductPage = () => {
                 />
               </Form.Item>
 
+              {/* Список текущих ключей товара */}
               {productData && productData.keys.length > 0 && (
                 <Form.Item label="Текущие ключи">
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -282,8 +307,10 @@ const CreateEditProductPage = () => {
             </>
           )}
 
+          {/* Предварительный просмотр ключей (валидация) */}
           <KeyPreviewList keys={keysPreview} />
 
+          {/* Кнопки */}
           <Form.Item>
             <Space>
               <Button type="primary" htmlType="submit" loading={loadingForm || productLoading}>

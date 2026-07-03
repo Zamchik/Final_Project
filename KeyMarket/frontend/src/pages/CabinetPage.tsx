@@ -12,46 +12,49 @@ import {
   UserOutlined, WalletOutlined, DollarOutlined, LockOutlined, LogoutOutlined,
 } from '@ant-design/icons';
 import apiClient from '../api/client';
-import { AxiosError } from 'axios';                     // для типизации ошибок axios
-import OrdersList from '../components/OrdersList';     // компонент списка заказов
+import { AxiosError } from 'axios';
+import OrdersList from '../components/OrdersList';
 
 const { Text } = Typography;
 
 const CabinetPage = () => {
-  const { user, loading, fetchUser, logout } = useAuthStore();
+  // забираем fetched для точной проверки сессии
+  const { user, loading, fetched, fetchUser, logout } = useAuthStore();
   const navigate = useNavigate();
 
-  // Состояния для модального окна пополнения баланса
-  const [isModalOpen, setIsModalOpen] = useState(false);             // флаг видимости
-  const [amount, setAmount] = useState<number | null>(null);         // сумма пополнения
-  const [submitting, setSubmitting] = useState(false);               // индикатор отправки
+  // Состояния для модальных окон (без изменений)
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [amount, setAmount] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Состояния для модального окна вывода средств
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState<number | null>(null);
   const [withdrawSubmitting, setWithdrawSubmitting] = useState(false);
 
-  // Состояния для модального окна смены пароля
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
 
-  // Защита маршрута и загрузка данных пользователя
+  // Защита маршрута и загрузка баланса
   useEffect(() => {
-    // Если пользователь не авторизован – редиректим на страницу входа
-    if (!loading && !user) {
+    // Если проверка сессии ещё не запускалась — запускаем (на случай прямого захода)
+    if (!fetched && !loading) {
+      fetchUser();
+    }
+    // Когда проверка завершена (fetched === true) и пользователь отсутствует — редирект на вход
+    if (fetched && !user) {
       navigate('/login');
       return;
     }
-    // Если пользователь уже есть, но баланс ещё не загружен – получаем актуальные данные
-    if (!loading && user && user.balance === undefined) {
+    // Если пользователь уже есть, но баланс ещё не загружен — запрашиваем актуальные данные
+    if (user && user.balance === undefined) {
       fetchUser(true);
     }
-  }, [loading, user, navigate, fetchUser]);
+  }, [fetched, loading, user, navigate, fetchUser]);
 
-  // обновляем баланс при возвращении на вкладку (после оплаты в другом окне)
+  // Обновление баланса при возвращении на вкладку (после оплаты)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && user) {
@@ -64,9 +67,7 @@ const CabinetPage = () => {
     };
   }, [user, fetchUser]);
 
-  // ОБРАБОТЧИКИ ДЕЙСТВИЙ ПОЛЬЗОВАТЕЛЯ
-
-  // Пополнение баланса (через Mock-платёж)
+  // Обработчики действий (без изменений)
   const handleReplenish = async () => {
     if (!amount || amount <= 0) {
       message.warning('Введите сумму пополнения');
@@ -75,7 +76,6 @@ const CabinetPage = () => {
     setSubmitting(true);
     try {
       const { data } = await apiClient.post('/payments/replenish', { amount });
-      // Открываем страницу имитации оплаты в новой вкладке
       window.open(data.paymentUrl, '_blank');
       message.success('Перейдите на открывшуюся страницу для оплаты');
       setIsModalOpen(false);
@@ -88,7 +88,6 @@ const CabinetPage = () => {
     }
   };
 
-  // Вывод средств (только для продавца)
   const handleWithdraw = async () => {
     if (!withdrawAmount || withdrawAmount <= 0) {
       message.warning('Введите сумму вывода');
@@ -100,7 +99,6 @@ const CabinetPage = () => {
       message.success(`Заявка на вывод ${withdrawAmount} ₽ создана. Баланс: ${data.balance} ₽`);
       setIsWithdrawModalOpen(false);
       setWithdrawAmount(null);
-      // Обновляем данные пользователя, чтобы баланс отобразился сразу
       fetchUser(true);
     } catch (err) {
       const error = err as AxiosError<{ error: string }>;
@@ -110,9 +108,7 @@ const CabinetPage = () => {
     }
   };
 
-  // Смена пароля
   const handleChangePassword = async () => {
-    // Базовая валидация
     if (!oldPassword || !newPassword || !confirmPassword) {
       message.warning('Заполните все поля');
       return;
@@ -141,14 +137,14 @@ const CabinetPage = () => {
     }
   };
 
-  // РЕНДЕРИНГ
+  // Рендеринг
 
-  // Пока проверяется сессия – показываем спиннер
-  if (loading) {
+  // Пока идёт проверка сессии (loading или ещё не fetched) — показываем спиннер
+  if (loading || !fetched) {
     return <Spin style={{ display: 'block', marginTop: 40 }} />;
   }
 
-  // Если пользователь не авторизован (уже должны были редиректнуть) – ничего не рендерим
+  // Если проверка завершена и пользователя нет — размонтируемся (редирект уже должен произойти)
   if (!user) return null;
 
   // Вкладки личного кабинета
@@ -158,7 +154,6 @@ const CabinetPage = () => {
       label: 'Профиль',
       children: (
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
-          {/* Аватар и основная информация о пользователе*/}
           <Row gutter={[24, 24]} align="middle">
             <Col>
               <Avatar size={80} icon={<UserOutlined />} style={{ backgroundColor: '#722ed1' }} />
@@ -178,7 +173,6 @@ const CabinetPage = () => {
             </Col>
           </Row>
 
-                    {/* Карточки действий */}
           <Row gutter={[16, 16]} style={{ marginTop: 24 }} align="stretch">
             <Col xs={24} sm={12} md={6}>
               <Card
@@ -237,7 +231,6 @@ const CabinetPage = () => {
     },
   ];
 
-  // Вкладка "Продажи" – только для продавцов
   if (user.role === 'seller') {
     tabItems.push({
       key: 'sales',
@@ -251,9 +244,7 @@ const CabinetPage = () => {
       <h1>Личный кабинет</h1>
       <Tabs defaultActiveKey="profile" items={tabItems} />
 
-      {/* Модальные окна*/}
-
-      {/* Пополнение баланса */}
+      {/* Модальные окна */}
       <Modal title="Пополнение баланса" open={isModalOpen} onOk={handleReplenish}
         onCancel={() => { setIsModalOpen(false); setAmount(null); }}
         confirmLoading={submitting} okText="Пополнить" cancelText="Отмена">
@@ -267,7 +258,6 @@ const CabinetPage = () => {
         />
       </Modal>
 
-      {/* Вывод средств */}
       <Modal title="Вывод средств" open={isWithdrawModalOpen} onOk={handleWithdraw}
         onCancel={() => { setIsWithdrawModalOpen(false); setWithdrawAmount(null); }}
         confirmLoading={withdrawSubmitting} okText="Вывести" cancelText="Отмена">
@@ -281,7 +271,6 @@ const CabinetPage = () => {
         />
       </Modal>
 
-      {/* Смена пароля */}
       <Modal title="Смена пароля" open={isPasswordModalOpen} onOk={handleChangePassword}
         onCancel={() => { setIsPasswordModalOpen(false); setOldPassword(''); setNewPassword(''); setConfirmPassword(''); }}
         confirmLoading={passwordSubmitting} okText="Сменить" cancelText="Отмена">

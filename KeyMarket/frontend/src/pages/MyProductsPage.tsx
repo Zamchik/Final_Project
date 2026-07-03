@@ -14,8 +14,11 @@ interface ProductItem {
 }
 
 const MyProductsPage = () => {
+  // теперь забираем fetched для точной проверки сессии
   const user = useAuthStore((s) => s.user);
   const loading = useAuthStore((s) => s.loading);
+  const fetched = useAuthStore((s) => s.fetched);
+  const fetchUser = useAuthStore((s) => s.fetchUser);
   const navigate = useNavigate();
 
   const [products, setProducts] = useState<ProductItem[]>([]);
@@ -24,12 +27,17 @@ const MyProductsPage = () => {
   const [search, setSearch] = useState('');
   const [loadingData, setLoadingData] = useState(false);
 
-  // Защита: если нет пользователя после проверки сессии, редиректим на логин
+  // Защита маршрута с использованием fetched
   useEffect(() => {
-    if (!loading && !user) {
+    // Если проверка сессии ещё не запускалась – запускаем
+    if (!fetched && !loading) {
+      fetchUser();
+    }
+    // Когда проверка завершена и пользователь отсутствует – редирект на вход
+    if (fetched && !user) {
       navigate('/login');
     }
-  }, [user, loading, navigate]);
+  }, [fetched, loading, user, navigate, fetchUser]);
 
   const fetchProducts = useCallback(async () => {
     if (!user) return;
@@ -48,7 +56,6 @@ const MyProductsPage = () => {
   }, [page, search, user]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProducts();
   }, [fetchProducts]);
 
@@ -94,10 +101,10 @@ const MyProductsPage = () => {
     },
   ];
 
-  // Пока проверяется сессия
-  if (loading) return null;
+  // Пока идёт проверка сессии (loading или ещё не fetched) – показываем пустоту/спиннер
+  if (loading || !fetched) return null;
 
-  // Если пользователя нет (уже редиректим)
+  // Если проверка завершена и пользователя нет – размонтируемся (редирект уже произошёл)
   if (!user) return null;
 
   return (

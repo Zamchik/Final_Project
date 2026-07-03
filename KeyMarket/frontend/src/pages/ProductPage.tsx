@@ -174,11 +174,11 @@ const ProductPage = () => {
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto' }}>
-            {/* Изображение товара или заглушка */}
+      {/* Блок изображения с защитной заглушкой */}
       {product.imageUrl ? (
-        <div style={{ marginBottom: 24, textAlign: 'center' }}>
+        <div style={{ position: 'relative', marginBottom: 24, textAlign: 'center' }}>
           <img
-            src={product.imageUrl || '/placeholder.png'}
+            src={product.imageUrl}
             alt={product.title}
             style={{
               maxWidth: '100%',
@@ -186,9 +186,31 @@ const ProductPage = () => {
               objectFit: 'contain',
               borderRadius: 12,
             }}
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
           />
+          {/* Заглушка, видимая при ошибке загрузки */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 12,
+              zIndex: 0,
+            }}
+          >
+            <ShoppingCartOutlined style={{ fontSize: 72, color: '#722ed1' }} />
+          </div>
         </div>
       ) : (
+        // Если imageUrl вообще не задан — обычная заглушка
         <div
           style={{
             height: 200,
