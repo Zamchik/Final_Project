@@ -7,17 +7,19 @@ import {
   SafetyCertificateOutlined,
   PercentageOutlined,
   RocketOutlined,
+  KeyOutlined,
 } from '@ant-design/icons';
 import apiClient from '../api/client';
 
 const { Title, Paragraph, Text } = Typography;
 
-// Тип для популярного товара (только нужные поля)
+// Тип для популярного товара
 interface PopularProduct {
   id: number;
   title: string;
   price: string;
   rating: string;
+  imageUrl: string | null;
   category: { name: string };
 }
 
@@ -44,7 +46,6 @@ const HomePage = () => {
 
   return (
     <div>
-
       {/* Hero-секция */}
       <div style={{ textAlign: 'center', padding: '80px 20px 60px' }}>
         <Title level={1} style={{ fontSize: 48, marginBottom: 16 }}>
@@ -61,7 +62,7 @@ const HomePage = () => {
         </Link>
       </div>
 
-      {/* Блок преимуществ*/}
+      {/* Блок преимуществ */}
       <Row gutter={[24, 24]} justify="center" style={{ maxWidth: 900, margin: '0 auto', padding: '0 20px 60px' }}>
         {[
           {
@@ -86,10 +87,7 @@ const HomePage = () => {
           },
         ].map((item) => (
           <Col xs={24} sm={12} key={item.title}>
-            <Card
-              hoverable
-              style={{ textAlign: 'center', height: '100%' }}
-            >
+            <Card hoverable style={{ textAlign: 'center', height: '100%' }}>
               <div style={{ marginBottom: 16 }}>{item.icon}</div>
               <Title level={4}>{item.title}</Title>
               <Paragraph type="secondary">{item.text}</Paragraph>
@@ -98,7 +96,7 @@ const HomePage = () => {
         ))}
       </Row>
 
-      {/* Популярные товары                                                */}
+      {/* Популярные товары */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px 60px' }}>
         <Title level={2} style={{ textAlign: 'center', marginBottom: 40 }}>
           Популярные товары
@@ -115,18 +113,25 @@ const HomePage = () => {
                   <Card
                     hoverable
                     cover={
-                      <div
-                        style={{
-                          height: 140,
-                          background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 48,
-                        }}
-                      >
-                        🛒
-                      </div>
+                      product.imageUrl ? (
+                        <img
+                          src={product.imageUrl}
+                          alt={product.title}
+                          style={{ height: 140, width: '100%', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            height: 140,
+                            background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <KeyOutlined style={{ fontSize: 48, color: '#722ed1' }} />
+                        </div>
+                      )
                     }
                   >
                     <Card.Meta

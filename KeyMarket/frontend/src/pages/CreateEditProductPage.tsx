@@ -44,7 +44,7 @@ const CreateEditProductPage = () => {
   const [uploading, setUploading] = useState(false);
 
   const categories = useCategories(!!user);
-  const safeCategories = Array.isArray(categories) ? categories : []; // защита
+  const safeCategories = Array.isArray(categories) ? categories : [];
 
   const { productData, loading: productLoading } = useProduct(id, isEdit, !!user);
 
@@ -55,7 +55,16 @@ const CreateEditProductPage = () => {
     }
   }, [user, authLoading, navigate]);
 
-  // Заполняем форму, когда загружены товар и категории
+  // Сброс формы при переходе в режим создания
+  useEffect(() => {
+    if (!isEdit) {
+      form.resetFields();
+      setImageUrl(null);
+      setKeysPreview([]);
+    }
+  }, [isEdit, form]);
+
+  // Заполняем форму при редактировании, когда загружены товар и категории
   useEffect(() => {
     if (isEdit && productData && safeCategories.length > 0) {
       form.setFieldsValue({
@@ -81,15 +90,13 @@ const CreateEditProductPage = () => {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setImageUrl(data.imageUrl);
-      console.log('✅ imageUrl установлен:', data.imageUrl);
       message.success('Изображение загружено');
-    } catch (err) {
-      console.error('❌ Ошибка загрузки изображения:', err);
+    } catch {
       message.error('Ошибка загрузки изображения');
     } finally {
       setUploading(false);
     }
-    return false; // предотвращаем автоматическую отправку формы
+    return false;
   };
 
   // Отправка формы

@@ -59,7 +59,7 @@ const CatalogPage = () => {
       .catch(() => {
         setCategories([]);
       });
-  }, []); // ← пустой массив зависимостей, чтобы выполнилось один раз
+  }, []);
 
   return (
     <div style={{ padding: '0 20px' }}>

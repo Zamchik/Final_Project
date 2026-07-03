@@ -1,11 +1,8 @@
 // Запросы к БД для товаров и ключей
-
 import { prisma } from '../../prisma';
 import { Prisma } from '@prisma/client';
 
-/**
- * Поиск товаров продавца с пагинацией и фильтрацией.
- */
+// Поиск товаров продавца с пагинацией и фильтрацией.
 export const findMyProducts = async (
   sellerId: number,
   page: number,
@@ -30,9 +27,7 @@ export const findMyProducts = async (
   return { products, total, page, limit };
 };
 
-/**
- * Создание товара с ключами.
- */
+// Создание товара с ключами и, опционально, изображением.
 export const createProductWithKeys = async (
   sellerId: number,
   data: {
@@ -41,6 +36,7 @@ export const createProductWithKeys = async (
     price: number;
     categoryId: number;
     keys: string[];
+    imageUrl?: string | null;
   }
 ) => {
   return prisma.product.create({
@@ -50,6 +46,7 @@ export const createProductWithKeys = async (
       description: data.description || '',
       price: data.price,
       categoryId: data.categoryId,
+      imageUrl: data.imageUrl || null,
       stock: data.keys.length,
       keys: { create: data.keys.map((key) => ({ keyValue: key })) },
     },
@@ -57,25 +54,19 @@ export const createProductWithKeys = async (
   });
 };
 
-/**
- * Обновление полей товара.
- */
+// Обновление полей товара.
 export const updateProductFields = async (productId: number, data: Prisma.ProductUpdateInput) => {
   return prisma.product.update({ where: { id: productId }, data });
 };
 
-/**
- * Добавление новых ключей (createMany).
- */
+// Добавление новых ключей (createMany).
 export const addProductKeys = async (productId: number, keys: string[]) => {
   return prisma.productKey.createMany({
     data: keys.map((key) => ({ productId, keyValue: key })),
   });
 };
 
-/**
- * Увеличение стока товара.
- */
+// Увеличение стока товара.
 export const incrementStock = async (productId: number, amount: number) => {
   return prisma.product.update({
     where: { id: productId },
@@ -83,16 +74,12 @@ export const incrementStock = async (productId: number, amount: number) => {
   });
 };
 
-/**
- * Поиск товара по ID с проверкой владельца.
- */
+// Поиск товара по ID с проверкой владельца.
 export const findProductById = async (productId: number, sellerId: number) => {
   return prisma.product.findFirst({ where: { id: productId, sellerId } });
 };
 
-/**
- * Получить товар с категорией и ключами.
- */
+// Получить товар с категорией и ключами.
 export const getProductWithDetails = async (productId: number) => {
   return prisma.product.findUnique({
     where: { id: productId },
@@ -100,9 +87,7 @@ export const getProductWithDetails = async (productId: number) => {
   });
 };
 
-/**
- * Удаление товара и его ключей (в транзакции).
- */
+// Удаление товара и его ключей (в транзакции).
 export const deleteProductWithKeys = async (productId: number) => {
   return prisma.$transaction([
     prisma.productKey.deleteMany({ where: { productId } }),
@@ -110,9 +95,7 @@ export const deleteProductWithKeys = async (productId: number) => {
   ]);
 };
 
-/**
- * Поиск существующих ключей по значениям.
- */
+// Поиск существующих ключей по значениям.
 export const findExistingKeys = async (keys: string[]) => {
   return prisma.productKey.findMany({
     where: { keyValue: { in: keys } },
@@ -120,9 +103,8 @@ export const findExistingKeys = async (keys: string[]) => {
   });
 };
 
-/**
- * Публичный список товаров с фильтрацией и пагинацией.
- */
+// Публичный список товаров с фильтрацией и пагинацией.
+// Теперь включает imageUrl.
 export const findPublicProducts = async (options: {
   page: number;
   limit: number;
@@ -158,6 +140,7 @@ export const findPublicProducts = async (options: {
         title: true,
         price: true,
         rating: true,
+        imageUrl: true,
         category: { select: { id: true, name: true } },
         createdAt: true,
       },

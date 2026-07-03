@@ -14,7 +14,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
     schema: {
       tags: ['products'],
       summary: 'Получить список своих товаров (продавец)',
-      security: [{ cookieAuth: [] }],                    // требует авторизации
+      security: [{ cookieAuth: [] }],
       querystring: {
         type: 'object',
         properties: {
@@ -184,6 +184,8 @@ export default async function productRoutes(fastify: FastifyInstance) {
             price: { type: 'string' },
             stock: { type: 'number' },
             status: { type: 'string' },
+            imageUrl: { type: 'string' },
+            categoryId: { type: 'number' },
             category: {
               type: 'object',
               properties: {

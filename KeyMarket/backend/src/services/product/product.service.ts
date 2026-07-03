@@ -1,34 +1,36 @@
-// ============================================================================
 // Сервис управления товарами (фасад)
-// ============================================================================
-
 import { prisma } from '../../prisma';
 import * as queries from './product.queries';
 import * as validators from './product.validators';
 
 export class ProductService {
-  /**
-   * Получить список товаров продавца с пагинацией и поиском.
-   */
+  // Получить список товаров продавца с пагинацией и поиском.
   async getMyProducts(sellerId: number, page: number, limit: number, search?: string, categoryId?: number) {
     return queries.findMyProducts(sellerId, page, limit, search, categoryId);
   }
 
-  /**
-   * Создать товар с ключами.
-   */
+  // Создать товар с ключами и, опционально, изображением.
   async createProduct(
     sellerId: number,
-    data: { title: string; description?: string; price: number; categoryId: number; keys: string[] }
+    data: {
+      title: string;
+      description?: string;
+      price: number;
+      categoryId: number;
+      keys: string[];
+      imageUrl?: string | null;
+    }
   ) {
     const uniqueKeys = validators.ensureNoDuplicates(data.keys);
     await validators.ensureGlobalUniqueness(uniqueKeys);
-    return queries.createProductWithKeys(sellerId, { ...data, keys: uniqueKeys });
+    return queries.createProductWithKeys(sellerId, {
+      ...data,
+      keys: uniqueKeys,
+      imageUrl: data.imageUrl || null,
+    });
   }
 
-  /**
-   * Обновить товар и/или добавить новые ключи.
-   */
+  // Обновить товар и/или добавить новые ключи.
   async updateProduct(
     productId: number,
     sellerId: number,
@@ -38,13 +40,13 @@ export class ProductService {
       price?: number;
       categoryId?: number;
       status?: string;
+      imageUrl?: string | null;
       newKeys?: string[];
     }
   ) {
     const product = await queries.findProductById(productId, sellerId);
     if (!product) throw new Error('Товар не найден или нет доступа');
 
-    // Используем более строгие типы вместо any
     const ops: unknown[] = [];
     const updateData: Record<string, unknown> = {};
 
@@ -53,6 +55,7 @@ export class ProductService {
     if (data.price !== undefined) updateData.price = data.price;
     if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
     if (data.status !== undefined) updateData.status = data.status;
+    if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
 
     if (Object.keys(updateData).length > 0) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -74,9 +77,7 @@ export class ProductService {
     return queries.getProductWithDetails(productId);
   }
 
-  /**
-   * Удалить товар и все его ключи.
-   */
+  // Удалить товар и все его ключи.
   async deleteProduct(productId: number, sellerId: number) {
     const product = await queries.findProductById(productId, sellerId);
     if (!product) throw new Error('Товар не найден или нет доступа');
@@ -84,9 +85,7 @@ export class ProductService {
     return { success: true };
   }
 
-  /**
- * Получить публичный список товаров (каталог).
- */
+  // Получить публичный список товаров (каталог).
   async getPublicList(options: {
     page: number;
     limit: number;

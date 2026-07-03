@@ -21,7 +21,7 @@ interface ProductParams {
 
 export default async function publicRoutes(fastify: FastifyInstance) {
   const productService = new ProductService();
-  const reviewService = new ReviewService();            // для отзывов и рейтинга
+  const reviewService = new ReviewService();
 
   // GET /products — публичный каталог с фильтрами и пагинацией
   fastify.get('/', {
@@ -53,6 +53,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
                   title: { type: 'string' },
                   price: { type: 'string' },
                   rating: { type: 'string' },
+                  imageUrl: { type: 'string' },
                   category: {
                     type: 'object',
                     properties: {
