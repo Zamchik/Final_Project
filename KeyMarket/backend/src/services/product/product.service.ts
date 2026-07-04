@@ -3,6 +3,7 @@ import { prisma } from '../../prisma';
 import * as queries from './product.queries';
 import * as validators from './product.validators';
 import { ProductStatus } from '@prisma/client';
+import { NotFoundError } from '../../common/errors';
 
 export class ProductService {
   async getMyProducts(sellerId: number, page: number, limit: number, search?: string, categoryId?: number) {
@@ -43,7 +44,7 @@ export class ProductService {
     }
   ) {
     const product = await queries.findProductById(productId, sellerId);
-    if (!product) throw new Error('Товар не найден или нет доступа');
+    if (!product) throw new NotFoundError('Товар не найден или нет доступа');
 
     const ops: unknown[] = [];
     const updateData: Record<string, unknown> = {};
@@ -77,7 +78,7 @@ export class ProductService {
 
   async deleteProduct(productId: number, sellerId: number) {
     const product = await queries.findProductById(productId, sellerId);
-    if (!product) throw new Error('Товар не найден или нет доступа');
+    if (!product) throw new NotFoundError('Товар не найден или нет доступа');
     await queries.deleteProductWithKeys(productId);
     return { success: true };
   }

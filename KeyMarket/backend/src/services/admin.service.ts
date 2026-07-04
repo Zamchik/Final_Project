@@ -1,5 +1,6 @@
 // Сервис администратора
 import { PrismaClient, UserRole } from '@prisma/client';
+import { NotFoundError, BadRequestError } from '../common/errors';
 
 export class AdminService {
   constructor(private prisma: PrismaClient) {}
@@ -31,7 +32,7 @@ export class AdminService {
 
   async banUser(userId: number) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new Error('Пользователь не найден');
+    if (!user) throw new NotFoundError('Пользователь не найден');
     await this.prisma.user.update({
       where: { id: userId },
       data: { bannedAt: new Date() },
@@ -41,7 +42,7 @@ export class AdminService {
 
   async unbanUser(userId: number) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new Error('Пользователь не найден');
+    if (!user) throw new NotFoundError('Пользователь не найден');
     await this.prisma.user.update({
       where: { id: userId },
       data: { bannedAt: null },
@@ -51,9 +52,9 @@ export class AdminService {
 
   async changeRole(userId: number, role: UserRole) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new Error('Пользователь не найден');
+    if (!user) throw new NotFoundError('Пользователь не найден');
     if (!Object.values(UserRole).includes(role)) {
-      throw new Error('Недопустимая роль');
+      throw new BadRequestError('Недопустимая роль');
     }
     await this.prisma.user.update({
       where: { id: userId },

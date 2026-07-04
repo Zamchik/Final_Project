@@ -29,6 +29,9 @@ import { createTestTransport } from './config/mail';
 import { EmailService } from './services/email.service';
 import { NotificationService } from './services/notification.service';
 
+// Импорт кастомных ошибок для глобального обработчика
+import { AppError } from './common/errors';
+
 const app = Fastify({ logger: true });
 
 // Расширение типов для сессии
@@ -131,11 +134,37 @@ async function setup() {
   // Health check
   app.get('/health', async () => ({ status: 'ok' }));
 
+  // Глобальный обработчик ошибок (после всех маршрутов)
+  app.setErrorHandler(async (error: Error, request, reply) => {
+    app.log.error(error);
+
+    // Если ошибка – наша кастомная, используем её статус
+    if (error instanceof AppError) {
+      return reply.status(error.statusCode).send({
+        error: error.message,
+      });
+    }
+
+    // Ошибки валидации Fastify
+    const fastifyError = error as any;
+    if (fastifyError.validation) {
+      return reply.status(400).send({
+        error: 'Validation error',
+        details: fastifyError.validation,
+      });
+    }
+
+    // Неизвестные ошибки – 500
+    return reply.status(500).send({
+      error: 'Internal server error',
+    });
+  });
+
   // Запуск сервера
   try {
     await app.listen({ port: 3000, host: '0.0.0.0' });
-    console.log('Server running on http://localhost:3000');
-    console.log('Swagger docs: http://localhost:3000/docs');
+    app.log.info('Server running on http://localhost:3000');
+    app.log.info('Swagger docs: http://localhost:3000/docs');
   } catch (err) {
     app.log.error(err);
     process.exit(1);

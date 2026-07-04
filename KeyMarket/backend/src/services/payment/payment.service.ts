@@ -4,6 +4,8 @@ import { PaymentGateway } from './payment-gateway.interface';
 import { OrderService } from '../order.service';
 import { EmailService } from '../email.service';
 import { NotificationService } from '../notification.service';
+import { NotFoundError, ConflictError } from '../../common/errors';
+
 
 export class PaymentService {
   constructor(
@@ -41,10 +43,10 @@ export class PaymentService {
       where: { id: orderId },
     });
     if (!order || order.buyerId !== userId) {
-      throw new Error('Заказ не найден или не принадлежит вам');
+      throw new NotFoundError('Заказ не найден или не принадлежит вам');
     }
     if (order.status !== 'CREATED') {
-      throw new Error('Заказ уже оплачен или отменён');
+      throw new ConflictError('Заказ уже оплачен или отменён');
     }
 
     const amount = order.totalPrice;
@@ -83,7 +85,7 @@ export class PaymentService {
     });
 
     if (!payment || payment.status !== PaymentStatus.PENDING) {
-      throw new Error('Платёж не найден или уже обработан');
+      throw new NotFoundError('Платёж не найден или уже обработан');
     }
 
     await this.prisma.payment.update({

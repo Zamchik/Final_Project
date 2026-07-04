@@ -1,5 +1,6 @@
 // Сервис управления заказами
 import { PrismaClient, OrderStatus } from '@prisma/client';
+import { NotFoundError, ConflictError } from '../common/errors';
 
 export class OrderService {
   constructor(private prisma: PrismaClient) { }
@@ -12,12 +13,12 @@ export class OrderService {
     });
 
     if (!product || product.status !== 'ACTIVE') {
-      throw new Error('Товар недоступен');
+      throw new ConflictError('Товар недоступен')
     }
 
     const availableKey = product.keys.find(k => !k.soldAt);
     if (!availableKey) {
-      throw new Error('Нет доступных ключей');
+      throw new ConflictError('Нет доступных ключей');
     }
 
     const order = await this.prisma.order.create({
@@ -53,10 +54,10 @@ export class OrderService {
     });
 
     if (!order || order.buyerId !== buyerId) {
-      throw new Error('Заказ не найден или не принадлежит вам');
+      throw new NotFoundError('Заказ не найден или не принадлежит вам');
     }
     if (order.status !== OrderStatus.CREATED) {
-      throw new Error('Заказ уже оплачен или отменён');
+      throw new ConflictError('Заказ уже оплачен или отменён');
     }
 
     const updatedOrder = await this.prisma.order.update({
@@ -112,10 +113,10 @@ export class OrderService {
     });
 
     if (!order || order.buyerId !== userId) {
-      throw new Error('Заказ не найден или не принадлежит вам');
+      throw new NotFoundError('Заказ не найден или не принадлежит вам');
     }
     if (order.status !== OrderStatus.CREATED) {
-      throw new Error('Нельзя отменить оплаченный или уже отменённый заказ');
+      throw new NotFoundError('Нельзя отменить оплаченный или уже отменённый заказ');
     }
 
     // Возвращаем ключ в доступные
