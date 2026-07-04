@@ -1,27 +1,12 @@
 // Контроллер заказов
-// Обрабатывает создание, оплату и отмену заказов
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { OrderService } from '../services/order.service';
-import { prisma } from '../prisma';
-
-// Тип для детального ответа о заказе
-interface OrderDetails {
-  id: number;
-  totalPrice: string;
-  status: string;
-  createdAt: Date;
-  items: {
-    id: number;
-    price: string;
-    product: { id: number; title: string; price: string };
-    productKey?: { id: number; keyValue: string };
-  }[];
-}
+import { OrderStatus } from '@prisma/client';
 
 export class OrderController {
-  constructor(private orderService: OrderService) { }
+  constructor(private orderService: OrderService) {}
 
-  // POST /orders — создать заказ (статус 'created')
+  // POST /orders — создать заказ
   create = async (req: FastifyRequest<{ Body: { productId: number } }>, reply: FastifyReply) => {
     const userId = req.session.get('user')?.id;
     if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
@@ -30,9 +15,8 @@ export class OrderController {
       const order = await this.orderService.createOrder(userId, req.body.productId);
       reply.status(201).send(order);
     } catch (err) {
-      const message = (err as Error).message;
-      console.error('Ошибка создания заказа:', message);
-      reply.status(400).send({ error: message });
+      // временно оставим сообщение, позже заменим на кастомные ошибки
+      reply.status(400).send({ error: (err as Error).message });
     }
   };
 
@@ -45,56 +29,49 @@ export class OrderController {
       const result = await this.orderService.cancelOrder(Number(req.params.id), userId);
       return result;
     } catch (err) {
-      const message = (err as Error).message;
-      console.error('Ошибка отмены заказа:', message);
-      reply.status(400).send({ error: message });
+      reply.status(400).send({ error: (err as Error).message });
     }
   };
 
-  // GET /orders/my — мои покупки
+  // GET /orders/my — мои покупки (используем метод сервиса getMyOrders)
   getMyOrders = async (req: FastifyRequest<{ Querystring: { page?: number; limit?: number; status?: string } }>, reply: FastifyReply) => {
     const userId = req.session.get('user')?.id;
     if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
 
     const { page = 1, limit = 10, status } = req.query;
-    return this.orderService.getMyOrders(userId, Number(page), Number(limit), status);
+    // сервис ожидает OrderStatus? Но здесь пока строку, преобразуем при необходимости
+    return this.orderService.getMyOrders(userId, Number(page), Number(limit), status as OrderStatus);
   };
 
-  // GET /orders/sales — мои продажи (для продавца)
+  // GET /orders/sales — мои продажи (продавец)
   getMySales = async (req: FastifyRequest<{ Querystring: { page?: number; limit?: number; status?: string } }>, reply: FastifyReply) => {
     const userId = req.session.get('user')?.id;
     if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
 
     const { page = 1, limit = 10, status } = req.query;
-    return this.orderService.getMySales(userId, Number(page), Number(limit), status);
+    return this.orderService.getSales(userId, Number(page), Number(limit), status as OrderStatus);
   };
 
-  // GET /orders/:id — получить один заказ (только свой)
+  // GET /orders/:id — получить один заказ (используем сервис вместо прямого Prisma)
   getOrder = async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
     const userId = req.session.get('user')?.id;
     if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
 
     const orderId = Number(req.params.id);
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: {
-        items: {
-          include: { productKey: true, product: true },
-        },
-      },
-    });
 
-    if (!order || order.buyerId !== userId) {
+    // используем метод сервиса getOrderById (должен быть в OrderService)
+    const order = await this.orderService.getOrderById(orderId, userId);
+    if (!order) {
       return reply.status(404).send({ error: 'Заказ не найден' });
     }
 
-    // Явно формируем ответ согласно типу OrderDetails
-    const result: OrderDetails = {
+    // Формируем детальный ответ с ключами только для оплаченных/доставленных
+    const result = {
       id: order.id,
       totalPrice: order.totalPrice.toString(),
       status: order.status,
       createdAt: order.createdAt,
-      items: order.items.map((item) => ({
+      items: order.items.map((item: any) => ({
         id: item.id,
         price: item.price.toString(),
         product: {
@@ -102,14 +79,14 @@ export class OrderController {
           title: item.product.title,
           price: item.product.price.toString(),
         },
-        // Ключ только для delivered
-        ...(order.status === 'delivered' && item.productKey
+        // Ключ показываем только если заказ в статусе PAID или DELIVERED
+        ...( (order.status === OrderStatus.PAID || order.status === OrderStatus.DELIVERED) && item.productKey
           ? {
-            productKey: {
-              id: item.productKey.id,
-              keyValue: item.productKey.keyValue,
-            },
-          }
+              productKey: {
+                id: item.productKey.id,
+                keyValue: item.productKey.keyValue,
+              },
+            }
           : {}),
       })),
     };

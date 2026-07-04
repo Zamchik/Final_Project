@@ -1,104 +1,90 @@
-// Сервис для административных действий
-import { prisma } from '../prisma';
+// Сервис администратора
+import { PrismaClient, UserRole } from '@prisma/client';
 
 export class AdminService {
-    
-   // Получить список пользователей с пагинацией и поиском.
-  async getUsers(page: number, limit: number, search?: string, role?: string) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  constructor(private prisma: PrismaClient) {}
+
+  async getUsers(page: number, limit: number, search?: string) {
     const where: any = {};
     if (search) {
       where.email = { contains: search, mode: 'insensitive' };
     }
-    if (role) {
-      where.role = role;
-    }
     const [users, total] = await Promise.all([
-      prisma.user.findMany({
+      this.prisma.user.findMany({
         where,
         select: {
           id: true,
           email: true,
           role: true,
+          bannedAt: true,
+          createdAt: true,
           balance: true,
-          is_banned: true,
-          created_at: true,
         },
         skip: (page - 1) * limit,
         take: limit,
-        orderBy: { created_at: 'desc' },
+        orderBy: { createdAt: 'desc' },
       }),
-      prisma.user.count({ where }),
+      this.prisma.user.count({ where }),
     ]);
     return { users, total, page, limit };
   }
 
-   // Забанить или разбанить пользователя.
-  async toggleBan(userId: number) {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+  async banUser(userId: number) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new Error('Пользователь не найден');
-    const updated = await prisma.user.update({
+    await this.prisma.user.update({
       where: { id: userId },
-      data: { is_banned: !user.is_banned },
-      select: { id: true, email: true, is_banned: true },
+      data: { bannedAt: new Date() },
     });
-    return updated;
+    return { success: true };
   }
 
-   // Изменить роль пользователя (admin, seller, buyer).
-  async changeRole(userId: number, role: string) {
-    if (!['admin', 'seller', 'buyer'].includes(role)) {
+  async unbanUser(userId: number) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new Error('Пользователь не найден');
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { bannedAt: null },
+    });
+    return { success: true };
+  }
+
+  async changeRole(userId: number, role: UserRole) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new Error('Пользователь не найден');
+    if (!Object.values(UserRole).includes(role)) {
       throw new Error('Недопустимая роль');
     }
-    const updated = await prisma.user.update({
+    await this.prisma.user.update({
       where: { id: userId },
       data: { role },
-      select: { id: true, email: true, role: true },
     });
-    return updated;
+    return { success: true };
   }
 
-   // Получить список всех товаров (с пагинацией, поиском, фильтром по статусу).
-  async getProducts(page: number, limit: number, search?: string, status?: string) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = {};
-    if (search) where.title = { contains: search, mode: 'insensitive' };
-    if (status) where.status = status;
-
+  // Просмотр товаров и заказов для админа можно оставить без изменений
+  async getProducts(page: number, limit: number) {
     const [products, total] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        include: { category: true, seller: { select: { id: true, email: true } } },
+      this.prisma.product.findMany({
+        include: { category: true },
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { createdAt: 'desc' },
       }),
-      prisma.product.count({ where }),
+      this.prisma.product.count(),
     ]);
     return { products, total, page, limit };
   }
 
-   // Получить список всех заказов (с пагинацией, поиском по покупателю).
-  async getOrders(page: number, limit: number, search?: string, status?: string) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = {};
-    if (status) where.status = status;
-    if (search) {
-      where.buyer = { email: { contains: search, mode: 'insensitive' } };
-    }
-
+  async getOrders(page: number, limit: number) {
     const [orders, total] = await Promise.all([
-      prisma.order.findMany({
-        where,
-        include: {
-          buyer: { select: { id: true, email: true } },
-          items: { include: { product: true, productKey: true } },
-        },
+      this.prisma.order.findMany({
+        include: { buyer: { select: { email: true } }, items: { include: { product: true } } },
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { createdAt: 'desc' },
       }),
-      prisma.order.count({ where }),
+      this.prisma.order.count(),
     ]);
     return { orders, total, page, limit };
   }

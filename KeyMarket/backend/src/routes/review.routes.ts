@@ -1,10 +1,9 @@
-// Маршруты для отзывов (префикс /reviews в app.ts)
+// Маршруты для отзывов
 import { FastifyInstance } from 'fastify';
 import { ReviewController } from '../controllers/review.controller';
 import { ReviewService } from '../services/review.service';
 import { prisma } from '../prisma';
 
-// Тип тела запроса для создания отзыва
 interface CreateReviewBody {
   productId: number;
   orderId: number;
@@ -13,7 +12,7 @@ interface CreateReviewBody {
 }
 
 export default async function reviewRoutes(fastify: FastifyInstance) {
-  const reviewService = new ReviewService();
+  const reviewService = new ReviewService(prisma);
   const controller = new ReviewController(reviewService);
 
   // POST /reviews — создать отзыв
@@ -48,7 +47,7 @@ export default async function reviewRoutes(fastify: FastifyInstance) {
     },
   }, controller.create);
 
-  // GET /reviews — получить отзывы (с фильтром по productId)
+  // GET /reviews — получить отзывы (с фильтром по productId и пагинацией)
   fastify.get('/', {
     schema: {
       tags: ['reviews'],
@@ -57,6 +56,8 @@ export default async function reviewRoutes(fastify: FastifyInstance) {
         type: 'object',
         properties: {
           productId: { type: 'number', description: 'ID товара для фильтрации' },
+          page: { type: 'number', default: 1 },
+          limit: { type: 'number', default: 100 },
         },
       },
       response: {
@@ -80,15 +81,14 @@ export default async function reviewRoutes(fastify: FastifyInstance) {
         },
       },
     },
-  }, async (request, reply) => {
-    const { productId } = request.query as { productId?: number };
-    const reviews = await prisma.review.findMany({
-      where: productId ? { productId: Number(productId) } : undefined,
-      include: {
-        user: { select: { email: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    return reviews;
+  }, async (request) => {
+    const { productId, page = 1, limit = 100 } = request.query as any;
+
+    const result = productId
+      ? await reviewService.getByProduct(Number(productId), Number(page), Number(limit))
+      : await reviewService.getAll(Number(page), Number(limit));
+
+    // Для обратной совместимости с текущим фронтендом возвращаем только массив отзывов
+    return result.reviews;
   });
 }

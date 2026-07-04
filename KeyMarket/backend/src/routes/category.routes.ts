@@ -1,21 +1,21 @@
-// Маршруты для категорий
 import { FastifyInstance } from 'fastify';
+import { CategoryService } from '../services/category.service';
 import { prisma } from '../prisma';
 
 export default async function categoryRoutes(fastify: FastifyInstance) {
-   // GET /categories — публичный список категорий.
-   // Используется для выпадающих списков при создании/фильтрации товаров.
+  const categoryService = new CategoryService(prisma);
+
   fastify.get('/', {
     schema: {
-      tags: ['products'],                              // группировка в Swagger UI
-      summary: 'Получить список всех категорий',       // краткое описание маршрута
+      tags: ['categories'],
+      summary: 'Получить список всех категорий',
       response: {
         200: {
           type: 'array',
           items: {
             type: 'object',
             properties: {
-              id: { type: 'number' },
+              id: { type: 'integer' },
               name: { type: 'string' },
               slug: { type: 'string' },
             },
@@ -24,7 +24,6 @@ export default async function categoryRoutes(fastify: FastifyInstance) {
       },
     },
   }, async () => {
-    const categories = await prisma.category.findMany();
-    return categories;
+    return categoryService.getAll();
   });
 }

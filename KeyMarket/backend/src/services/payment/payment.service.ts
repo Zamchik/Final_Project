@@ -1,6 +1,5 @@
 // Сервис управления платежами
-// Использует реализацию PaymentGateway (Mock или реальную)
-import { prisma } from '../../prisma';
+import { PrismaClient, PaymentStatus } from '@prisma/client';
 import { PaymentGateway } from './payment-gateway.interface';
 import { OrderService } from '../order.service';
 import { EmailService } from '../email.service';
@@ -8,77 +7,71 @@ import { NotificationService } from '../notification.service';
 
 export class PaymentService {
   constructor(
+    private prisma: PrismaClient,
     private gateway: PaymentGateway,
     private orderService: OrderService,
     private emailService: EmailService,
     private notificationService: NotificationService,
   ) {}
 
-    // Создать платёж для пополнения баланса.
-    // Возвращает ссылку для оплаты.
-    async createReplenishment(userId: number, amount: number) {
-        const payment = await prisma.payment.create({
-            data: {
-                userId,
-                amount,
-                status: 'pending',
-                externalId: '',
-            },
-        });
+  // Создать платёж для пополнения баланса
+  async createReplenishment(userId: number, amount: number) {
+    const payment = await this.prisma.payment.create({
+      data: {
+        userId,
+        amount,
+        status: PaymentStatus.PENDING,
+        externalId: '',
+      },
+    });
 
-        const { externalId, paymentUrl } = await this.gateway.init(payment.id, amount, userId);
+    const { externalId, paymentUrl } = await this.gateway.init(payment.id, amount, userId);
 
-        await prisma.payment.update({
-            where: { id: payment.id },
-            data: { externalId },
-        });
+    await this.prisma.payment.update({
+      where: { id: payment.id },
+      data: { externalId },
+    });
 
-        return { paymentId: payment.id, externalId, paymentUrl };
+    return { paymentId: payment.id, externalId, paymentUrl };
+  }
+
+  // Создать платёж для оплаты заказа
+  async createOrderPayment(orderId: number, userId: number) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+    });
+    if (!order || order.buyerId !== userId) {
+      throw new Error('Заказ не найден или не принадлежит вам');
+    }
+    if (order.status !== 'CREATED') {
+      throw new Error('Заказ уже оплачен или отменён');
     }
 
-    /**
-     * Создать платёж для оплаты заказа.
-     * @param orderId – ID заказа
-     * @param userId – ID покупателя (для проверки владения)
-     * @returns ссылка на оплату
-     */
-    async createOrderPayment(orderId: number, userId: number) {
-        const order = await prisma.order.findUnique({
-            where: { id: orderId },
-        });
-        if (!order || order.buyerId !== userId) {
-            throw new Error('Заказ не найден или не принадлежит вам');
-        }
-        if (order.status !== 'created') {
-            throw new Error('Заказ уже оплачен или отменён');
-        }
+    const amount = order.totalPrice;
 
-        const amount = order.totalPrice;
+    const payment = await this.prisma.payment.create({
+      data: {
+        userId,
+        amount,
+        status: PaymentStatus.PENDING,
+        externalId: '',
+        orderId,
+      },
+    });
 
-        const payment = await prisma.payment.create({
-            data: {
-                userId,
-                amount,
-                status: 'pending',
-                externalId: '',
-                orderId,
-            },
-        });
+    const { externalId, paymentUrl } = await this.gateway.init(payment.id, Number(amount), userId);
 
-        const { externalId, paymentUrl } = await this.gateway.init(payment.id, Number(amount), userId);
+    await this.prisma.payment.update({
+      where: { id: payment.id },
+      data: { externalId },
+    });
 
-        await prisma.payment.update({
-            where: { id: payment.id },
-            data: { externalId },
-        });
+    return { paymentId: payment.id, externalId, paymentUrl };
+  }
 
-        return { paymentId: payment.id, externalId, paymentUrl };
-    }
-
-    // Обработать успешную оплату (вызывается webhook'ом или подтверждением).
-   // При оплате заказа отправляет покупателю email с ключом.
-    async handlePaymentSuccess(externalId: string) {
-    const payment = await prisma.payment.findUnique({
+  // Обработать успешную оплату (webhook)
+  async handlePaymentSuccess(externalId: string) {
+    const payment = await this.prisma.payment.findUnique({
       where: { externalId },
       select: {
         id: true,
@@ -89,33 +82,33 @@ export class PaymentService {
       },
     });
 
-    if (!payment || payment.status !== 'pending') {
+    if (!payment || payment.status !== PaymentStatus.PENDING) {
       throw new Error('Платёж не найден или уже обработан');
     }
 
-    await prisma.payment.update({
+    await this.prisma.payment.update({
       where: { id: payment.id },
-      data: { status: 'completed' },
+      data: { status: PaymentStatus.COMPLETED },
     });
 
     if (payment.orderId) {
       // Оплата заказа
       const paidOrder = await this.orderService.payOrder(payment.orderId, payment.userId);
 
-      // Создаём in-app уведомление
+      // Уведомление
       try {
         await this.notificationService.create(
           payment.userId,
-          'order_paid',
+          'ORDER_PAID',
           `Заказ №${paidOrder.id} оплачен. Ключ можно посмотреть в личном кабинете.`
         );
       } catch (err) {
         console.error('Ошибка создания уведомления:', err);
       }
 
-      // Отправляем email с ключом
+      // Email с ключом
       try {
-        const buyer = await prisma.user.findUnique({ where: { id: payment.userId } });
+        const buyer = await this.prisma.user.findUnique({ where: { id: payment.userId } });
         if (buyer && paidOrder.items.length > 0) {
           const productName = paidOrder.items[0].product.title;
           const keyValue = paidOrder.items[0].productKey.keyValue;
@@ -138,15 +131,15 @@ export class PaymentService {
       }
     } else {
       // Пополнение баланса
-      await prisma.user.update({
+      await this.prisma.user.update({
         where: { id: payment.userId },
         data: { balance: { increment: payment.amount } },
       });
 
-      await prisma.transaction.create({
+      await this.prisma.transaction.create({
         data: {
           userId: payment.userId,
-          type: 'replenish',
+          type: 'REPLENISH',
           amount: payment.amount,
         },
       });

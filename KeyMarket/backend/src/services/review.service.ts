@@ -1,128 +1,72 @@
-// Сервис для работы с отзывами
-import { prisma } from '../prisma';
+import { PrismaClient, OrderStatus } from '@prisma/client';
 
 export class ReviewService {
-  /**
-   * Создать отзыв о товаре после успешной покупки.
-   * @param userId - ID покупателя
-   * @param productId - ID товара
-   * @param orderId - ID завершённого заказа
-   * @param rating - оценка (1-5)
-   * @param comment - текст отзыва (опционально)
-   */
-  async create(userId: number, productId: number, orderId: number, rating: number, comment?: string) {
-    // Проверяем, что заказ принадлежит пользователю и выполнен
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: { items: true },
-    });
+  constructor(private prisma: PrismaClient) {}
 
-    if (!order || order.buyerId !== userId) {
+  async create(userId: number, productId: number, orderId: number, rating: number, comment?: string) {
+    const order = await this.prisma.order.findUnique({ where: { id: orderId } });
+    if (!order || order.buyerId !== userId)
       throw new Error('Заказ не найден или не принадлежит вам');
-    }
-    if (order.status !== 'delivered') {
+    if (order.status !== OrderStatus.PAID && order.status !== OrderStatus.DELIVERED) {
       throw new Error('Отзыв можно оставить только после завершения заказа');
     }
 
-    // Проверяем, что товар действительно был в заказе
-    const itemInOrder = order.items.some(
-      (item) => item.productId === productId
-    );
-    if (!itemInOrder) {
-      throw new Error('Товар не найден в заказе');
-    }
-
-    // Проверяем, что отзыв ещё не оставлялся для этого заказа
-    const existingReview = await prisma.review.findUnique({
-      where: { orderId },
+    const item = await this.prisma.orderItem.findFirst({
+      where: { orderId, productId },
     });
-    if (existingReview) {
-      throw new Error('Отзыв для этого заказа уже оставлен');
-    }
+    if (!item) throw new Error('Товар не найден в заказе');
 
-    // Проверяем рейтинг
-    if (rating < 1 || rating > 5) {
-      throw new Error('Оценка должна быть от 1 до 5');
-    }
+    const existing = await this.prisma.review.findUnique({ where: { orderId } });
+    if (existing) throw new Error('Отзыв для этого заказа уже оставлен');
 
-    // Создаём отзыв и обновляем средний рейтинг товара в одной транзакции
-    const review = await prisma.$transaction(async (tx) => {
-      // Создаём отзыв
-      const newReview = await tx.review.create({
-        data: {
-          userId,
-          productId,
-          orderId,
-          rating,
-          comment: comment || '',
-        },
-      });
+    if (rating < 1 || rating > 5) throw new Error('Оценка должна быть от 1 до 5');
 
-      // Пересчитываем средний рейтинг товара
-      const aggregation = await tx.review.aggregate({
-        where: { productId },
-        _avg: { rating: true },
-      });
-      const avgRating = aggregation._avg.rating || 0;
-
-      await tx.product.update({
-        where: { id: productId },
-        data: { rating: avgRating },
-      });
-
-      return newReview;
+    const review = await this.prisma.review.create({
+      data: { userId, productId, orderId, rating, comment: comment || '' },
+      include: { user: { select: { email: true } } },
     });
 
     return review;
   }
 
-  /**
-   * Получить список отзывов для товара с пагинацией.
-   * @param productId - ID товара
-   * @param page - страница
-   * @param limit - количество на странице
-   */
   async getByProduct(productId: number, page: number, limit: number) {
+    const where = { productId };
     const [reviews, total] = await Promise.all([
-      prisma.review.findMany({
-        where: { productId },
-        include: {
-          user: { select: { id: true, email: true } },
-        },
+      this.prisma.review.findMany({
+        where,
+        include: { user: { select: { email: true } } },
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { createdAt: 'desc' },
       }),
-      prisma.review.count({ where: { productId } }),
+      this.prisma.review.count({ where }),
     ]);
-
-    return {
-      reviews: reviews.map((r) => ({
-        id: r.id,
-        rating: r.rating,
-        comment: r.comment,
-        createdAt: r.createdAt,
-        user: { id: r.user.id, email: r.user.email },
-      })),
-      total,
-      page,
-      limit,
-    };
+    return { reviews, total, page, limit };
   }
 
-  /**
-   * Получить средний рейтинг товара.
-   * @param productId - ID товара
-   */
+  // все отзывы (пагинация)
+  async getAll(page: number, limit: number) {
+    const [reviews, total] = await Promise.all([
+      this.prisma.review.findMany({
+        include: { user: { select: { email: true } } },
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.review.count(),
+    ]);
+    return { reviews, total, page, limit };
+  }
+
   async getAverageRating(productId: number) {
-    const aggregation = await prisma.review.aggregate({
+    const result = await this.prisma.review.aggregate({
       where: { productId },
       _avg: { rating: true },
       _count: { rating: true },
     });
     return {
-      average: aggregation._avg.rating || 0,
-      count: aggregation._count.rating || 0,
+      average: result._avg.rating || 0,
+      count: result._count.rating,
     };
   }
 }
