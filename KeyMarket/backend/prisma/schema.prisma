@@ -4,24 +4,69 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
+// ------------------- Enums -------------------
+
+enum UserRole {
+  BUYER
+  SELLER
+  ADMIN
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum OrderStatus {
+  CREATED
+  PAID
+  CANCELLED
+  DELIVERED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum TransactionType {
+  PURCHASE
+  SALE
+  COMMISSION
+  REPLENISH
+  WITHDRAWAL
+}
+
+enum NotificationType {
+  ORDER_PAID
+  ORDER_CANCELLED
+  WELCOME
+}
+
+// ------------------- Models -------------------
+
 model User {
-  id            Int           @id @default(autoincrement())
-  email         String        @unique
-  password_hash String
-  role          String        @default("buyer")
-  balance       Decimal       @default(0)
-  is_banned     Boolean       @default(false)
-  created_at    DateTime      @default(now())
+  id           Int            @id @default(autoincrement())
+  email        String         @unique
+  passwordHash String         @map("password_hash")
+  role         UserRole       @default(BUYER)
+  balance      Decimal        @default(0)
+  bannedAt     DateTime?      @map("banned_at")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  verifiedAt   DateTime?      @map("verified_at")
+
   products      Product[]     @relation("SellerProducts")
   orders        Order[]       @relation("BuyerOrders")
   transactions  Transaction[]
   payments      Payment[]
-  notifications Notification[] 
-  reviews Review[]
-  email_verified Boolean @default(false) @map("email_verified")
+  notifications Notification[]
+  reviews       Review[]
+
+  @@map("users")
 }
 
 model Category {
@@ -29,55 +74,61 @@ model Category {
   name     String    @unique
   slug     String    @unique
   products Product[]
+
+  @@map("categories")
 }
 
 model Product {
-  id          Int          @id @default(autoincrement())
-  sellerId    Int          @map("seller_id")
-  seller      User         @relation("SellerProducts", fields: [sellerId], references: [id])
-  categoryId  Int          @map("category_id")
-  category    Category     @relation(fields: [categoryId], references: [id])
+  id          Int           @id @default(autoincrement())
+  sellerId    Int           @map("seller_id")
+  seller      User          @relation("SellerProducts", fields: [sellerId], references: [id])
+  categoryId  Int           @map("category_id")
+  category    Category      @relation(fields: [categoryId], references: [id])
   title       String
-  description String       @default("")
+  description String        @default("")
   price       Decimal
-  stock       Int          @default(0)
-  rating      Decimal      @default(0)
-  status      String       @default("active")
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
-  imageUrl    String?    @map("image_url")
-  keys        ProductKey[]
-  orderItems  OrderItem[]
-  reviews Review[]
-  
+  stock       Int           @default(0)
+  rating      Decimal       @default(0)
+  status      ProductStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  imageUrl    String?       @map("image_url")
+
+  keys       ProductKey[]
+  orderItems OrderItem[]
+  reviews    Review[]
+
+  @@map("products")
 }
 
 model ProductKey {
-  id        Int        @id @default(autoincrement())
-  productId Int        @map("product_id")
-  product   Product    @relation(fields: [productId], references: [id])
-  keyValue  String     @map("key_value")
-  isSold    Boolean    @default(false) @map("is_sold")
-  orderId   Int?       @map("order_id")
-  createdAt DateTime   @default(now()) @map("created_at")
-  orderItem OrderItem? // обратная связь (ключ может быть ещё не продан)
+  id        Int       @id @default(autoincrement())
+  productId Int       @map("product_id")
+  product   Product   @relation(fields: [productId], references: [id])
+  keyValue  String    @map("key_value")
+  soldAt    DateTime? @map("sold_at")
+  orderId   Int?      @map("order_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  orderItem OrderItem?
 
   @@index([keyValue])
   @@map("product_keys")
 }
 
 model Order {
-  id           Int           @id @default(autoincrement())
-  buyerId      Int           @map("buyer_id")
-  buyer        User          @relation("BuyerOrders", fields: [buyerId], references: [id])
-  totalPrice   Decimal       @map("total_price")
-  status       String        @default("created")
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
+  id         Int         @id @default(autoincrement())
+  buyerId    Int         @map("buyer_id")
+  buyer      User        @relation("BuyerOrders", fields: [buyerId], references: [id])
+  totalPrice Decimal     @map("total_price")
+  status     OrderStatus @default(CREATED)
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+
   items        OrderItem[]
   transactions Transaction[]
-  payments     Payment[] 
-  reviews Review[]
+  payments     Payment[]
+  reviews      Review[]
 
   @@map("orders")
 }
@@ -91,46 +142,46 @@ model OrderItem {
   productKeyId Int        @unique @map("product_key_id")
   productKey   ProductKey @relation(fields: [productKeyId], references: [id])
   price        Decimal
-  
+
   @@map("order_items")
 }
 
 model Transaction {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
-  user      User     @relation(fields: [userId], references: [id])
-  type      String   // purchase, sale, commission, replenish, withdrawal
+  id        Int             @id @default(autoincrement())
+  userId    Int             @map("user_id")
+  user      User            @relation(fields: [userId], references: [id])
+  type      TransactionType
   amount    Decimal
-  orderId   Int?     @map("order_id")
-  order     Order?   @relation(fields: [orderId], references: [id])
-  createdAt DateTime @default(now()) @map("created_at")
+  orderId   Int?            @map("order_id")
+  order     Order?          @relation(fields: [orderId], references: [id])
+  createdAt DateTime        @default(now()) @map("created_at")
 
   @@map("transactions")
 }
 
 model Payment {
-  id         Int      @id @default(autoincrement())
-  userId     Int      @map("user_id")
-  user       User     @relation(fields: [userId], references: [id])
+  id         Int           @id @default(autoincrement())
+  userId     Int           @map("user_id")
+  user       User          @relation(fields: [userId], references: [id])
   amount     Decimal
-  status     String   @default("pending")   // pending, completed, failed, cancelled
-  externalId String   @unique @map("external_id")  // ID в платёжном шлюзе (UUID)
-  orderId    Int?     @map("order_id")      // связь с заказом (null при пополнении баланса)
-  order      Order?   @relation(fields: [orderId], references: [id])
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  status     PaymentStatus @default(PENDING)
+  externalId String        @unique @map("external_id")
+  orderId    Int?          @map("order_id")
+  order      Order?        @relation(fields: [orderId], references: [id])
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
 
   @@map("payments")
 }
 
 model Notification {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
-  user      User     @relation(fields: [userId], references: [id])
-  type      String   // order_paid, order_cancelled, welcome, etc.
+  id        Int              @id @default(autoincrement())
+  userId    Int              @map("user_id")
+  user      User             @relation(fields: [userId], references: [id])
+  type      NotificationType
   message   String
-  isRead    Boolean  @default(false) @map("is_read")
-  createdAt DateTime @default(now()) @map("created_at")
+  readAt    DateTime?        @map("read_at")
+  createdAt DateTime         @default(now()) @map("created_at")
 
   @@map("notifications")
 }
@@ -141,7 +192,7 @@ model Review {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   productId Int      @map("product_id")
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  orderId   Int      @unique @map("order_id")   // один отзыв на заказ
+  orderId   Int      @unique @map("order_id") // один отзыв на заказ
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   rating    Int      // от 1 до 5
   comment   String   @default("")

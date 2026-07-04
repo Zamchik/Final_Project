@@ -3,7 +3,7 @@
 services:
   # База данных PostgreSQL
   postgres:
-    image: postgres:15-alpine
+    image: postgres:18-alpine
     container_name: keymarket-db
     restart: unless-stopped
     environment:
@@ -25,10 +25,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: keymarket-backend
-    restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://keymarket:${POSTGRES_PASSWORD}@postgres:5432/keymarket
+      DATABASE_URL: ${DATABASE_URL}
       SESSION_SECRET: ${SESSION_SECRET}
     ports:
       - "3000:3000"

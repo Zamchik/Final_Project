@@ -1,18 +1,39 @@
 // Сервис аутентификации
-import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, UserRole } from '@prisma/client';
+import { scryptSync, randomBytes, timingSafeEqual } from 'crypto';
+
+ // Хеширует пароль с солью (scrypt).
+ // Возвращает строку вида salt:hash для хранения в БД.
+function hashPassword(password: string): string {
+  const salt = randomBytes(16).toString('hex');
+  const hash = scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
+
+ // Проверяет пароль по сохранённой строке salt:hash
+function verifyPassword(password: string, stored: string): boolean {
+  const [salt, hash] = stored.split(':');
+  if (!salt || !hash) return false;
+  const hashed = scryptSync(password, salt, 64);
+  const storedBuf = Buffer.from(hash, 'hex');
+  return timingSafeEqual(hashed, storedBuf);
+}
 
 export class AuthService {
-  constructor(private prisma: PrismaClient) { }
+  constructor(private prisma: PrismaClient) {}
 
   // Регистрация нового пользователя
   async register(email: string, password: string) {
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) throw new Error('Email already registered');
-    const password_hash = await bcrypt.hash(password, 10);
+    const passwordHash = hashPassword(password);
     const user = await this.prisma.user.create({
-      data: { email, password_hash, role: 'buyer' },
+      data: {
+        email,
+        passwordHash,          // camelCase, поле маппится на password_hash
+        role: UserRole.BUYER,  // enum значение
+      },
     });
     return { id: user.id, email: user.email, role: user.role };
   }
@@ -21,8 +42,8 @@ export class AuthService {
   async login(email: string, password: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) throw new Error('Invalid email or password');
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) throw new Error('Invalid email or password');
+    if (!verifyPassword(password, user.passwordHash))
+      throw new Error('Invalid email or password');
     return { id: user.id, email: user.email, role: user.role };
   }
 
@@ -30,47 +51,53 @@ export class AuthService {
   async getUserById(id: number) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new Error('User not found');
-    return { id: user.id, email: user.email, role: user.role, balance: user.balance };
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      balance: user.balance, // Decimal, фронтенд сам преобразует
+    };
   }
 
-  // Сменить пароль пользователя.
-  // Проверяет старый пароль, хеширует новый и сохраняет.
+  // Сменить пароль пользователя
   async changePassword(userId: number, oldPassword: string, newPassword: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new Error('Пользователь не найден');
 
-    // Проверяем старый пароль
-    const isValid = await bcrypt.compare(oldPassword, user.password_hash);
-    if (!isValid) throw new Error('Неверный текущий пароль');
+    if (!verifyPassword(oldPassword, user.passwordHash))
+      throw new Error('Неверный текущий пароль');
 
-    // Хешируем новый пароль и сохраняем
-    const newHash = await bcrypt.hash(newPassword, 10);
+    const newHash = hashPassword(newPassword);
     await this.prisma.user.update({
       where: { id: userId },
-      data: { password_hash: newHash },
+      data: { passwordHash: newHash },
     });
 
     return { success: true };
   }
-  
-  // Генерирует JWT-токен для подтверждения email.
-   // Токен действителен 24 часа.
+
+  // Генерирует JWT-токен для подтверждения email (действителен 24 часа)
   async generateVerificationToken(userId: number) {
-  return jwt.sign({ userId }, process.env.JWT_SECRET || 'supersecretkey', { expiresIn: '24h' });
-}
+    return jwt.sign({ userId }, process.env.JWT_SECRET || 'supersecretkey', {
+      expiresIn: '24h',
+    });
+  }
 
    // Проверяет токен подтверждения email и активирует пользователя.
-   // Возвращает true, если токен валиден и пользователь активирован.
+   // Теперь устанавливается дата verifiedAt вместо булева флага.
   async verifyEmail(token: string) {
-  try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET || 'supersecretkey') as { userId: number };
-    await this.prisma.user.update({
-      where: { id: payload.userId },
-      data: { email_verified: true },
-    });
-    return true;
-  } catch {
-    return false;
+    try {
+      const payload = jwt.verify(
+        token,
+        process.env.JWT_SECRET || 'supersecretkey'
+      ) as { userId: number };
+      await this.prisma.user.update({
+        where: { id: payload.userId },
+        data: { verifiedAt: new Date() }, // поле даты верификации
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
-}
 }
