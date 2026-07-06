@@ -1,9 +1,9 @@
 // Сервис администратора
 import { PrismaClient, UserRole } from '@prisma/client';
-import { NotFoundError, BadRequestError } from '../common/errors';
+import { NotFoundError, BadRequestError, ForbiddenError } from '../common/errors';
 
 export class AdminService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private prisma: PrismaClient) { }
 
   async getUsers(page: number, limit: number, search?: string) {
     const where: any = {};
@@ -33,6 +33,9 @@ export class AdminService {
   async banUser(userId: number) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundError('Пользователь не найден');
+    if (user.role === UserRole.SUPER_ADMIN) {
+      throw new ForbiddenError('Нельзя забанить супер‑администратора');
+    }
     await this.prisma.user.update({
       where: { id: userId },
       data: { bannedAt: new Date() },
@@ -43,6 +46,9 @@ export class AdminService {
   async unbanUser(userId: number) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundError('Пользователь не найден');
+    if (user.role === UserRole.SUPER_ADMIN) {
+      throw new ForbiddenError('Нельзя разбанить супер‑администратора');
+    }
     await this.prisma.user.update({
       where: { id: userId },
       data: { bannedAt: null },
@@ -50,12 +56,24 @@ export class AdminService {
     return { success: true };
   }
 
-  async changeRole(userId: number, role: UserRole) {
+  async changeRole(userId: number, role: UserRole, adminRole: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundError('Пользователь не найден');
+
     if (!Object.values(UserRole).includes(role)) {
       throw new BadRequestError('Недопустимая роль');
     }
+
+    // Запрещаем менять роль супер‑админа
+    if (user.role === UserRole.SUPER_ADMIN) {
+      throw new ForbiddenError('Нельзя изменить роль супер‑администратора');
+    }
+
+    // Только SUPER_ADMIN может назначать роль SUPER_ADMIN
+    if (role === UserRole.SUPER_ADMIN && adminRole !== 'SUPER_ADMIN') {
+      throw new ForbiddenError('Только супер‑администратор может назначать эту роль');
+    }
+
     await this.prisma.user.update({
       where: { id: userId },
       data: { role },

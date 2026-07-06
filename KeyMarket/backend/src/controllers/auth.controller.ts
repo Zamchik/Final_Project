@@ -58,6 +58,10 @@ export class AuthController {
     if (!user.verifiedAt) {
       throw new ForbiddenError('Email not verified');
     }
+    // если пользователь забанен, не даём войти
+    if (user.bannedAt) {
+      throw new ForbiddenError('Ваш аккаунт заблокирован');
+    }
 
     req.session.set('user', { id: user.id, email: user.email, role: user.role });
     return { user: user };

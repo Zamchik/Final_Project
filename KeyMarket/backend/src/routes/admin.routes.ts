@@ -8,8 +8,11 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   const adminService = new AdminService(prisma);
   const controller = new AdminController(adminService);
 
-  // GET /admin/users — список пользователей
+  // Пользователи
+
+  // GET /admin/users — список пользователей с пагинацией и поиском
   fastify.get('/users', {
+    // Проверка сессии и бана через authenticate, проверка прав в контроллере
     preHandler: [fastify.authenticate],
     schema: {
       tags: ['admin'],
@@ -37,7 +40,7 @@ export default async function adminRoutes(fastify: FastifyInstance) {
                   role: { type: 'string' },
                   bannedAt: { type: 'string', nullable: true },
                   createdAt: { type: 'string' },
-                  balance: { type: 'string' }, // Decimal передаётся строкой
+                  balance: { type: 'string' }, // Decimal приходит как строка
                 },
               },
             },
@@ -50,8 +53,8 @@ export default async function adminRoutes(fastify: FastifyInstance) {
     },
   }, controller.getUsers);
 
-  // POST /admin/users/:id/ban — забанить пользователя
-  fastify.post('/users/:id/ban', {
+  // PUT /admin/users/:id/ban — забанить пользователя (устанавливает bannedAt)
+  fastify.put('/users/:id/ban', {
     preHandler: [fastify.authenticate],
     schema: {
       tags: ['admin'],
@@ -64,18 +67,14 @@ export default async function adminRoutes(fastify: FastifyInstance) {
         },
       },
       response: {
-        200: {
-          type: 'object',
-          properties: {
-            // пустой объект, так как успех определяется статусом 200
-          },
-        },
+        200: { type: 'object', properties: {} }, // успех без дополнительного поля
+        400: { type: 'object', properties: { error: { type: 'string' } } },
       },
     },
   }, controller.banUser);
 
-  // POST /admin/users/:id/unban — разбанить пользователя
-  fastify.post('/users/:id/unban', {
+  // PUT /admin/users/:id/unban — разбанить пользователя (сбрасывает bannedAt)
+  fastify.put('/users/:id/unban', {
     preHandler: [fastify.authenticate],
     schema: {
       tags: ['admin'],
@@ -88,15 +87,13 @@ export default async function adminRoutes(fastify: FastifyInstance) {
         },
       },
       response: {
-        200: {
-          type: 'object',
-          properties: {},
-        },
+        200: { type: 'object', properties: {} },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
       },
     },
   }, controller.unbanUser);
 
-  // PUT /admin/users/:id/role — изменить роль
+  // PUT /admin/users/:id/role — изменить роль пользователя
   fastify.put('/users/:id/role', {
     preHandler: [fastify.authenticate],
     schema: {
@@ -113,19 +110,20 @@ export default async function adminRoutes(fastify: FastifyInstance) {
         type: 'object',
         required: ['role'],
         properties: {
-          role: { type: 'string', enum: ['BUYER', 'SELLER', 'ADMIN'] },
+          // Доступные роли, включая SUPER_ADMIN (последняя не может быть изменена у супер-админа)
+          role: { type: 'string', enum: ['BUYER', 'SELLER', 'ADMIN', 'SUPER_ADMIN'] },
         },
       },
       response: {
-        200: {
-          type: 'object',
-          properties: {},
-        },
+        200: { type: 'object', properties: {} },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
       },
     },
   }, controller.changeRole);
 
-  // GET /admin/products — список товаров
+  // Товары
+
+  // GET /admin/products — список всех товаров с пагинацией
   fastify.get('/products', {
     preHandler: [fastify.authenticate],
     schema: {
@@ -173,7 +171,9 @@ export default async function adminRoutes(fastify: FastifyInstance) {
     },
   }, controller.getProducts);
 
-  // GET /admin/orders — список заказов
+  // Заказы
+
+  // GET /admin/orders — список всех заказов с пагинацией
   fastify.get('/orders', {
     preHandler: [fastify.authenticate],
     schema: {

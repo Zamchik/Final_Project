@@ -41,7 +41,7 @@ const MainLayout = () => {
     ...(user
       ? [{ key: 'cabinet', label: <Link to="/cabinet"><UserOutlined /> Личный кабинет</Link> }]
       : []),
-    ...(user?.role === 'ADMIN'
+    ...(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN'
       ? [{ key: 'admin', label: <Link to="/admin"><DashboardOutlined /> Админ-панель</Link> }]
       : []),
     ...(user?.role === 'SELLER'

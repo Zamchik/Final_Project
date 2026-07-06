@@ -1,8 +1,5 @@
-// ============================================================================
 // Вкладка просмотра заказов (админ-панель)
-// Показывает все заказы с поиском по покупателю и фильтром по статусу
-// ============================================================================
-
+// Показывает все заказы с поиском по покупателю и фильтром по статус
 import { useEffect, useState, useCallback } from 'react';
 import { Table, Input, Select, Space, message, Tag } from 'antd';
 import apiClient from '../../api/client';
@@ -16,6 +13,20 @@ interface OrderItem {
   items: { product: { title: string }; price: string }[];
 }
 
+const statusColors: Record<string, string> = {
+  CREATED: 'blue',
+  PAID: 'orange',
+  DELIVERED: 'green',
+  CANCELLED: 'red',
+};
+
+const statusLabels: Record<string, string> = {
+  CREATED: 'Создан',
+  PAID: 'Оплачен',
+  DELIVERED: 'Выполнен',
+  CANCELLED: 'Отменён',
+};
+
 const OrdersTab = () => {
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -24,9 +35,7 @@ const OrdersTab = () => {
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
-  // -------------------------------------------------------------------------
   // Загрузка заказов
-  // -------------------------------------------------------------------------
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
@@ -43,13 +52,10 @@ const OrdersTab = () => {
   }, [page, search, statusFilter]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchOrders();
   }, [fetchOrders]);
 
-  // -------------------------------------------------------------------------
   // Колонки таблицы
-  // -------------------------------------------------------------------------
   const columns = [
     { title: 'ID', dataIndex: 'id', key: 'id' },
     { title: 'Покупатель', render: (_: unknown, r: OrderItem) => r.buyer?.email },
@@ -59,7 +65,9 @@ const OrdersTab = () => {
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => (
-        <Tag color={status === 'delivered' ? 'green' : 'blue'}>{status}</Tag>
+        <Tag color={statusColors[status] || 'default'}>
+          {statusLabels[status] || status}
+        </Tag>
       ),
     },
     {
@@ -70,9 +78,6 @@ const OrdersTab = () => {
     { title: 'Дата', dataIndex: 'createdAt', key: 'createdAt' },
   ];
 
-  // -------------------------------------------------------------------------
-  // Рендер
-  // -------------------------------------------------------------------------
   return (
     <div>
       <Space style={{ marginBottom: 16 }}>
@@ -88,8 +93,10 @@ const OrdersTab = () => {
           value={statusFilter}
           onChange={setStatusFilter}
           options={[
-            { value: 'created', label: 'Создан' },
-            { value: 'delivered', label: 'Выполнен' },
+            { value: 'CREATED', label: 'Создан' },
+            { value: 'PAID', label: 'Оплачен' },
+            { value: 'DELIVERED', label: 'Выполнен' },
+            { value: 'CANCELLED', label: 'Отменён' },
           ]}
           style={{ width: 150 }}
         />

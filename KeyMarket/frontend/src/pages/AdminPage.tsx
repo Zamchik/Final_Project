@@ -1,8 +1,5 @@
-// ============================================================================
 // Страница админ-панели
-// Доступна только пользователям с ролью 'admin'
-// ============================================================================
-
+// Доступна только пользователям с ролью ADMIN или SUPER_ADMIN
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, Spin } from 'antd';
@@ -11,24 +8,39 @@ import UsersTab from '../components/admin/UsersTab';
 import ProductsTab from '../components/admin/ProductsTab';
 import OrdersTab from '../components/admin/OrdersTab';
 
+// Список ролей, которым разрешён доступ к админ-панели
+const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN'];
+
 const AdminPage = () => {
   const user = useAuthStore((s) => s.user);
   const loading = useAuthStore((s) => s.loading);
+  const fetched = useAuthStore((s) => s.fetched);
+  const fetchUser = useAuthStore((s) => s.fetchUser);
   const navigate = useNavigate();
 
-  // Защита: если пользователь не admin – редирект на главную
+  // Защита: дожидаемся проверки сессии и проверяем роль
   useEffect(() => {
-    if (!loading && (!user || user.role !== 'admin')) {
+    // Если проверка сессии ещё не начата – запускаем
+    if (!fetched && !loading) {
+      fetchUser();
+    }
+    // Когда проверка завершена и пользователь не админ – редирект на главную
+    if (fetched && (!user || !ADMIN_ROLES.includes(user.role))) {
       navigate('/');
     }
-  }, [user, loading, navigate]);
+  }, [fetched, loading, user, navigate, fetchUser]);
 
-  if (loading) {
+  // Пока идёт проверка сессии – показываем спиннер
+  if (loading || !fetched) {
     return <Spin style={{ display: 'block', marginTop: 40 }} />;
   }
 
-  if (!user || user.role !== 'admin') return null;
+  //  если после проверки пользователь не админ – ничего не рендерим
+  if (!user || !ADMIN_ROLES.includes(user.role)) {
+    return null;   // редирект уже произойдёт в useEffect, но этот return предотвращает мигание контента
+  }
 
+  // Вкладки админ-панели
   const tabItems = [
     {
       key: 'users',

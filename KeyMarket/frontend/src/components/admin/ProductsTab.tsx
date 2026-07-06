@@ -1,8 +1,5 @@
-// ============================================================================
 // Вкладка просмотра товаров (админ-панель)
-// Показывает все товары с возможностью поиска и фильтрации по статусу
-// ============================================================================
-
+// Показывает все товары с поиском и фильтрацией по статусу
 import { useEffect, useState, useCallback } from 'react';
 import { Table, Input, Select, Space, message, Tag } from 'antd';
 import apiClient from '../../api/client';
@@ -15,6 +12,7 @@ interface ProductItem {
   status: string;
   category: { name: string };
   seller: { email: string };
+  imageUrl?: string | null;
 }
 
 const ProductsTab = () => {
@@ -25,9 +23,7 @@ const ProductsTab = () => {
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
-  // -------------------------------------------------------------------------
   // Загрузка товаров
-  // -------------------------------------------------------------------------
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
@@ -44,13 +40,10 @@ const ProductsTab = () => {
   }, [page, search, statusFilter]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProducts();
   }, [fetchProducts]);
 
-  // -------------------------------------------------------------------------
   // Колонки таблицы
-  // -------------------------------------------------------------------------
   const columns = [
     { title: 'ID', dataIndex: 'id', key: 'id' },
     { title: 'Название', dataIndex: 'title', key: 'title' },
@@ -61,16 +54,15 @@ const ProductsTab = () => {
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => (
-        <Tag color={status === 'active' ? 'green' : 'red'}>{status}</Tag>
+        <Tag color={status === 'ACTIVE' ? 'green' : 'red'}>
+          {status === 'ACTIVE' ? 'Активен' : status === 'INACTIVE' ? 'Неактивен' : status}
+        </Tag>
       ),
     },
     { title: 'Категория', render: (_: unknown, r: ProductItem) => r.category?.name },
     { title: 'Продавец', render: (_: unknown, r: ProductItem) => r.seller?.email },
   ];
 
-  // -------------------------------------------------------------------------
-  // Рендер
-  // -------------------------------------------------------------------------
   return (
     <div>
       <Space style={{ marginBottom: 16 }}>
@@ -86,9 +78,8 @@ const ProductsTab = () => {
           value={statusFilter}
           onChange={setStatusFilter}
           options={[
-            { value: 'active', label: 'Активные' },
-            { value: 'inactive', label: 'Неактивные' },
-            { value: 'banned', label: 'Забанены' },
+            { value: 'ACTIVE', label: 'Активные' },
+            { value: 'INACTIVE', label: 'Неактивные' },
           ]}
           style={{ width: 150 }}
         />

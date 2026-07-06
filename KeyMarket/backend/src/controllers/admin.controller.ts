@@ -2,60 +2,64 @@ import { FastifyRequest } from 'fastify';
 import { AdminService } from '../services/admin.service';
 import { UnauthorizedError, ForbiddenError } from '../common/errors';
 
-// Контроллер административной панели.
-// Все методы требуют прав администратора, проверка выполняется через ensureAdmin.
+// Список ролей, которым разрешён доступ к админ-панели
+const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN'];
+
 export class AdminController {
     constructor(private adminService: AdminService) { }
 
-    // GET /admin/users — список пользователей с пагинацией и поиском.
+    // GET /admin/users — список пользователей
     getUsers = async (req: FastifyRequest) => {
         this.ensureAdmin(req);
         const { page = 1, limit = 20, search } = req.query as any;
         return this.adminService.getUsers(Number(page), Number(limit), search);
     };
 
-    // POST /admin/users/:id/ban — забанить пользователя (устанавливает bannedAt).
+    // PUT /admin/users/:id/ban — забанить пользователя
     banUser = async (req: FastifyRequest) => {
         this.ensureAdmin(req);
         const { id } = req.params as any;
         return this.adminService.banUser(Number(id));
     };
-    // POST /admin/users/:id/unban — разбанить пользователя (сбрасывает bannedAt).
+
+    // PUT /admin/users/:id/unban — разбанить пользователя
     unbanUser = async (req: FastifyRequest) => {
         this.ensureAdmin(req);
         const { id } = req.params as any;
         return this.adminService.unbanUser(Number(id));
     };
 
-    // PUT /admin/users/:id/role — изменить роль пользователя.
-    // Ожидает тело { role: 'BUYER' | 'SELLER' | 'ADMIN' }.
+    // PUT /admin/users/:id/role — изменить роль пользователя
     changeRole = async (req: FastifyRequest) => {
         this.ensureAdmin(req);
         const { id } = req.params as any;
         const { role } = req.body as any;
-        return this.adminService.changeRole(Number(id), role);
+        const currentUser = req.session.get('user')!;
+        return this.adminService.changeRole(Number(id), role.toUpperCase(), currentUser.role);
     };
 
-    // GET /admin/products — просмотр всех товаров.
+    // GET /admin/products — список товаров
     getProducts = async (req: FastifyRequest) => {
         this.ensureAdmin(req);
         const { page = 1, limit = 20 } = req.query as any;
         return this.adminService.getProducts(Number(page), Number(limit));
     };
 
-
-    // GET /admin/orders — просмотр всех заказов.
+    // GET /admin/orders — список заказов
     getOrders = async (req: FastifyRequest) => {
         this.ensureAdmin(req);
         const { page = 1, limit = 20 } = req.query as any;
         return this.adminService.getOrders(Number(page), Number(limit));
     };
 
-    // Вспомогательный метод: проверяет, что запрос отправлен администратором.
-    // Бросает UnauthorizedError или ForbiddenError в случае неудачи.
+    // Проверяет, что запрос отправлен администратором или супер-администратором.
+    // Бросает UnauthorizedError, если пользователь не авторизован,
+    // и ForbiddenError, если у него недостаточно прав.
     private ensureAdmin(req: FastifyRequest) {
         const user = req.session.get('user');
         if (!user) throw new UnauthorizedError('Unauthorized');
-        if (user.role !== 'ADMIN') throw new ForbiddenError('Access denied');
+        if (!ADMIN_ROLES.includes(user.role)) {
+            throw new ForbiddenError('Access denied');
+        }
     }
 }

@@ -12,6 +12,7 @@ enum UserRole {
   BUYER
   SELLER
   ADMIN
+  SUPER_ADMIN 
 }
 
 enum ProductStatus {
