@@ -1,6 +1,6 @@
 // Список отзывов о товаре
 import { useEffect, useState, useCallback } from 'react';
-import { List, Rate, Typography, Spin, message } from 'antd';
+import { List, Rate, Typography, message } from 'antd';
 import apiClient from '../api/client';
 
 const { Text } = Typography;

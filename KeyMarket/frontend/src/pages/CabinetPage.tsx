@@ -1,15 +1,15 @@
 // Страница личного кабинета
-// Показывает профиль, баланс, позволяет пополнить счёт, вывести средства,
-// изменить пароль, а также просматривать историю покупок и продаж
+// Показывает профиль, позволяет вывести средства (только продавцам),
+// сменить пароль, просматривать историю покупок и продаж.
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { useNavigate } from 'react-router-dom';
 import {
-  Button, Descriptions, Spin, Modal, InputNumber, Input, message, Tabs, Card, Row, Col,
+  Descriptions, Spin, Modal, InputNumber, Input, message, Tabs, Card, Row, Col,
   Avatar, Typography,
 } from 'antd';
 import {
-  UserOutlined, WalletOutlined, DollarOutlined, LockOutlined, LogoutOutlined,
+  UserOutlined, DollarOutlined, LockOutlined, LogoutOutlined,
 } from '@ant-design/icons';
 import apiClient from '../api/client';
 import { AxiosError } from 'axios';
@@ -18,37 +18,31 @@ import OrdersList from '../components/OrdersList';
 const { Text } = Typography;
 
 const CabinetPage = () => {
-  // забираем fetched для точной проверки сессии
+  // Получаем данные из стора, включая fetched
   const { user, loading, fetched, fetchUser, logout } = useAuthStore();
   const navigate = useNavigate();
 
-  // Состояния для модальных окон (без изменений)
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [amount, setAmount] = useState<number | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
+  // Состояния для модального окна вывода средств (только для продавцов)
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState<number | null>(null);
   const [withdrawSubmitting, setWithdrawSubmitting] = useState(false);
 
+  // Состояния для модального окна смены пароля
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
 
-  // Защита маршрута и загрузка баланса
+  // Защита маршрута
   useEffect(() => {
-    // Если проверка сессии ещё не запускалась — запускаем (на случай прямого захода)
     if (!fetched && !loading) {
       fetchUser();
     }
-    // Когда проверка завершена (fetched === true) и пользователь отсутствует — редирект на вход
     if (fetched && !user) {
       navigate('/login');
       return;
     }
-    // Если пользователь уже есть, но баланс ещё не загружен — запрашиваем актуальные данные
     if (user && user.balance === undefined) {
       fetchUser(true);
     }
@@ -67,27 +61,7 @@ const CabinetPage = () => {
     };
   }, [user, fetchUser]);
 
-  // Обработчики действий (без изменений)
-  const handleReplenish = async () => {
-    if (!amount || amount <= 0) {
-      message.warning('Введите сумму пополнения');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const { data } = await apiClient.post('/payments/replenish', { amount });
-      window.open(data.paymentUrl, '_blank');
-      message.success('Перейдите на открывшуюся страницу для оплаты');
-      setIsModalOpen(false);
-      setAmount(null);
-    } catch (err) {
-      const error = err as AxiosError<{ error: string }>;
-      message.error(error.response?.data?.error || 'Ошибка создания платежа');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
+  // Вывод средств (только для продавца)
   const handleWithdraw = async () => {
     if (!withdrawAmount || withdrawAmount <= 0) {
       message.warning('Введите сумму вывода');
@@ -108,6 +82,7 @@ const CabinetPage = () => {
     }
   };
 
+  // Смена пароля
   const handleChangePassword = async () => {
     if (!oldPassword || !newPassword || !confirmPassword) {
       message.warning('Заполните все поля');
@@ -138,13 +113,9 @@ const CabinetPage = () => {
   };
 
   // Рендеринг
-
-  // Пока идёт проверка сессии (loading или ещё не fetched) — показываем спиннер
   if (loading || !fetched) {
     return <Spin style={{ display: 'block', marginTop: 40 }} />;
   }
-
-  // Если проверка завершена и пользователя нет — размонтируемся (редирект уже должен произойти)
   if (!user) return null;
 
   // Вкладки личного кабинета
@@ -162,30 +133,24 @@ const CabinetPage = () => {
               <Descriptions bordered column={1} size="small">
                 <Descriptions.Item label="Email">{user.email}</Descriptions.Item>
                 <Descriptions.Item label="Роль">
-                  {user.role === 'buyer' ? 'Покупатель' : user.role === 'seller' ? 'Продавец' : 'Администратор'}
+                  {user.role === 'BUYER' ? 'Покупатель' : user.role === 'SELLER' ? 'Продавец' : user.role === 'ADMIN' ? 'Администратор' : user.role}
                 </Descriptions.Item>
-                <Descriptions.Item label="Баланс">
-                  <Text strong style={{ fontSize: 18, color: '#52c41a' }}>
-                    {user.balance ?? 0} ₽
-                  </Text>
-                </Descriptions.Item>
+                {/* Баланс показываем только продавцам */}
+                {user.role === 'SELLER' && (
+                  <Descriptions.Item label="Баланс">
+                    <Text strong style={{ fontSize: 18, color: '#52c41a' }}>
+                      {user.balance ?? 0} ₽
+                    </Text>
+                  </Descriptions.Item>
+                )}
               </Descriptions>
             </Col>
           </Row>
 
+          {/* Карточки действий */}
           <Row gutter={[16, 16]} style={{ marginTop: 24 }} align="stretch">
-            <Col xs={24} sm={12} md={6}>
-              <Card
-                hoverable
-                onClick={() => setIsModalOpen(true)}
-                style={{ textAlign: 'center', cursor: 'pointer', height: '100%' }}
-              >
-                <WalletOutlined style={{ fontSize: 32, color: '#722ed1', marginBottom: 8 }} />
-                <div style={{ fontSize: 16, fontWeight: 500 }}>Пополнить баланс</div>
-                <Text type="secondary">Пополните счёт для покупок</Text>
-              </Card>
-            </Col>
-            {user.role === 'seller' && (
+            {/* Вывод средств – только для продавца */}
+            {user.role === 'SELLER' && (
               <Col xs={24} sm={12} md={6}>
                 <Card
                   hoverable
@@ -198,6 +163,8 @@ const CabinetPage = () => {
                 </Card>
               </Col>
             )}
+
+            {/* Смена пароля */}
             <Col xs={24} sm={12} md={6}>
               <Card
                 hoverable
@@ -209,6 +176,8 @@ const CabinetPage = () => {
                 <Text type="secondary">Повысьте безопасность аккаунта</Text>
               </Card>
             </Col>
+
+            {/* Выход */}
             <Col xs={24} sm={12} md={6}>
               <Card
                 hoverable
@@ -231,7 +200,8 @@ const CabinetPage = () => {
     },
   ];
 
-  if (user.role === 'seller') {
+  // Вкладка "Продажи" – только для продавцов
+  if (user.role === 'SELLER') {
     tabItems.push({
       key: 'sales',
       label: 'Продажи',
@@ -244,20 +214,7 @@ const CabinetPage = () => {
       <h1>Личный кабинет</h1>
       <Tabs defaultActiveKey="profile" items={tabItems} />
 
-      {/* Модальные окна */}
-      <Modal title="Пополнение баланса" open={isModalOpen} onOk={handleReplenish}
-        onCancel={() => { setIsModalOpen(false); setAmount(null); }}
-        confirmLoading={submitting} okText="Пополнить" cancelText="Отмена">
-        <p>Введите сумму (эмуляция платежа):</p>
-        <InputNumber
-          style={{ width: '100%' }}
-          min={1}
-          placeholder="Сумма в рублях"
-          value={amount}
-          onChange={(val: number | null) => setAmount(val)}
-        />
-      </Modal>
-
+      {/* Модальное окно вывода средств */}
       <Modal title="Вывод средств" open={isWithdrawModalOpen} onOk={handleWithdraw}
         onCancel={() => { setIsWithdrawModalOpen(false); setWithdrawAmount(null); }}
         confirmLoading={withdrawSubmitting} okText="Вывести" cancelText="Отмена">
@@ -271,6 +228,7 @@ const CabinetPage = () => {
         />
       </Modal>
 
+      {/* Модальное окно смены пароля */}
       <Modal title="Смена пароля" open={isPasswordModalOpen} onOk={handleChangePassword}
         onCancel={() => { setIsPasswordModalOpen(false); setOldPassword(''); setNewPassword(''); setConfirmPassword(''); }}
         confirmLoading={passwordSubmitting} okText="Сменить" cancelText="Отмена">

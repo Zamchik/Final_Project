@@ -1,7 +1,7 @@
 // Форма оставления отзыва о товаре
 // Принимает productId и orderId, а также callback после успешной отправки
 import { useState } from 'react';
-import { Modal, Rate, Input, Button, message } from 'antd';
+import { Modal, Rate, Input, message } from 'antd';
 import apiClient from '../api/client';
 import { AxiosError } from 'axios';
 

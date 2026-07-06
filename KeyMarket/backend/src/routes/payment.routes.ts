@@ -13,40 +13,40 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   const notificationService = fastify.notificationService;
   const paymentService = new PaymentService(prisma, mockGateway, orderService, emailService, notificationService);
 
-  // POST /payments/replenish — пополнение баланса
-  fastify.post('/replenish', {
-    preHandler: [fastify.authenticate],
-    schema: {
-      tags: ['payments'],
-      summary: 'Создать платёж для пополнения баланса (mock)',
-      security: [{ cookieAuth: [] }],
-      body: {
-        type: 'object',
-        required: ['amount'],
-        properties: {
-          amount: { type: 'number', description: 'Сумма пополнения' },
-        },
-      },
-      response: {
-        200: {
-          type: 'object',
-          properties: {
-            paymentId: { type: 'integer' },
-            externalId: { type: 'string' },
-            paymentUrl: { type: 'string' },
-          },
-        },
-        400: { type: 'object', properties: { error: { type: 'string' } } },
-        401: { type: 'object', properties: { error: { type: 'string' } } },
-      },
-    },
-  }, async (request, reply) => {
-    const { amount } = request.body as any;
-    const userId = request.session.get('user')?.id;
-    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
-    const result = await paymentService.createReplenishment(userId, amount);
-    return result;
-  });
+  // POST /payments/replenish — пополнение баланса (Пока что не используется, но оставим на будущее)
+  // fastify.post('/replenish', {
+  //   preHandler: [fastify.authenticate],
+  //   schema: {
+  //     tags: ['payments'],
+  //     summary: 'Создать платёж для пополнения баланса (mock)',
+  //     security: [{ cookieAuth: [] }],
+  //     body: {
+  //       type: 'object',
+  //       required: ['amount'],
+  //       properties: {
+  //         amount: { type: 'number', description: 'Сумма пополнения' },
+  //       },
+  //     },
+  //     response: {
+  //       200: {
+  //         type: 'object',
+  //         properties: {
+  //           paymentId: { type: 'integer' },
+  //           externalId: { type: 'string' },
+  //           paymentUrl: { type: 'string' },
+  //         },
+  //       },
+  //       400: { type: 'object', properties: { error: { type: 'string' } } },
+  //       401: { type: 'object', properties: { error: { type: 'string' } } },
+  //     },
+  //   },
+  // }, async (request, reply) => {
+  //   const { amount } = request.body as any;
+  //   const userId = request.session.get('user')?.id;
+  //   if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+  //   const result = await paymentService.createReplenishment(userId, amount);
+  //   return result;
+  // });
 
   // POST /payments/orders/:orderId/create-payment — оплата заказа
   fastify.post('/orders/:orderId/create-payment', {

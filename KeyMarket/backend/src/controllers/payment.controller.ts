@@ -6,17 +6,18 @@ import { UnauthorizedError } from '../common/errors';
 export class PaymentController {
   constructor(private paymentService: PaymentService) {}
 
-  // POST /payments/replenish
-  createReplenishment = async (
-    req: FastifyRequest<{ Body: { amount: number } }>,
-    reply: FastifyReply
-  ) => {
-    const userId = req.session.get('user')?.id;
-    if (!userId) throw new UnauthorizedError('Unauthorized');
+  // POST /payments/replenish пополнение баланса (Пока что не используется, но оставим на будущее)
+  // fastify.post('/replenish', {
+  // createReplenishment = async (
+  //   req: FastifyRequest<{ Body: { amount: number } }>,
+  //   reply: FastifyReply
+  // ) => {
+  //   const userId = req.session.get('user')?.id;
+  //   if (!userId) throw new UnauthorizedError('Unauthorized');
 
-    const result = await this.paymentService.createReplenishment(userId, req.body.amount);
-    return result;
-  };
+  //   const result = await this.paymentService.createReplenishment(userId, req.body.amount);
+  //   return result;
+  // };
 
   // POST /payments/webhook
   webhook = async (req: FastifyRequest<{ Body: { externalId: string; state: string } }>) => {

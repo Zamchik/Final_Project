@@ -5,7 +5,7 @@ import { Outlet, Link } from 'react-router-dom';
 import { Layout as AntLayout, Menu, Spin, Row, Col, Typography } from 'antd';
 import {
   HomeOutlined, AppstoreOutlined, UserOutlined, LoginOutlined,
-  FormOutlined, PlusSquareOutlined, SettingOutlined, ShopOutlined,
+  FormOutlined, PlusSquareOutlined, ShopOutlined,
   DashboardOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../stores/authStore';
@@ -41,10 +41,10 @@ const MainLayout = () => {
     ...(user
       ? [{ key: 'cabinet', label: <Link to="/cabinet"><UserOutlined /> Личный кабинет</Link> }]
       : []),
-    ...(user?.role === 'admin'
+    ...(user?.role === 'ADMIN'
       ? [{ key: 'admin', label: <Link to="/admin"><DashboardOutlined /> Админ-панель</Link> }]
       : []),
-    ...(user?.role === 'seller'
+    ...(user?.role === 'SELLER'
       ? [
         { key: 'my-products', label: <Link to="/my-products"><ShopOutlined /> Мои товары</Link> },
         { key: 'create-product', label: <Link to="/create-product"><PlusSquareOutlined /> Добавить товар</Link> },

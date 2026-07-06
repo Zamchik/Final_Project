@@ -2,6 +2,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { AuthService } from '../services/auth.service';
 import { UnauthorizedError, BadRequestError } from '../common/errors';
+import { NotificationType } from '@prisma/client';
 
 export class AuthController {
   constructor(private authService: AuthService) { }
@@ -31,7 +32,7 @@ export class AuthController {
 
     // Создаём приветственное уведомление
     try {
-      await req.server.notificationService.create(user.id, 'welcome', 'Добро пожаловать в KeyMarket!');
+      await req.server.notificationService.create(user.id, NotificationType.WELCOME, 'Добро пожаловать в KeyMarket!');
     } catch (err) {
       // игнорируем ошибку
     }
@@ -41,16 +42,16 @@ export class AuthController {
 
   // POST /auth/login — вход
   login = async (req: FastifyRequest<{ Body: { email: string; password: string } }>, reply: FastifyReply) => {
-    const { email, password } = req.body;
-    const user = await this.authService.login(email, password);
-    req.session.set('user', { id: user.id, email: user.email, role: user.role });
-    return user;
-  };
+  const { email, password } = req.body;
+  const user = await this.authService.login(email, password);
+  req.session.set('user', { id: user.id, email: user.email, role: user.role });
+  return { user: user };
+};
 
   // POST /auth/logout — выход
   logout = async (req: FastifyRequest) => {
-    (req.session as any).destroy();
-    return { success: true };
+    req.session.delete(); // удаляем сессию
+    return {};
   };
 
   // GET /auth/me — профиль текущего пользователя
