@@ -57,7 +57,7 @@ declare module 'fastify' {
 async function setup() {
   // Email и уведомления
   const mailTransport = await createTestTransport();
-  const emailService = new EmailService(mailTransport);
+  const emailService = new EmailService(mailTransport, app.log);
   const notificationService = new NotificationService();
   app.decorate('emailService', emailService);
   app.decorate('notificationService', notificationService);

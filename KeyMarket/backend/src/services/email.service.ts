@@ -1,15 +1,15 @@
 // Сервис отправки email-уведомлений
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
+import type { FastifyBaseLogger } from 'fastify';
 
 export class EmailService {
-  constructor(private transporter: Transporter) {}
-  /**
-   * Отправить письмо.
-   * @param to - адрес получателя
-   * @param subject - тема письма
-   * @param html - HTML-содержимое письма
-   */
+  constructor(
+    private transporter: Transporter,
+    private logger: FastifyBaseLogger
+  ) { }
+
+  // Отправить письмо.
   async send(to: string, subject: string, html: string) {
     const info = await this.transporter.sendMail({
       from: '"KeyMarket" <noreply@keymarket.local>',
@@ -18,11 +18,10 @@ export class EmailService {
       html,
     });
 
-    console.log('Email sent:', info.messageId);
-    // Ссылка на просмотр письма в Ethereal (только для тестового транспорта)
+    this.logger.info('Email sent: %s', info.messageId);
     const previewUrl = nodemailer.getTestMessageUrl(info);
     if (previewUrl) {
-      console.log('Preview URL:', previewUrl);
+      this.logger.info('Preview URL: %s', previewUrl);
     }
     return info;
   }
