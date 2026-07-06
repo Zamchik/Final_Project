@@ -22,7 +22,7 @@ describe('AuthService', () => {
 
     // Проверяем, что пароль захэширован
     const dbUser = await prisma.user.findUnique({ where: { email: 'test@example.com' } });
-    const isPasswordValid = await bcrypt.compare('password123', dbUser!.password_hash);
+    const isPasswordValid = await bcrypt.compare('password123', dbUser!.passwordHash);
     expect(isPasswordValid).toBe(true);
   });
 

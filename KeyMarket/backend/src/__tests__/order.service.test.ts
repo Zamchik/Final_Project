@@ -1,10 +1,11 @@
 import { OrderService } from '../services/order.service';
+import { prisma } from '../prisma';
 
 describe('OrderService', () => {
   let orderService: OrderService;
 
   beforeAll(() => {
-    orderService = new OrderService();
+    orderService = new OrderService(prisma);
   });
 
   it('должен выбросить ошибку при создании заказа для несуществующего товара', async () => {

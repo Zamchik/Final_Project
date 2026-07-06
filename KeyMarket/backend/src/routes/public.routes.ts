@@ -125,7 +125,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     const { keys, ...rest } = product;
     return {
       ...rest,
-      stock: keys.filter((k) => !k.isSold).length,   // оставляем isSold, т.к. модель ещё не переведена
+      stock: keys.filter((k) => !k.soldAt).length,
     };
   });
 

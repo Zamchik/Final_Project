@@ -117,7 +117,7 @@ export const findPublicProducts = async (options: {
   maxPrice?: number;
   sort?: 'price_asc' | 'price_desc' | 'newest';
 }) => {
-  const where: Prisma.ProductWhereInput = { status: 'active' };
+  const where: Prisma.ProductWhereInput = { status: 'ACTIVE' };
 
   if (options.search) {
     where.title = { contains: options.search, mode: 'insensitive' };
