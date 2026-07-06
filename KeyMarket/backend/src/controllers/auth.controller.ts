@@ -61,10 +61,11 @@ export class AuthController {
   };
 
   // POST /auth/change-password — смена пароля
-  changePassword = async (req: FastifyRequest<{ Body: { oldPassword: string; newPassword: string } }>) => {
+  changePassword = async (req: FastifyRequest) => {
     const userId = req.session.get('user')?.id;
     if (!userId) throw new UnauthorizedError('Unauthorized');
-    return this.authService.changePassword(userId, req.body.oldPassword, req.body.newPassword);
+    const { oldPassword, newPassword } = req.body as any;
+    return this.authService.changePassword(userId, oldPassword, newPassword);
   };
 
   // GET /auth/verify-email — подтверждение email

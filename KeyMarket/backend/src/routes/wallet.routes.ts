@@ -2,14 +2,11 @@
 import { FastifyInstance } from 'fastify';
 import { WalletController } from '../controllers/wallet.controller';
 import { WalletService } from '../services/wallet.service';
+import { prisma } from '../prisma';
 import { requireRole } from '../middleware/auth';
 
-interface AmountBody {
-  amount: number;
-}
-
 export default async function walletRoutes(fastify: FastifyInstance) {
-  const walletService = new WalletService();
+  const walletService = new WalletService(prisma);
   const controller = new WalletController(walletService);
 
   // GET /wallet — баланс
@@ -23,21 +20,16 @@ export default async function walletRoutes(fastify: FastifyInstance) {
         200: {
           type: 'object',
           properties: {
-            balance: { type: 'string', description: 'Текущий баланс' },
+            balance: { type: 'string' },
           },
         },
-        401: {
-          type: 'object',
-          properties: {
-            error: { type: 'string' },
-          },
-        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
       },
     },
   }, controller.getBalance);
 
   // POST /wallet/withdraw — вывод средств (только для продавца)
-  fastify.post<{ Body: AmountBody }>('/withdraw', {
+  fastify.post('/withdraw', {
     preHandler: [fastify.authenticate, requireRole('seller')],
     schema: {
       tags: ['wallet'],
@@ -47,7 +39,7 @@ export default async function walletRoutes(fastify: FastifyInstance) {
         type: 'object',
         required: ['amount'],
         properties: {
-          amount: { type: 'number', description: 'Сумма для вывода' },
+          amount: { type: 'number' },
         },
       },
       response: {
@@ -55,15 +47,10 @@ export default async function walletRoutes(fastify: FastifyInstance) {
           type: 'object',
           properties: {
             balance: { type: 'string' },
-            transactionId: { type: 'number' },
+            transactionId: { type: 'integer' },
           },
         },
-        400: {
-          type: 'object',
-          properties: {
-            error: { type: 'string' },
-          },
-        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
       },
     },
   }, controller.withdraw);

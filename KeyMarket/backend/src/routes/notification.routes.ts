@@ -1,23 +1,18 @@
-// Маршруты для уведомлений
+// Маршруты уведомлений
 import { FastifyInstance } from 'fastify';
 import { NotificationController } from '../controllers/notification.controller';
 import { NotificationService } from '../services/notification.service';
 
-// Тип тела запроса для отметки прочитанных
-interface MarkAsReadBody {
-  ids: number[];
-}
-
 export default async function notificationRoutes(fastify: FastifyInstance) {
-  const notificationService = fastify.notificationService;
+  const notificationService = new NotificationService();   // без параметров
   const controller = new NotificationController(notificationService);
 
-  // GET /notifications — непрочитанные уведомления
+  // GET /notifications — непрочитанные
   fastify.get('/', {
     preHandler: [fastify.authenticate],
     schema: {
       tags: ['notifications'],
-      summary: 'Получить непрочитанные уведомления текущего пользователя',
+      summary: 'Получить непрочитанные уведомления',
       security: [{ cookieAuth: [] }],
       response: {
         200: {
@@ -25,20 +20,20 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
           items: {
             type: 'object',
             properties: {
-              id: { type: 'number' },
-              type: { type: 'string', description: 'Тип уведомления (welcome, order_paid, order_cancelled)' },
+              id: { type: 'integer' },
+              type: { type: 'string' },
               message: { type: 'string' },
-              isRead: { type: 'boolean' },
+              readAt: { type: 'string', nullable: true },
               createdAt: { type: 'string' },
             },
           },
         },
       },
     },
-  }, controller.getUnread);
+  }, controller.getNotifications);
 
   // POST /notifications/read — отметить прочитанными
-  fastify.post<{ Body: MarkAsReadBody }>('/read', {
+  fastify.post('/read', {
     preHandler: [fastify.authenticate],
     schema: {
       tags: ['notifications'],
@@ -50,17 +45,14 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
         properties: {
           ids: {
             type: 'array',
-            items: { type: 'number' },
-            description: 'Массив ID уведомлений',
+            items: { type: 'integer' },
           },
         },
       },
       response: {
         200: {
           type: 'object',
-          properties: {
-            success: { type: 'boolean' },
-          },
+          properties: {},   // успех по статусу
         },
       },
     },

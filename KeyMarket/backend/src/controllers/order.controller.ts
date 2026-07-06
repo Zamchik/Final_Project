@@ -7,51 +7,50 @@ export class OrderController {
   constructor(private orderService: OrderService) { }
 
   // POST /orders — создать заказ
-  create = async (req: FastifyRequest<{ Body: { productId: number } }>, reply: FastifyReply) => {
+  create = async (req: FastifyRequest, reply: FastifyReply) => {
     const userId = req.session.get('user')?.id;
     if (!userId) throw new UnauthorizedError('Unauthorized');
 
-    const order = await this.orderService.createOrder(userId, req.body.productId);
+    const { productId } = req.body as any;
+    const order = await this.orderService.createOrder(userId, productId);
     reply.status(201).send(order);
   };
 
   // POST /orders/:id/cancel — отменить заказ
-  cancel = async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+  cancel = async (req: FastifyRequest) => {
     const userId = req.session.get('user')?.id;
     if (!userId) throw new UnauthorizedError('Unauthorized');
 
-    const result = await this.orderService.cancelOrder(Number(req.params.id), userId);
-    return result;
+    const { id } = req.params as any;
+    return this.orderService.cancelOrder(Number(id), userId);
   };
 
   // GET /orders/my — мои покупки
-  getMyOrders = async (req: FastifyRequest<{ Querystring: { page?: number; limit?: number; status?: string } }>, reply: FastifyReply) => {
+  getMyOrders = async (req: FastifyRequest) => {
     const userId = req.session.get('user')?.id;
     if (!userId) throw new UnauthorizedError('Unauthorized');
 
-    const { page = 1, limit = 10, status } = req.query;
+    const { page = 1, limit = 10, status } = req.query as any;
     return this.orderService.getMyOrders(userId, Number(page), Number(limit), status);
   };
 
   // GET /orders/sales — мои продажи (продавец)
-  getMySales = async (req: FastifyRequest<{ Querystring: { page?: number; limit?: number; status?: string } }>, reply: FastifyReply) => {
+  getMySales = async (req: FastifyRequest) => {
     const userId = req.session.get('user')?.id;
     if (!userId) throw new UnauthorizedError('Unauthorized');
 
-    const { page = 1, limit = 10, status } = req.query;
+    const { page = 1, limit = 10, status } = req.query as any;
     return this.orderService.getSales(userId, Number(page), Number(limit), status);
   };
 
   // GET /orders/:id — получить один заказ
-  getOrder = async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+  getOrder = async (req: FastifyRequest) => {
     const userId = req.session.get('user')?.id;
     if (!userId) throw new UnauthorizedError('Unauthorized');
 
-    const orderId = Number(req.params.id);
-    const order = await this.orderService.getOrderById(orderId, userId);
-    if (!order) {
-      throw new NotFoundError('Заказ не найден');
-    }
+    const { id } = req.params as any;
+    const order = await this.orderService.getOrderById(Number(id), userId);
+    if (!order) throw new NotFoundError('Заказ не найден')
 
     // ответ с ключами только для оплаченных/доставленных
     const result = {

@@ -18,20 +18,51 @@ export default async function productRoutes(fastify: FastifyInstance) {
       querystring: {
         type: 'object',
         properties: {
-          page: { type: 'number', default: 1 },
-          limit: { type: 'number', default: 10 },
+          page: { type: 'integer', default: 1 },
+          limit: { type: 'integer', default: 10 },
           search: { type: 'string' },
-          categoryId: { type: 'number' },
+          categoryId: { type: 'integer' },
         },
       },
       response: {
         200: {
           type: 'object',
           properties: {
-            products: { type: 'array', items: {} },
-            total: { type: 'number' },
-            page: { type: 'number' },
-            limit: { type: 'number' },
+            products: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'integer' },
+                  title: { type: 'string' },
+                  price: { type: 'string' },
+                  stock: { type: 'integer' },
+                  status: { type: 'string' },
+                  imageUrl: { type: 'string', nullable: true },
+                  category: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'integer' },
+                      name: { type: 'string' },
+                    },
+                  },
+                  keys: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'integer' },
+                        keyValue: { type: 'string' },
+                        soldAt: { type: 'string', nullable: true },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            total: { type: 'integer' },
+            page: { type: 'integer' },
+            limit: { type: 'integer' },
           },
         },
       },
@@ -52,7 +83,8 @@ export default async function productRoutes(fastify: FastifyInstance) {
           title: { type: 'string', description: 'Название товара' },
           description: { type: 'string', description: 'Описание' },
           price: { type: 'number', description: 'Цена' },
-          categoryId: { type: 'number', description: 'ID категории' },
+          categoryId: { type: 'integer', description: 'ID категории' },
+          imageUrl: { type: 'string', description: 'Ссылка на изображение' },
           keys: {
             type: 'array',
             items: { type: 'string' },
@@ -64,11 +96,19 @@ export default async function productRoutes(fastify: FastifyInstance) {
         201: {
           type: 'object',
           properties: {
-            id: { type: 'number' },
+            id: { type: 'integer' },
             title: { type: 'string' },
             price: { type: 'string' },
-            stock: { type: 'number' },
+            stock: { type: 'integer' },
             status: { type: 'string' },
+            imageUrl: { type: 'string', nullable: true },
+            category: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                name: { type: 'string' },
+              },
+            },
           },
         },
         400: {
@@ -92,7 +132,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
         type: 'object',
         required: ['id'],
         properties: {
-          id: { type: 'string', description: 'ID товара' },
+          id: { type: 'integer', description: 'ID товара' },
         },
       },
       body: {
@@ -101,9 +141,9 @@ export default async function productRoutes(fastify: FastifyInstance) {
           title: { type: 'string' },
           description: { type: 'string' },
           price: { type: 'number' },
-          categoryId: { type: 'number' },
-          status: { type: 'string', enum: ['active', 'inactive'] },
-          imageUrl: { type: 'string', description: 'Ссылка на изображение товара' },
+          categoryId: { type: 'integer' },
+          status: { type: 'string', enum: ['ACTIVE', 'INACTIVE'] },
+          imageUrl: { type: 'string', description: 'Ссылка на изображение' },
           newKeys: {
             type: 'array',
             items: { type: 'string' },
@@ -115,9 +155,11 @@ export default async function productRoutes(fastify: FastifyInstance) {
         200: {
           type: 'object',
           properties: {
-            id: { type: 'number' },
+            id: { type: 'integer' },
             title: { type: 'string' },
-            stock: { type: 'number' },
+            stock: { type: 'integer' },
+            status: { type: 'string' },
+            imageUrl: { type: 'string', nullable: true },
           },
         },
         400: {
@@ -141,15 +183,13 @@ export default async function productRoutes(fastify: FastifyInstance) {
         type: 'object',
         required: ['id'],
         properties: {
-          id: { type: 'string', description: 'ID товара' },
+          id: { type: 'integer', description: 'ID товара' },
         },
       },
       response: {
         200: {
           type: 'object',
-          properties: {
-            success: { type: 'boolean' },
-          },
+          properties: {},   // достаточно статуса 200
         },
         400: {
           type: 'object',
@@ -162,7 +202,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
   }, controller.deleteProduct);
 
   // GET /products/my/:id — получить один товар для редактирования
-  fastify.get<{ Params: { id: string } }>('/my/:id', {
+  fastify.get('/my/:id', {
     preHandler: [fastify.authenticate, requireRole('seller')],
     schema: {
       tags: ['products'],
@@ -172,25 +212,25 @@ export default async function productRoutes(fastify: FastifyInstance) {
         type: 'object',
         required: ['id'],
         properties: {
-          id: { type: 'string', description: 'ID товара' },
+          id: { type: 'integer', description: 'ID товара' },
         },
       },
       response: {
         200: {
           type: 'object',
           properties: {
-            id: { type: 'number' },
+            id: { type: 'integer' },
             title: { type: 'string' },
             description: { type: 'string' },
             price: { type: 'string' },
-            stock: { type: 'number' },
+            stock: { type: 'integer' },
             status: { type: 'string' },
-            imageUrl: { type: 'string' },
-            categoryId: { type: 'number' },
+            imageUrl: { type: 'string', nullable: true },
+            categoryId: { type: 'integer' },
             category: {
               type: 'object',
               properties: {
-                id: { type: 'number' },
+                id: { type: 'integer' },
                 name: { type: 'string' },
               },
             },
@@ -199,9 +239,9 @@ export default async function productRoutes(fastify: FastifyInstance) {
               items: {
                 type: 'object',
                 properties: {
-                  id: { type: 'number' },
+                  id: { type: 'integer' },
                   keyValue: { type: 'string' },
-                  isSold: { type: 'boolean' },
+                  isSold: { type: 'boolean' },   // пока оставим boolean, т.к. не все мигрировали
                 },
               },
             },
@@ -216,10 +256,10 @@ export default async function productRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (req, reply) => {
-    const productId = Number(req.params.id);
+    const { id } = req.params as any;
     const sellerId = req.session.get('user')?.id;
     const product = await prisma.product.findFirst({
-      where: { id: productId, sellerId },
+      where: { id: Number(id), sellerId },
       include: { category: true, keys: true },
     });
     if (!product) {

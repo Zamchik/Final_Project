@@ -4,12 +4,6 @@ import { prisma } from '../prisma';
 import { AuthController } from '../controllers/auth.controller';
 import { AuthService } from '../services/auth.service';
 
-// Типы для запроса смены пароля
-interface ChangePasswordBody {
-  oldPassword: string;
-  newPassword: string;
-}
-
 export default async function authRoutes(fastify: FastifyInstance) {
   const authService = new AuthService(prisma);
   const controller = new AuthController(authService);
@@ -23,8 +17,8 @@ export default async function authRoutes(fastify: FastifyInstance) {
         type: 'object',
         required: ['email', 'password'],
         properties: {
-          email: { type: 'string', format: 'email', description: 'Email пользователя' },
-          password: { type: 'string', minLength: 6, description: 'Пароль' },
+          email: { type: 'string', format: 'email' },
+          password: { type: 'string', minLength: 6 },
         },
       },
       response: {
@@ -34,12 +28,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
             message: { type: 'string' },
           },
         },
-        400: {
-          type: 'object',
-          properties: {
-            error: { type: 'string' },
-          },
-        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
       },
     },
   }, controller.register);
@@ -57,13 +46,8 @@ export default async function authRoutes(fastify: FastifyInstance) {
         },
       },
       response: {
-        302: { type: 'null', description: 'Редирект на фронтенд' },
-        400: {
-          type: 'object',
-          properties: {
-            error: { type: 'string' },
-          },
-        },
+        302: { type: 'null' },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
       },
     },
   }, controller.verifyEmail);
@@ -88,19 +72,14 @@ export default async function authRoutes(fastify: FastifyInstance) {
             user: {
               type: 'object',
               properties: {
-                id: { type: 'number' },
+                id: { type: 'integer' },
                 email: { type: 'string' },
                 role: { type: 'string' },
               },
             },
           },
         },
-        401: {
-          type: 'object',
-          properties: {
-            error: { type: 'string' },
-          },
-        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
       },
     },
   }, controller.login);
@@ -116,21 +95,16 @@ export default async function authRoutes(fastify: FastifyInstance) {
         200: {
           type: 'object',
           properties: {
-            id: { type: 'number' },
+            id: { type: 'integer' },
             email: { type: 'string' },
             role: { type: 'string' },
             balance: { type: 'string' },
           },
         },
-        401: {
-          type: 'object',
-          properties: {
-            error: { type: 'string' },
-          },
-        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
       },
     },
-  }, controller.me);
+  }, controller.getMe);
 
   // POST /auth/logout
   fastify.post('/logout', {
@@ -140,16 +114,14 @@ export default async function authRoutes(fastify: FastifyInstance) {
       response: {
         200: {
           type: 'object',
-          properties: {
-            success: { type: 'boolean' },
-          },
+          properties: {},
         },
       },
     },
   }, controller.logout);
 
   // POST /auth/change-password
-  fastify.post<{ Body: ChangePasswordBody }>('/change-password', {
+  fastify.post('/change-password', {
     preHandler: [fastify.authenticate],
     schema: {
       tags: ['auth'],
@@ -165,16 +137,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
       response: {
         200: {
           type: 'object',
-          properties: {
-            success: { type: 'boolean' },
-          },
+          properties: {},
         },
-        400: {
-          type: 'object',
-          properties: {
-            error: { type: 'string' },
-          },
-        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
       },
     },
   }, controller.changePassword);

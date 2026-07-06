@@ -8,42 +8,46 @@ export class AdminController {
     constructor(private adminService: AdminService) { }
 
     // GET /admin/users — список пользователей с пагинацией и поиском.
-    getUsers = async (req: FastifyRequest<{ Querystring: { page?: number; limit?: number; search?: string } }>) => {
+    getUsers = async (req: FastifyRequest) => {
         this.ensureAdmin(req);
-        const { page = 1, limit = 20, search } = req.query;
+        const { page = 1, limit = 20, search } = req.query as any;
         return this.adminService.getUsers(Number(page), Number(limit), search);
     };
 
     // POST /admin/users/:id/ban — забанить пользователя (устанавливает bannedAt).
-    banUser = async (req: FastifyRequest<{ Params: { id: string } }>) => {
+    banUser = async (req: FastifyRequest) => {
         this.ensureAdmin(req);
-        return this.adminService.banUser(Number(req.params.id));
+        const { id } = req.params as any;
+        return this.adminService.banUser(Number(id));
     };
-
     // POST /admin/users/:id/unban — разбанить пользователя (сбрасывает bannedAt).
-    unbanUser = async (req: FastifyRequest<{ Params: { id: string } }>) => {
+    unbanUser = async (req: FastifyRequest) => {
         this.ensureAdmin(req);
-        return this.adminService.unbanUser(Number(req.params.id));
+        const { id } = req.params as any;
+        return this.adminService.unbanUser(Number(id));
     };
 
     // PUT /admin/users/:id/role — изменить роль пользователя.
     // Ожидает тело { role: 'BUYER' | 'SELLER' | 'ADMIN' }.
-    changeRole = async (req: FastifyRequest<{ Params: { id: string }; Body: { role: string } }>) => {
+    changeRole = async (req: FastifyRequest) => {
         this.ensureAdmin(req);
-        return this.adminService.changeRole(Number(req.params.id), req.body.role);
+        const { id } = req.params as any;
+        const { role } = req.body as any;
+        return this.adminService.changeRole(Number(id), role);
     };
 
     // GET /admin/products — просмотр всех товаров.
-    getProducts = async (req: FastifyRequest<{ Querystring: { page?: number; limit?: number } }>) => {
+    getProducts = async (req: FastifyRequest) => {
         this.ensureAdmin(req);
-        const { page = 1, limit = 20 } = req.query;
+        const { page = 1, limit = 20 } = req.query as any;
         return this.adminService.getProducts(Number(page), Number(limit));
     };
 
+
     // GET /admin/orders — просмотр всех заказов.
-    getOrders = async (req: FastifyRequest<{ Querystring: { page?: number; limit?: number } }>) => {
+    getOrders = async (req: FastifyRequest) => {
         this.ensureAdmin(req);
-        const { page = 1, limit = 20 } = req.query;
+        const { page = 1, limit = 20 } = req.query as any;
         return this.adminService.getOrders(Number(page), Number(limit));
     };
 

@@ -1,45 +1,32 @@
-// Маршруты для заказов
-
+// Маршруты заказов (префикс /orders в app.ts)
 import { FastifyInstance } from 'fastify';
 import { OrderController } from '../controllers/order.controller';
 import { OrderService } from '../services/order.service';
-
-// Тип тела запроса на создание заказа
-interface CreateOrderBody {
-  productId: number;
-}
-
-// Тип query-параметров для списков заказов
-interface OrderListQuery {
-  page?: number;
-  limit?: number;
-  status?: string;
-}
+import { prisma } from '../prisma';
 
 export default async function orderRoutes(fastify: FastifyInstance) {
-  const notificationService = fastify.notificationService;
-  const orderService = new OrderService(notificationService);
+  const orderService = new OrderService(prisma);
   const controller = new OrderController(orderService);
 
-  // POST /orders — создать заказ (статус 'created')
-  fastify.post<{ Body: CreateOrderBody }>('/', {
+  // POST /orders — создать заказ
+  fastify.post('/', {
     preHandler: [fastify.authenticate],
     schema: {
       tags: ['orders'],
-      summary: 'Создать заказ (статус created) и зарезервировать ключ',
+      summary: 'Создать заказ на покупку товара',
       security: [{ cookieAuth: [] }],
       body: {
         type: 'object',
         required: ['productId'],
         properties: {
-          productId: { type: 'number', description: 'ID товара для покупки' },
+          productId: { type: 'integer', description: 'ID товара для покупки' },
         },
       },
       response: {
         201: {
           type: 'object',
           properties: {
-            id: { type: 'number' },
+            id: { type: 'integer' },
             totalPrice: { type: 'string' },
             status: { type: 'string' },
             createdAt: { type: 'string' },
@@ -48,12 +35,12 @@ export default async function orderRoutes(fastify: FastifyInstance) {
               items: {
                 type: 'object',
                 properties: {
-                  id: { type: 'number' },
+                  id: { type: 'integer' },
                   price: { type: 'string' },
                   product: {
                     type: 'object',
                     properties: {
-                      id: { type: 'number' },
+                      id: { type: 'integer' },
                       title: { type: 'string' },
                       price: { type: 'string' },
                     },
@@ -74,24 +61,24 @@ export default async function orderRoutes(fastify: FastifyInstance) {
   }, controller.create);
 
   // POST /orders/:id/cancel — отменить заказ
-  fastify.post<{ Params: { id: string } }>('/:id/cancel', {
+  fastify.post('/:id/cancel', {
     preHandler: [fastify.authenticate],
     schema: {
       tags: ['orders'],
-      summary: 'Отменить заказ (только если статус created)',
+      summary: 'Отменить заказ (только статус created)',
       security: [{ cookieAuth: [] }],
       params: {
         type: 'object',
         required: ['id'],
         properties: {
-          id: { type: 'string', description: 'ID заказа' },
+          id: { type: 'integer', description: 'ID заказа' },
         },
       },
       response: {
         200: {
           type: 'object',
           properties: {
-            success: { type: 'boolean' },
+            // пустой объект – успех
           },
         },
         400: {
@@ -105,18 +92,18 @@ export default async function orderRoutes(fastify: FastifyInstance) {
   }, controller.cancel);
 
   // GET /orders/my — мои покупки
-  fastify.get<{ Querystring: OrderListQuery }>('/my', {
+  fastify.get('/my', {
     preHandler: [fastify.authenticate],
     schema: {
       tags: ['orders'],
-      summary: 'Получить историю своих покупок',
+      summary: 'Получить список своих покупок',
       security: [{ cookieAuth: [] }],
       querystring: {
         type: 'object',
         properties: {
-          page: { type: 'number', default: 1 },
-          limit: { type: 'number', default: 10 },
-          status: { type: 'string', enum: ['created', 'delivered', 'cancelled'], description: 'Фильтр по статусу' },
+          page: { type: 'integer', default: 1 },
+          limit: { type: 'integer', default: 10 },
+          status: { type: 'string', enum: ['CREATED', 'PAID', 'CANCELLED', 'DELIVERED'] },
         },
       },
       response: {
@@ -128,7 +115,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
               items: {
                 type: 'object',
                 properties: {
-                  id: { type: 'number' },
+                  id: { type: 'integer' },
                   totalPrice: { type: 'string' },
                   status: { type: 'string' },
                   createdAt: { type: 'string' },
@@ -137,23 +124,15 @@ export default async function orderRoutes(fastify: FastifyInstance) {
                     items: {
                       type: 'object',
                       properties: {
-                        id: { type: 'number' },
+                        id: { type: 'integer' },
                         price: { type: 'string' },
                         product: {
                           type: 'object',
                           properties: {
-                            id: { type: 'number' },
+                            id: { type: 'integer' },
                             title: { type: 'string' },
                             price: { type: 'string' },
                           },
-                        },
-                        productKey: {
-                          type: 'object',
-                          properties: {
-                            id: { type: 'number' },
-                            keyValue: { type: 'string' },
-                          },
-                          description: 'Только для статуса delivered',
                         },
                       },
                     },
@@ -161,28 +140,28 @@ export default async function orderRoutes(fastify: FastifyInstance) {
                 },
               },
             },
-            total: { type: 'number' },
-            page: { type: 'number' },
-            limit: { type: 'number' },
+            total: { type: 'integer' },
+            page: { type: 'integer' },
+            limit: { type: 'integer' },
           },
         },
       },
     },
   }, controller.getMyOrders);
 
-  // GET /orders/sales — мои продажи
-  fastify.get<{ Querystring: OrderListQuery }>('/sales', {
+  // GET /orders/sales — мои продажи (для продавца)
+  fastify.get('/sales', {
     preHandler: [fastify.authenticate],
     schema: {
       tags: ['orders'],
-      summary: 'Получить историю своих продаж (для продавца)',
+      summary: 'Получить список своих продаж (продавец)',
       security: [{ cookieAuth: [] }],
       querystring: {
         type: 'object',
         properties: {
-          page: { type: 'number', default: 1 },
-          limit: { type: 'number', default: 10 },
-          status: { type: 'string', enum: ['created', 'delivered', 'cancelled'] },
+          page: { type: 'integer', default: 1 },
+          limit: { type: 'integer', default: 10 },
+          status: { type: 'string', enum: ['CREATED', 'PAID', 'CANCELLED', 'DELIVERED'] },
         },
       },
       response: {
@@ -194,24 +173,36 @@ export default async function orderRoutes(fastify: FastifyInstance) {
               items: {
                 type: 'object',
                 properties: {
-                  id: { type: 'number' },
+                  id: { type: 'integer' },
                   totalPrice: { type: 'string' },
                   status: { type: 'string' },
-                  createdAt: { type: 'string' },
                   buyer: {
                     type: 'object',
                     properties: {
-                      id: { type: 'number' },
                       email: { type: 'string' },
                     },
                   },
-                  items: { type: 'array', items: {} },
+                  items: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        product: {
+                          type: 'object',
+                          properties: {
+                            title: { type: 'string' },
+                          },
+                        },
+                      },
+                    },
+                  },
+                  createdAt: { type: 'string' },
                 },
               },
             },
-            total: { type: 'number' },
-            page: { type: 'number' },
-            limit: { type: 'number' },
+            total: { type: 'integer' },
+            page: { type: 'integer' },
+            limit: { type: 'integer' },
           },
         },
       },
@@ -219,24 +210,24 @@ export default async function orderRoutes(fastify: FastifyInstance) {
   }, controller.getMySales);
 
   // GET /orders/:id — получить один заказ
-  fastify.get<{ Params: { id: string } }>('/:id', {
+  fastify.get('/:id', {
     preHandler: [fastify.authenticate],
     schema: {
       tags: ['orders'],
-      summary: 'Получить один заказ (только свой)',
+      summary: 'Получить детальную информацию о заказе',
       security: [{ cookieAuth: [] }],
       params: {
         type: 'object',
         required: ['id'],
         properties: {
-          id: { type: 'string', description: 'ID заказа' },
+          id: { type: 'integer', description: 'ID заказа' },
         },
       },
       response: {
         200: {
           type: 'object',
           properties: {
-            id: { type: 'number' },
+            id: { type: 'integer' },
             totalPrice: { type: 'string' },
             status: { type: 'string' },
             createdAt: { type: 'string' },
@@ -245,12 +236,12 @@ export default async function orderRoutes(fastify: FastifyInstance) {
               items: {
                 type: 'object',
                 properties: {
-                  id: { type: 'number' },
+                  id: { type: 'integer' },
                   price: { type: 'string' },
                   product: {
                     type: 'object',
                     properties: {
-                      id: { type: 'number' },
+                      id: { type: 'integer' },
                       title: { type: 'string' },
                       price: { type: 'string' },
                     },
@@ -258,10 +249,10 @@ export default async function orderRoutes(fastify: FastifyInstance) {
                   productKey: {
                     type: 'object',
                     properties: {
-                      id: { type: 'number' },
+                      id: { type: 'integer' },
                       keyValue: { type: 'string' },
                     },
-                    description: 'Только для статуса delivered',
+                    nullable: true,
                   },
                 },
               },

@@ -16,10 +16,10 @@ export class WalletController {
   };
 
    // POST /wallet/withdraw — запросить вывод средств (только для продавца).
-  withdraw = async (req: FastifyRequest<{ Body: { amount: number } }>) => {
+  withdraw = async (req: FastifyRequest) => {
     const userId = req.session.get('user')?.id;
     if (!userId) throw new UnauthorizedError('Unauthorized');
-    return this.walletService.withdraw(userId, req.body.amount);
+    const { amount } = req.body as any;
   };
 }
 

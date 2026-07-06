@@ -3,15 +3,17 @@ import { FastifyInstance } from 'fastify';
 import { PaymentService } from '../services/payment/payment.service';
 import { OrderService } from '../services/order.service';
 import { MockPaymentGateway } from '../services/payment/mock-payment-gateway';
+import { prisma } from '../prisma';
+// import { requireRole } from '../middleware/auth';   // если нужен для replenish, но replenish доступен всем авторизованным
 
 export default async function paymentRoutes(fastify: FastifyInstance) {
   const mockGateway = new MockPaymentGateway();
-  const orderService = new OrderService();
+  const orderService = new OrderService(prisma);
   const emailService = fastify.emailService;
   const notificationService = fastify.notificationService;
-  const paymentService = new PaymentService(mockGateway, orderService, emailService, notificationService);
+  const paymentService = new PaymentService(prisma, mockGateway, orderService, emailService, notificationService);
 
-  // POST /payments/replenish — пополнение баланса (уже есть)
+  // POST /payments/replenish — пополнение баланса
   fastify.post('/replenish', {
     preHandler: [fastify.authenticate],
     schema: {
@@ -29,7 +31,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         200: {
           type: 'object',
           properties: {
-            paymentId: { type: 'number' },
+            paymentId: { type: 'integer' },
             externalId: { type: 'string' },
             paymentUrl: { type: 'string' },
           },
@@ -39,16 +41,14 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    const { amount } = request.body as { amount: number };
-    const sessionUser = request.session.user;
-    if (!sessionUser) {
-      return reply.status(401).send({ error: 'Не авторизован' });
-    }
-    const result = await paymentService.createReplenishment(sessionUser.id, amount);
+    const { amount } = request.body as any;
+    const userId = request.session.get('user')?.id;
+    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+    const result = await paymentService.createReplenishment(userId, amount);
     return result;
   });
 
-  // 👇 НОВЫЙ МАРШРУТ: создать платёж для оплаты заказа
+  // POST /payments/orders/:orderId/create-payment — оплата заказа
   fastify.post('/orders/:orderId/create-payment', {
     preHandler: [fastify.authenticate],
     schema: {
@@ -58,14 +58,14 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       params: {
         type: 'object',
         properties: {
-          orderId: { type: 'number' },
+          orderId: { type: 'integer' },
         },
       },
       response: {
         200: {
           type: 'object',
           properties: {
-            paymentId: { type: 'number' },
+            paymentId: { type: 'integer' },
             externalId: { type: 'string' },
             paymentUrl: { type: 'string' },
           },
@@ -75,13 +75,11 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    const { orderId } = request.params as { orderId: number };
-    const sessionUser = request.session.user;
-    if (!sessionUser) {
-      return reply.status(401).send({ error: 'Не авторизован' });
-    }
+    const { orderId } = request.params as any;
+    const userId = request.session.get('user')?.id;
+    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
     try {
-      const result = await paymentService.createOrderPayment(orderId, sessionUser.id);
+      const result = await paymentService.createOrderPayment(orderId, userId);
       return result;
     } catch (err) {
       reply.status(400).send({ error: (err as Error).message });
@@ -101,16 +99,21 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         },
       },
       response: {
-        200: { type: 'object', properties: { success: { type: 'boolean' } } },
+        200: {
+          type: 'object',
+          properties: {
+            // просто пустой объект, успех определяется статусом
+          },
+        },
         400: { type: 'object', properties: { error: { type: 'string' } } },
       },
     },
   }, async (request, reply) => {
-    const { externalId } = request.body as { externalId: string };
+    const { externalId } = request.body as any;
     try {
       await mockGateway.confirm(externalId);
       await paymentService.handlePaymentSuccess(externalId);
-      return { success: true };
+      return {};
     } catch (err) {
       reply.status(400).send({ error: (err as Error).message });
     }

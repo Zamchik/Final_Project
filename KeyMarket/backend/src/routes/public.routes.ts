@@ -4,26 +4,11 @@ import { ProductService } from '../services/product/product.service';
 import { ReviewService } from '../services/review.service';
 import { prisma } from '../prisma';
 
-// Типы для query-параметров и параметров URL
-interface PublicQuery {
-  page?: number;
-  limit?: number;
-  search?: string;
-  categoryId?: number;
-  minPrice?: number;
-  maxPrice?: number;
-  sort?: 'price_asc' | 'price_desc' | 'newest';
-}
-
-interface ProductParams {
-  id: string;
-}
-
 export default async function publicRoutes(fastify: FastifyInstance) {
   const productService = new ProductService();
-  const reviewService = new ReviewService();
+  const reviewService = new ReviewService(prisma);
 
-  // GET /products — публичный каталог с фильтрами и пагинацией
+  // GET /products — публичный каталог
   fastify.get('/', {
     schema: {
       tags: ['products'],
@@ -31,13 +16,13 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       querystring: {
         type: 'object',
         properties: {
-          page: { type: 'number', default: 1, description: 'Номер страницы' },
-          limit: { type: 'number', default: 12, description: 'Товаров на странице' },
-          search: { type: 'string', description: 'Поиск по названию' },
-          categoryId: { type: 'number', description: 'Фильтр по категории' },
-          minPrice: { type: 'number', description: 'Минимальная цена' },
-          maxPrice: { type: 'number', description: 'Максимальная цена' },
-          sort: { type: 'string', enum: ['price_asc', 'price_desc', 'newest'], description: 'Сортировка' },
+          page: { type: 'integer', default: 1 },
+          limit: { type: 'integer', default: 12 },
+          search: { type: 'string' },
+          categoryId: { type: 'integer' },
+          minPrice: { type: 'number' },
+          maxPrice: { type: 'number' },
+          sort: { type: 'string', enum: ['price_asc', 'price_desc', 'newest'] },
         },
       },
       response: {
@@ -49,15 +34,15 @@ export default async function publicRoutes(fastify: FastifyInstance) {
               items: {
                 type: 'object',
                 properties: {
-                  id: { type: 'number' },
+                  id: { type: 'integer' },
                   title: { type: 'string' },
                   price: { type: 'string' },
                   rating: { type: 'string' },
-                  imageUrl: { type: 'string' },
+                  imageUrl: { type: 'string', nullable: true },
                   category: {
                     type: 'object',
                     properties: {
-                      id: { type: 'number' },
+                      id: { type: 'integer' },
                       name: { type: 'string' },
                     },
                   },
@@ -65,15 +50,15 @@ export default async function publicRoutes(fastify: FastifyInstance) {
                 },
               },
             },
-            total: { type: 'number' },
-            page: { type: 'number' },
-            limit: { type: 'number' },
+            total: { type: 'integer' },
+            page: { type: 'integer' },
+            limit: { type: 'integer' },
           },
         },
       },
     },
-  }, async (request: FastifyRequest<{ Querystring: PublicQuery }>) => {
-    const { page = 1, limit = 12, search, categoryId, minPrice, maxPrice, sort } = request.query;
+  }, async (req: FastifyRequest) => {
+    const { page = 1, limit = 12, search, categoryId, minPrice, maxPrice, sort } = req.query as any;
     return productService.getPublicList({
       page: Number(page),
       limit: Number(limit),
@@ -85,7 +70,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     });
   });
 
-  // GET /products/:id — детальная информация о товаре (карточка)
+  // GET /products/:id — карточка товара
   fastify.get('/:id', {
     schema: {
       tags: ['products'],
@@ -94,23 +79,24 @@ export default async function publicRoutes(fastify: FastifyInstance) {
         type: 'object',
         required: ['id'],
         properties: {
-          id: { type: 'string', description: 'ID товара' },
+          id: { type: 'integer', description: 'ID товара' },
         },
       },
       response: {
         200: {
           type: 'object',
           properties: {
-            id: { type: 'number' },
+            id: { type: 'integer' },
             title: { type: 'string' },
             description: { type: 'string' },
             price: { type: 'string' },
             rating: { type: 'string' },
-            stock: { type: 'number' },
+            stock: { type: 'integer' },
+            imageUrl: { type: 'string', nullable: true },
             category: {
               type: 'object',
               properties: {
-                id: { type: 'number' },
+                id: { type: 'integer' },
                 name: { type: 'string' },
               },
             },
@@ -125,28 +111,25 @@ export default async function publicRoutes(fastify: FastifyInstance) {
         },
       },
     },
-  }, async (
-    request: FastifyRequest<{ Params: ProductParams }>,
-    reply: FastifyReply
-  ) => {
-    const productId = Number(request.params.id);
+  }, async (req: FastifyRequest, reply: FastifyReply) => {
+    const { id } = req.params as any;
     const product = await prisma.product.findUnique({
-      where: { id: productId },
+      where: { id: Number(id) },
       include: { category: true, keys: true },
     });
 
-    if (!product || product.status !== 'active') {
+    if (!product || product.status !== 'ACTIVE') {
       return reply.status(404).send({ error: 'Товар не найден' });
     }
 
     const { keys, ...rest } = product;
     return {
       ...rest,
-      stock: keys.filter((k) => !k.isSold).length,
+      stock: keys.filter((k) => !k.isSold).length,   // оставляем isSold, т.к. модель ещё не переведена
     };
   });
 
-  // GET /products/:id/reviews — отзывы о товаре
+  // GET /products/:id/reviews — отзывы
   fastify.get('/:id/reviews', {
     schema: {
       tags: ['products'],
@@ -155,14 +138,14 @@ export default async function publicRoutes(fastify: FastifyInstance) {
         type: 'object',
         required: ['id'],
         properties: {
-          id: { type: 'string', description: 'ID товара' },
+          id: { type: 'integer' },
         },
       },
       querystring: {
         type: 'object',
         properties: {
-          page: { type: 'number', default: 1 },
-          limit: { type: 'number', default: 10 },
+          page: { type: 'integer', default: 1 },
+          limit: { type: 'integer', default: 10 },
         },
       },
       response: {
@@ -174,37 +157,33 @@ export default async function publicRoutes(fastify: FastifyInstance) {
               items: {
                 type: 'object',
                 properties: {
-                  id: { type: 'number' },
-                  rating: { type: 'number' },
+                  id: { type: 'integer' },
+                  rating: { type: 'integer' },
                   comment: { type: 'string' },
                   createdAt: { type: 'string' },
                   user: {
                     type: 'object',
                     properties: {
-                      id: { type: 'number' },
                       email: { type: 'string' },
                     },
                   },
                 },
               },
             },
-            total: { type: 'number' },
-            page: { type: 'number' },
-            limit: { type: 'number' },
+            total: { type: 'integer' },
+            page: { type: 'integer' },
+            limit: { type: 'integer' },
           },
         },
       },
     },
-  }, async (
-    request: FastifyRequest<{ Params: { id: string }; Querystring: { page?: number; limit?: number } }>,
-    reply: FastifyReply
-  ) => {
-    const productId = Number(request.params.id);
-    const { page = 1, limit = 10 } = request.query;
-    return reviewService.getByProduct(productId, Number(page), Number(limit));
+  }, async (req: FastifyRequest) => {
+    const { id } = req.params as any;
+    const { page = 1, limit = 10 } = req.query as any;
+    return reviewService.getByProduct(Number(id), Number(page), Number(limit));
   });
 
-  // GET /products/:id/rating — средний рейтинг товара
+  // GET /products/:id/rating — средний рейтинг
   fastify.get('/:id/rating', {
     schema: {
       tags: ['products'],
@@ -213,7 +192,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
         type: 'object',
         required: ['id'],
         properties: {
-          id: { type: 'string', description: 'ID товара' },
+          id: { type: 'integer' },
         },
       },
       response: {
@@ -221,16 +200,13 @@ export default async function publicRoutes(fastify: FastifyInstance) {
           type: 'object',
           properties: {
             average: { type: 'number' },
-            count: { type: 'number' },
+            count: { type: 'integer' },
           },
         },
       },
     },
-  }, async (
-    request: FastifyRequest<{ Params: { id: string } }>,
-    reply: FastifyReply
-  ) => {
-    const productId = Number(request.params.id);
-    return reviewService.getAverageRating(productId);
+  }, async (req: FastifyRequest) => {
+    const { id } = req.params as any;
+    return reviewService.getAverageRating(Number(id));
   });
 }
