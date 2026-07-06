@@ -5,7 +5,7 @@ import { AuthController } from '../controllers/auth.controller';
 import { AuthService } from '../services/auth.service';
 
 export default async function authRoutes(fastify: FastifyInstance) {
-  const authService = new AuthService(prisma);
+  const authService = new AuthService(prisma, fastify.emailService);
   const controller = new AuthController(authService);
 
   // POST /auth/register
@@ -143,4 +143,11 @@ export default async function authRoutes(fastify: FastifyInstance) {
       },
     },
   }, controller.changePassword);
+
+  fastify.post('/resend-verification', {
+    schema: {
+      body: { type: 'object', required: ['email'], properties: { email: { type: 'string', format: 'email' } } },
+      response: { 200: { type: 'object', properties: { verificationUrl: { type: 'string' }, previewUrl: { type: 'string' } } } },
+    },
+  }, controller.resendVerification);
 }

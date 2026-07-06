@@ -1,24 +1,24 @@
 // Контроллер аутентификации
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { AuthService } from '../services/auth.service';
-import { UnauthorizedError, BadRequestError } from '../common/errors';
+import { UnauthorizedError, BadRequestError, ForbiddenError } from '../common/errors';
 import { NotificationType } from '@prisma/client';
+import nodemailer from 'nodemailer'; // импорт для getTestMessageUrl
 
 export class AuthController {
   constructor(private authService: AuthService) { }
 
-  // POST /auth/register — регистрация
   register = async (req: FastifyRequest<{ Body: { email: string; password: string } }>, reply: FastifyReply) => {
     const { email, password } = req.body;
     const user = await this.authService.register(email, password);
 
-    // Генерируем токен подтверждения и ссылку
+    // Генерируем токен и ссылку для подтверждения
     const token = await this.authService.generateVerificationToken(user.id);
     const link = `http://localhost:3000/auth/verify-email?token=${token}`;
 
-    // Пытаемся отправить письмо – ошибка не должна ломать регистрацию
+    let previewUrl: string | null = null;
     try {
-      await req.server.emailService.send(
+      const info = await req.server.emailService.send(
         email,
         'Подтвердите регистрацию в KeyMarket',
         `<h1>Добро пожаловать, ${email}!</h1>
@@ -26,27 +26,42 @@ export class AuthController {
          <p>Для активации аккаунта перейдите по ссылке:</p>
          <a href="${link}">${link}</a>`
       );
+      previewUrl = nodemailer.getTestMessageUrl(info) || null;
+      // Ручное формирование ссылки, если getTestMessageUrl не сработал
+      if (!previewUrl && (info as any).messageId) {
+        previewUrl = `https://ethereal.email/message/${(info as any).messageId}`;
+      }
     } catch (mailErr) {
-      // логирование можно добавить позже через fastify.log
+      req.server.log.error(mailErr);
     }
 
-    // Создаём приветственное уведомление
+    // Приветственное уведомление
     try {
       await req.server.notificationService.create(user.id, NotificationType.WELCOME, 'Добро пожаловать в KeyMarket!');
     } catch (err) {
-      // игнорируем ошибку
+      req.server.log.error(err);
     }
 
-    reply.status(201).send({ message: 'Регистрация успешна. Проверьте почту для подтверждения.' });
+    reply.status(201).send({
+      message: 'Регистрация успешна. Проверьте почту для подтверждения.',
+      verificationUrl: link,
+      previewUrl,
+    });
   };
 
   // POST /auth/login — вход
   login = async (req: FastifyRequest<{ Body: { email: string; password: string } }>, reply: FastifyReply) => {
-  const { email, password } = req.body;
-  const user = await this.authService.login(email, password);
-  req.session.set('user', { id: user.id, email: user.email, role: user.role });
-  return { user: user };
-};
+    const { email, password } = req.body;
+    const user = await this.authService.login(email, password);
+
+    // Проверяем, подтверждён ли email
+    if (!user.verifiedAt) {
+      throw new ForbiddenError('Email not verified');
+    }
+
+    req.session.set('user', { id: user.id, email: user.email, role: user.role });
+    return { user: user };
+  };
 
   // POST /auth/logout — выход
   logout = async (req: FastifyRequest) => {
@@ -76,5 +91,16 @@ export class AuthController {
     if (!result) throw new BadRequestError('Invalid or expired token');
     // После успешного подтверждения перенаправляем на фронтенд
     reply.redirect('http://localhost:5173/login?verified=true');
+  };
+
+  // POST /auth/resend-verification — повторно отправить письмо для подтверждения email
+  resendVerification = async (
+    req: FastifyRequest<{ Body: { email: string } }>,
+    reply: FastifyReply
+  ) => {
+    const { email } = req.body;
+    // Все ошибки (неверный email, уже подтверждён) обработаются глобальным хендлером
+    const data = await this.authService.resendVerification(email);
+    return data; // { verificationUrl, previewUrl }
   };
 }
