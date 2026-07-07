@@ -1,5 +1,5 @@
 // Главная страница KeyMarket (Landing)
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Typography, Button, Row, Col, Card, Spin, message } from 'antd';
 import {
@@ -26,6 +26,7 @@ interface PopularProduct {
 const HomePage = () => {
   const [popularProducts, setPopularProducts] = useState<PopularProduct[]>([]);
   const [loading, setLoading] = useState(false);
+  const hasShownError = useRef(false);
 
   useEffect(() => {
     const fetchPopular = async () => {
@@ -36,7 +37,10 @@ const HomePage = () => {
         });
         setPopularProducts(data.products);
       } catch {
-        message.error('Не удалось загрузить популярные товары');
+        if (!hasShownError.current) {
+          message.error('Не удалось загрузить популярные товары');
+          hasShownError.current = true;
+        }
       } finally {
         setLoading(false);
       }

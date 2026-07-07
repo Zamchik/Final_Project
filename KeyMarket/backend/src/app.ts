@@ -118,18 +118,18 @@ async function setup() {
   app.decorate('authenticate', authenticate);
 
   // Маршруты
-  app.register(authRoutes, { prefix: '/auth' });
-  app.register(categoryRoutes, { prefix: '/categories' });
-  app.register(productRoutes, { prefix: '/products' });
-  app.register(publicRoutes, { prefix: '/products' });
-  app.register(walletRoutes, { prefix: '/wallet' });
-  app.register(orderRoutes, { prefix: '/orders' });
-  app.register(adminRoutes, { prefix: '/admin' });
-  app.register(paymentRoutes, { prefix: '/payments' });
-  app.register(mockPaymentRoutes, { prefix: '/mock-payment' });
+  app.register(authRoutes,         { prefix: '/auth' });
+  app.register(categoryRoutes,     { prefix: '/categories' });
+  app.register(productRoutes,      { prefix: '/products' });
+  app.register(publicRoutes,       { prefix: '/products' });
+  app.register(walletRoutes,       { prefix: '/wallet' });
+  app.register(orderRoutes,        { prefix: '/orders' });
+  app.register(adminRoutes,        { prefix: '/admin' });
+  app.register(paymentRoutes,      { prefix: '/payments' });
+  app.register(mockPaymentRoutes,  { prefix: '/mock-payment' });
   app.register(notificationRoutes, { prefix: '/notifications' });
-  app.register(reviewRoutes, { prefix: '/reviews' });
-  app.register(uploadRoutes, { prefix: '/upload' });
+  app.register(reviewRoutes,       { prefix: '/reviews' });
+  app.register(uploadRoutes,       { prefix: '/upload' });
 
   // Health check
   app.get('/health', async () => ({ status: 'ok' }));
