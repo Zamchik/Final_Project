@@ -1,6 +1,6 @@
 // Страница каталога товаров
 import { useEffect, useState, useCallback } from 'react';
-import { Card, Input, Select, InputNumber, Row, Col, Pagination, Spin, Empty, Typography } from 'antd';
+import { Card, Input, Select, InputNumber, Row, Col, Pagination, Spin, Empty, Typography, message } from 'antd';
 import { Link } from 'react-router-dom';
 import apiClient from '../api/client';
 
@@ -38,8 +38,8 @@ const CatalogPage = () => {
       });
       setProducts(data.products);
       setTotal(data.total);
-    } catch (err) {
-      console.error('Ошибка загрузки каталога', err);
+    } catch {
+      message.error('Не удалось загрузить товары');
     } finally {
       setLoading(false);
     }
@@ -55,6 +55,7 @@ const CatalogPage = () => {
         setCategories(Array.isArray(data) ? data : []);
       })
       .catch(() => {
+        message.error('Не удалось загрузить категории');
         setCategories([]);
       });
   }, []);

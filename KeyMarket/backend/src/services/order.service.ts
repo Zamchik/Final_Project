@@ -2,10 +2,10 @@
 import { PrismaClient, OrderStatus, TransactionType } from '@prisma/client';
 import { NotFoundError, ConflictError } from '../common/errors';
 
-const COMMISSION_RATE = 0.05; // 5%
+const COMMISSION_RATE = 0.05; // 5% комиссия платформы
 
 export class OrderService {
-  constructor(private prisma: PrismaClient) { }
+  constructor(private prisma: PrismaClient) {}
 
   // Создание заказа (покупатель)
   async createOrder(buyerId: number, productId: number) {
@@ -15,7 +15,7 @@ export class OrderService {
     });
 
     if (!product || product.status !== 'ACTIVE') {
-      throw new ConflictError('Товар недоступен')
+      throw new ConflictError('Товар недоступен');
     }
 
     const availableKey = product.keys.find(k => !k.soldAt);
@@ -39,7 +39,7 @@ export class OrderService {
       include: { items: true },
     });
 
-    // Помечаем ключ как проданный (устанавливаем дату продажи)
+    // Помечаем ключ как проданный
     await this.prisma.productKey.update({
       where: { id: availableKey.id },
       data: { soldAt: new Date() },
@@ -48,73 +48,76 @@ export class OrderService {
     return order;
   }
 
-  // Оплата заказа (подтверждение)
+  // Оплата заказа – теперь в одной атомарной транзакции
   async payOrder(orderId: number, buyerId: number) {
-    const order = await this.prisma.order.findUnique({
-      where: { id: orderId },
-      include: { items: { include: { productKey: true, product: true } } },
+    // Запускаем интерактивную транзакцию – все операции внутри выполняются
+    // в рамках одной транзакции БД.
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Находим заказ
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { items: { include: { productKey: true, product: true } } },
+      });
+
+      if (!order || order.buyerId !== buyerId) {
+        throw new NotFoundError('Заказ не найден или не принадлежит вам');
+      }
+      if (order.status !== OrderStatus.CREATED) {
+        throw new ConflictError('Заказ уже оплачен или отменён');
+      }
+
+      // 2. Обновляем статус заказа на DELIVERED
+      const updatedOrder = await tx.order.update({
+        where: { id: orderId },
+        data: { status: OrderStatus.DELIVERED },
+        include: { items: { include: { productKey: true, product: true } } },
+      });
+
+      // 3. Вычисляем комиссию и сумму продавца
+      const product = updatedOrder.items[0].product;
+      const sellerId = product.sellerId;
+      const amount = order.totalPrice;
+      const commission = amount.mul(COMMISSION_RATE);
+      const sellerAmount = amount.minus(commission);
+
+      // 4. Начисляем деньги продавцу (за вычетом комиссии)
+      await tx.user.update({
+        where: { id: sellerId },
+        data: { balance: { increment: sellerAmount } },
+      });
+
+      // 5. Транзакция продавца (продажа)
+      await tx.transaction.create({
+        data: {
+          userId: sellerId,
+          type: TransactionType.SALE,
+          amount: sellerAmount,
+          orderId,
+        },
+      });
+
+      // 6. Транзакция покупателя (покупка)
+      await tx.transaction.create({
+        data: {
+          userId: buyerId,
+          type: TransactionType.PURCHASE,
+          amount,
+          orderId,
+        },
+      });
+
+      // 7. Транзакция комиссии платформы
+      await tx.transaction.create({
+        data: {
+          userId: sellerId,   // или на системный аккаунт, если будет
+          type: TransactionType.COMMISSION,
+          amount: commission,
+          orderId,
+        },
+      });
+
+      return updatedOrder;
     });
-
-    if (!order || order.buyerId !== buyerId) {
-      throw new NotFoundError('Заказ не найден или не принадлежит вам');
-    }
-    if (order.status !== OrderStatus.CREATED) {
-      throw new ConflictError('Заказ уже оплачен или отменён');
-    }
-
-    // Обновляем статус заказа на DELIVERED
-    const updatedOrder = await this.prisma.order.update({
-      where: { id: orderId },
-      data: { status: OrderStatus.DELIVERED },
-      include: { items: { include: { productKey: true, product: true } } },
-    });
-
-    // Получаем информацию о товаре и продавце
-    const product = updatedOrder.items[0].product;
-    const sellerId = product.sellerId;
-    const amount = order.totalPrice;
-
-    // Рассчитываем комиссию
-    const commission = amount.mul(COMMISSION_RATE);   // amount * 0.05
-    const sellerAmount = amount.minus(commission);    // сумма, которую получит продавец
-
-    // Начисляем деньги продавцу (за вычетом комиссии)
-    await this.prisma.user.update({
-      where: { id: sellerId },
-      data: { balance: { increment: sellerAmount } },
-    });
-
-    // Создаём транзакцию для продавца (продажа)
-    await this.prisma.transaction.create({
-      data: {
-        userId: sellerId,
-        type: TransactionType.SALE,
-        amount: sellerAmount,
-        orderId,
-      },
-    });
-
-    // Создаём транзакцию для покупателя (покупка)
-    await this.prisma.transaction.create({
-      data: {
-        userId: buyerId,
-        type: TransactionType.PURCHASE,
-        amount,
-        orderId,
-      },
-    });
-
-    // Создаём транзакцию комиссии платформы
-    await this.prisma.transaction.create({
-      data: {
-        userId: sellerId,       // можно также записать на системный аккаунт, если будет
-        type: TransactionType.COMMISSION,
-        amount: commission,
-        orderId,
-      },
-    });
-
-    return updatedOrder;
   }
 
   // Получить заказы покупателя

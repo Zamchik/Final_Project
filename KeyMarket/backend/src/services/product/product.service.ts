@@ -6,10 +6,12 @@ import { ProductStatus } from '@prisma/client';
 import { NotFoundError } from '../../common/errors';
 
 export class ProductService {
+  // Получить список товаров продавца
   async getMyProducts(sellerId: number, page: number, limit: number, search?: string, categoryId?: number) {
     return queries.findMyProducts(sellerId, page, limit, search, categoryId);
   }
 
+  // Создать товар с ключами
   async createProduct(
     sellerId: number,
     data: {
@@ -30,6 +32,7 @@ export class ProductService {
     });
   }
 
+  // Обновить товар и/или добавить новые ключи
   async updateProduct(
     productId: number,
     sellerId: number,
@@ -76,6 +79,7 @@ export class ProductService {
     return queries.getProductWithDetails(productId);
   }
 
+  // Удалить товар
   async deleteProduct(productId: number, sellerId: number) {
     const product = await queries.findProductById(productId, sellerId);
     if (!product) throw new NotFoundError('Товар не найден или нет доступа');
@@ -83,6 +87,34 @@ export class ProductService {
     return { success: true };
   }
 
+  // Получить публичный товар по ID (для страницы товара).
+  // Возвращает товар без проданных ключей, с количеством доступных (stock).
+  async getProductById(id: number) {
+    const product = await prisma.product.findUnique({
+      where: { id },
+      include: { category: true, keys: true },
+    });
+
+    if (!product || product.status !== ProductStatus.ACTIVE) {
+      return null;
+    }
+
+    const { keys, ...rest } = product;
+    return {
+      ...rest,
+      stock: keys.filter(k => !k.soldAt).length,
+    };
+  }
+
+  // Получить товар для редактирования (продавец).
+  async getProductForEdit(productId: number, sellerId: number) {
+    return prisma.product.findFirst({
+      where: { id: productId, sellerId },
+      include: { category: true, keys: true },
+    });
+  }
+
+  // Публичный список товаров (каталог)
   async getPublicList(options: {
     page: number;
     limit: number;

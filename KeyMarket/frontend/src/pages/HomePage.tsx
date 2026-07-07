@@ -1,7 +1,7 @@
 // Главная страница KeyMarket (Landing)
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Typography, Button, Row, Col, Card, Spin } from 'antd';
+import { Typography, Button, Row, Col, Card, Spin, message } from 'antd';
 import {
   ThunderboltOutlined,
   SafetyCertificateOutlined,
@@ -35,8 +35,8 @@ const HomePage = () => {
           params: { page: 1, limit: 4, sort: 'price_desc' },
         });
         setPopularProducts(data.products);
-      } catch (err) {
-        console.error('Ошибка загрузки популярных товаров', err);
+      } catch {
+        message.error('Не удалось загрузить популярные товары');
       } finally {
         setLoading(false);
       }

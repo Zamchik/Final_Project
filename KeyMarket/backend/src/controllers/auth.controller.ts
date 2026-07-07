@@ -3,53 +3,48 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { AuthService } from '../services/auth.service';
 import { UnauthorizedError, BadRequestError, ForbiddenError } from '../common/errors';
 import { NotificationType } from '@prisma/client';
-import nodemailer from 'nodemailer'; // импорт для getTestMessageUrl
 
 export class AuthController {
-  constructor(private authService: AuthService) { }
+  constructor(private authService: AuthService) {}
 
+   // POST /auth/register — регистрация нового пользователя.
+   // Отправляет письмо и уведомление асинхронно, не задерживая ответ.
   register = async (req: FastifyRequest<{ Body: { email: string; password: string } }>, reply: FastifyReply) => {
     const { email, password } = req.body;
     const user = await this.authService.register(email, password);
 
     // Генерируем токен и ссылку для подтверждения
     const token = await this.authService.generateVerificationToken(user.id);
-    const link = `http://localhost:3000/auth/verify-email?token=${token}`;
+    // Базовый URL бэкенда (можно переопределить через APP_BASE_URL)
+    const appBaseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+    const link = `${appBaseUrl}/auth/verify-email?token=${token}`;
 
-    let previewUrl: string | null = null;
-    try {
-      const info = await req.server.emailService.send(
-        email,
-        'Подтвердите регистрацию в KeyMarket',
-        `<h1>Добро пожаловать, ${email}!</h1>
-         <p>Вы успешно зарегистрировались на платформе KeyMarket.</p>
-         <p>Для активации аккаунта перейдите по ссылке:</p>
-         <a href="${link}">${link}</a>`
-      );
-      previewUrl = nodemailer.getTestMessageUrl(info) || null;
-      // Ручное формирование ссылки, если getTestMessageUrl не сработал
-      if (!previewUrl && (info as any).messageId) {
-        previewUrl = `https://ethereal.email/message/${(info as any).messageId}`;
-      }
-    } catch (mailErr) {
-      req.server.log.error(mailErr);
-    }
+    // Отправляем письмо асинхронно, не дожидаясь ответа
+    req.server.emailService.send(
+      email,
+      'Подтвердите регистрацию в KeyMarket',
+      `<h1>Добро пожаловать, ${email}!</h1>
+       <p>Вы успешно зарегистрировались на платформе KeyMarket.</p>
+       <p>Для активации аккаунта перейдите по ссылке:</p>
+       <a href="${link}">${link}</a>`
+    ).catch(mailErr => req.server.log.error('Ошибка отправки письма подтверждения:', mailErr));
 
-    // Приветственное уведомление
-    try {
-      await req.server.notificationService.create(user.id, NotificationType.WELCOME, 'Добро пожаловать в KeyMarket!');
-    } catch (err) {
-      req.server.log.error(err);
-    }
+    // Приветственное уведомление тоже отправляем асинхронно
+    req.server.notificationService.create(
+      user.id,
+      NotificationType.WELCOME,
+      'Добро пожаловать в KeyMarket!'
+    ).catch(err => req.server.log.error('Ошибка создания уведомления:', err));
 
+    // Ответ возвращается немедленно, без ожидания почты и уведомлений
     reply.status(201).send({
       message: 'Регистрация успешна. Проверьте почту для подтверждения.',
       verificationUrl: link,
-      previewUrl,
     });
   };
 
-  // POST /auth/login — вход
+   // POST /auth/login — вход в систему.
+   // Проверяет подтверждение email и отсутствие бана.
   login = async (req: FastifyRequest<{ Body: { email: string; password: string } }>, reply: FastifyReply) => {
     const { email, password } = req.body;
     const user = await this.authService.login(email, password);
@@ -58,7 +53,7 @@ export class AuthController {
     if (!user.verifiedAt) {
       throw new ForbiddenError('Email not verified');
     }
-    // если пользователь забанен, не даём войти
+    // Если пользователь забанен, не даём войти
     if (user.bannedAt) {
       throw new ForbiddenError('Ваш аккаунт заблокирован');
     }
@@ -67,20 +62,20 @@ export class AuthController {
     return { user: user };
   };
 
-  // POST /auth/logout — выход
+   // POST /auth/logout — выход из системы.
   logout = async (req: FastifyRequest) => {
-    req.session.delete(); // удаляем сессию
+    (req.session as any).destroy(); // используем приведение к any, т.к. типы могут не содержать destroy
     return {};
   };
 
-  // GET /auth/me — профиль текущего пользователя
+   // GET /auth/me — получить данные текущего пользователя
   getMe = async (req: FastifyRequest) => {
     const userId = req.session.get('user')?.id;
     if (!userId) throw new UnauthorizedError('Unauthorized');
     return this.authService.getUserById(userId);
   };
 
-  // POST /auth/change-password — смена пароля
+  // POST /auth/change-password — смена пароля.
   changePassword = async (req: FastifyRequest) => {
     const userId = req.session.get('user')?.id;
     if (!userId) throw new UnauthorizedError('Unauthorized');
@@ -88,22 +83,23 @@ export class AuthController {
     return this.authService.changePassword(userId, oldPassword, newPassword);
   };
 
-  // GET /auth/verify-email — подтверждение email
+   // GET /auth/verify-email — подтверждение email по токену.
+   // Перенаправляет на фронтенд с сообщением об успехе.
   verifyEmail = async (req: FastifyRequest<{ Querystring: { token: string } }>, reply: FastifyReply) => {
     const { token } = req.query;
     const result = await this.authService.verifyEmail(token);
     if (!result) throw new BadRequestError('Invalid or expired token');
-    // После успешного подтверждения перенаправляем на фронтенд
-    reply.redirect('http://localhost:5173/login?verified=true');
+    // URL фронтенда для редиректа
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    reply.redirect(`${frontendUrl}/login?verified=true`);
   };
 
-  // POST /auth/resend-verification — повторно отправить письмо для подтверждения email
+  // POST /auth/resend-verification — повторно отправить письмо для подтверждения.
   resendVerification = async (
     req: FastifyRequest<{ Body: { email: string } }>,
     reply: FastifyReply
   ) => {
     const { email } = req.body;
-    // Все ошибки (неверный email, уже подтверждён) обработаются глобальным хендлером
     const data = await this.authService.resendVerification(email);
     return data; // { verificationUrl, previewUrl }
   };

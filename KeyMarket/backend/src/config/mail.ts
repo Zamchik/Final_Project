@@ -13,12 +13,12 @@ export const createTestTransport = async (): Promise<nodemailer.Transporter> => 
 
     // Создаём SMTP-транспорт с полученными учётными данными
     return nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false, // true для 465, false для остальных
+      host: process.env.SMTP_HOST || 'smtp.ethereal.email',
+      port: Number(process.env.SMTP_PORT) || 587,
+      secure: process.env.SMTP_SECURE === 'true',
       auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
+        user: process.env.SMTP_USER || testAccount.user,
+        pass: process.env.SMTP_PASS || testAccount.pass,
       },
     });
   } catch (error) {

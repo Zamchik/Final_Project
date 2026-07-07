@@ -70,7 +70,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     });
   });
 
-  // GET /products/:id — карточка товара
+  // GET /products/:id — детальная карточка товара
   fastify.get('/:id', {
     schema: {
       tags: ['products'],
@@ -78,9 +78,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       params: {
         type: 'object',
         required: ['id'],
-        properties: {
-          id: { type: 'integer', description: 'ID товара' },
-        },
+        properties: { id: { type: 'integer', description: 'ID товара' } },
       },
       response: {
         200: {
@@ -103,30 +101,17 @@ export default async function publicRoutes(fastify: FastifyInstance) {
             status: { type: 'string' },
           },
         },
-        404: {
-          type: 'object',
-          properties: {
-            error: { type: 'string' },
-          },
-        },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
       },
     },
   }, async (req: FastifyRequest, reply: FastifyReply) => {
     const { id } = req.params as any;
-    const product = await prisma.product.findUnique({
-      where: { id: Number(id) },
-      include: { category: true, keys: true },
-    });
-
-    if (!product || product.status !== 'ACTIVE') {
+    // Вызываем метод сервиса вместо прямого prisma
+    const product = await productService.getProductById(Number(id));
+    if (!product) {
       return reply.status(404).send({ error: 'Товар не найден' });
     }
-
-    const { keys, ...rest } = product;
-    return {
-      ...rest,
-      stock: keys.filter((k) => !k.soldAt).length,
-    };
+    return product;
   });
 
   // GET /products/:id/reviews — отзывы

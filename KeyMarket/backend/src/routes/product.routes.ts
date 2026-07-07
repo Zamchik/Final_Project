@@ -3,7 +3,6 @@ import { FastifyInstance } from 'fastify';
 import { ProductController } from '../controllers/product.controller';
 import { ProductService } from '../services/product/product.service';
 import { requireRole } from '../middleware/auth';
-import { prisma } from '../prisma';
 
 export default async function productRoutes(fastify: FastifyInstance) {
   const controller = new ProductController(new ProductService());
@@ -189,7 +188,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
       response: {
         200: {
           type: 'object',
-          properties: {},   // достаточно статуса 200
+          properties: {},
         },
         400: {
           type: 'object',
@@ -241,7 +240,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
                 properties: {
                   id: { type: 'integer' },
                   keyValue: { type: 'string' },
-                  isSold: { type: 'boolean' },   // пока оставим boolean, т.к. не все мигрировали
+                  soldAt: { type: 'string', nullable: true },
                 },
               },
             },
@@ -255,17 +254,5 @@ export default async function productRoutes(fastify: FastifyInstance) {
         },
       },
     },
-  }, async (req, reply) => {
-    const { id } = req.params as any;
-    const sellerId = req.session.get('user')?.id;
-    const product = await prisma.product.findFirst({
-      where: { id: Number(id), sellerId },
-      include: { category: true, keys: true },
-    });
-    if (!product) {
-      reply.status(404).send({ error: 'Товар не найден или нет доступа' });
-      return;
-    }
-    return product;
-  });
+  }, controller.getProductForEdit);
 }

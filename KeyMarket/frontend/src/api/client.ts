@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: '/', 
+  baseURL: '/api',
   withCredentials: true, // браузер будет отправлять куки с запросами
 });
 

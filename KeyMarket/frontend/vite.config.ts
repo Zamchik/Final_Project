@@ -7,18 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': 'http://localhost:3000',
-      '/auth': 'http://localhost:3000',
-      '/products': 'http://localhost:3000',
-      '/upload': 'http://localhost:3000',
       '/uploads': 'http://localhost:3000',
-      '/wallet': 'http://localhost:3000',
-      '/orders': 'http://localhost:3000',
-      '/payments': 'http://localhost:3000',
-      '/reviews': 'http://localhost:3000',
-      '/categories': 'http://localhost:3000',
-      '/admin': 'http://localhost:3000',
-      '/mock-payment': 'http://localhost:3000',
-      '/notifications': 'http://localhost:3000',
     },
   },
   test: {
