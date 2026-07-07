@@ -1,15 +1,15 @@
-// Главный Layout приложения (шапка, контент, футер)
-// При монтировании проверяет сессию и управляет видимостью меню
-import { useEffect } from 'react';
+// Главный Layout приложения
+import { useEffect, useState } from 'react';
 import { Outlet, Link } from 'react-router-dom';
-import { Layout as AntLayout, Menu, Spin, Row, Col, Typography } from 'antd';
+import { Layout as AntLayout, Menu, Spin, Row, Col, Typography, Button, Drawer } from 'antd';
 import {
   HomeOutlined, AppstoreOutlined, UserOutlined, LoginOutlined,
   FormOutlined, PlusSquareOutlined, ShopOutlined,
-  DashboardOutlined,
+  DashboardOutlined, MenuOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../stores/authStore';
 import NotificationBell from './NotificationBell';
+import '../styles/global.scss';
 
 const { Header, Content, Footer } = AntLayout;
 const { Text } = Typography;
@@ -19,13 +19,14 @@ const MainLayout = () => {
   const loading = useAuthStore((s) => s.loading);
   const fetched = useAuthStore((s) => s.fetched);
   const fetchUser = useAuthStore((s) => s.fetchUser);
-  // Загружаем данные пользователя один раз при старте
+  const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
+
   useEffect(() => {
     if (!fetched && !loading) {
       fetchUser();
     }
   }, [fetched, loading, fetchUser]);
-  // Пока проверяется сессия – показываем спиннер
+
   if (loading && !fetched) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
@@ -34,8 +35,7 @@ const MainLayout = () => {
     );
   }
 
-  // Пункты меню с иконками
-  const items = [
+  const menuItems = [
     { key: 'home', label: <Link to="/"><HomeOutlined /> Главная</Link> },
     { key: 'catalog', label: <Link to="/catalog"><AppstoreOutlined /> Каталог</Link> },
     ...(user
@@ -58,7 +58,6 @@ const MainLayout = () => {
       : []),
   ];
 
-  // Рендер
   return (
     <AntLayout style={{ minHeight: '100vh' }}>
       <Header
@@ -66,60 +65,73 @@ const MainLayout = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          padding: '0 16px',
         }}
       >
-        {/* Логотип KeyMarket */}
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', marginRight: 24 }}>
+        {/* Логотип */}
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }}>
           <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            {/* Фиолетовый квадратный фон */}
             <rect width="40" height="40" rx="8" fill="#722ed1" />
-
-            {/* Вертикальная стойка буквы K */}
             <line x1="16" y1="6" x2="16" y2="32" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" />
-
-            {/* Верхняя диагональ */}
             <line x1="18" y1="20" x2="30" y2="10" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" />
-
-            {/* Нижняя диагональ */}
             <line x1="18" y1="20" x2="30" y2="30" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" />
-
-            {/* Головка ключа */}
             <circle cx="16" cy="7" r="3.75" fill="#722ed1" stroke="#fff" strokeWidth="2.5" />
-
-            {/* Коронки (зубцы) */}
             <line x1="16" y1="29" x2="8" y2="29" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
             <line x1="16" y1="33" x2="8" y2="33" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
           </svg>
-
-          {/* Текстовая часть логотипа */}
           <span style={{ color: '#fff', fontSize: 23, fontWeight: 700, letterSpacing: 1, marginLeft: 4 }}>
             eyMarket
           </span>
         </Link>
 
-        <Menu
-          theme="dark"
-          mode="horizontal"
-          items={items}
-          style={{ flex: 1, borderBottom: 'none' }}
-        />
+        {/* Десктопное меню – показывается только на больших экранах */}
+        <div className="desktop-menu" style={{ flex: 1 }}>
+          <Menu
+            theme="dark"
+            mode="horizontal"
+            items={menuItems}
+            style={{ borderBottom: 'none', background: 'transparent' }}
+          />
+        </div>
 
-        <NotificationBell />
+        {/* Группа: колокольчик и бургер-меню */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <NotificationBell />
+          <Button
+            className="mobile-menu-btn"
+            type="text"
+            icon={<MenuOutlined style={{ color: '#fff', fontSize: 20 }} />}
+            onClick={() => setMobileMenuVisible(true)}
+          />
+        </div>
       </Header>
 
-      <Content style={{ padding: '20px' }}>
+      {/* Мобильное меню (Drawer) */}
+      <Drawer
+        placement="right"
+        open={mobileMenuVisible}
+        onClose={() => setMobileMenuVisible(false)}
+        bodyStyle={{ padding: 0 }}
+        width={250}
+      >
+        <Menu
+          mode="inline"
+          items={menuItems}
+          onClick={() => setMobileMenuVisible(false)}
+          style={{ borderRight: 0 }}
+        />
+      </Drawer>
+
+      <Content style={{ padding: '20px', maxWidth: 1200, margin: '0 auto', width: '100%' }}>
         <Outlet />
       </Content>
 
-      {/* Улучшенный футер с ссылками и описанием платформы */}
-      <Footer
-        style={{
-          textAlign: 'center',
-          background: '#141414',
-          padding: '24px 50px',
-          color: '#b0b0b0',
-        }}
-      >
+      <Footer style={{
+        textAlign: 'center',
+        background: '#141414',
+        padding: '24px 16px',
+        color: '#b0b0b0',
+      }}>
         <Row gutter={[16, 16]} justify="center">
           <Col>
             <Link to="/" style={{ color: '#b0b0b0' }}>Главная</Link>

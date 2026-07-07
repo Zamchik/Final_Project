@@ -1,11 +1,10 @@
 // Компонент списка заказов (покупки или продажи)
-// Принимает fetchUrl – эндпоинт для загрузки данных
 import { useEffect, useState, useCallback } from 'react';
 import { Table, Tag, Typography, message, Button, Popconfirm, Space } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import apiClient from '../api/client';
 import { AxiosError } from 'axios';
-import ReviewForm from '../components/ReviewForm'; // форма отзыва
+import ReviewForm from '../components/ReviewForm';
 
 const { Text } = Typography;
 
@@ -58,7 +57,6 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
     }, [fetchUrl, page]);
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchOrders();
     }, [fetchOrders]);
 
@@ -74,12 +72,12 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
         }
     };
 
-    // Отменить заказ (только для статуса 'created')
+    // Отменить заказ (только для статуса 'CREATED')
     const handleCancelOrder = async (orderId: number) => {
         try {
             await apiClient.post(`/orders/${orderId}/cancel`);
             message.success('Заказ отменён');
-            fetchOrders(); // обновить список после отмены
+            fetchOrders();
         } catch (err) {
             const error = err as AxiosError<{ error: string }>;
             message.error(error.response?.data?.error || 'Ошибка отмены');
@@ -100,15 +98,16 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
             dataIndex: 'status',
             key: 'status',
             render: (status: string) => {
+                // Используем заглавные значения, соответствующие enum OrderStatus
                 const colorMap: Record<string, string> = {
-                    created: 'blue',
-                    delivered: 'green',
-                    cancelled: 'red',
+                    CREATED: 'blue',
+                    DELIVERED: 'green',
+                    CANCELLED: 'red',
                 };
                 const labelMap: Record<string, string> = {
-                    created: 'Создан',
-                    delivered: 'Выполнен',
-                    cancelled: 'Отменён',
+                    CREATED: 'Создан',
+                    DELIVERED: 'Выполнен',
+                    CANCELLED: 'Отменён',
                 };
                 return <Tag color={colorMap[status] || 'default'}>{labelMap[status] || status}</Tag>;
             },
@@ -128,7 +127,8 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
             title: 'Ключ',
             key: 'key',
             render: (_, record) => {
-                if (record.status !== 'delivered') return '—';
+                // Показываем ключи только для выполненных заказов
+                if (record.status !== 'DELIVERED') return '—';
                 return record.items.map((item) =>
                     item.productKey ? (
                         <Text copyable code key={item.id}>
@@ -143,7 +143,7 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
             key: 'actions',
             render: (_, record) => {
                 // Для созданных заказов – оплатить и отменить
-                if (record.status === 'created') {
+                if (record.status === 'CREATED') {
                     return (
                         <Space>
                             <Button type="primary" size="small" onClick={() => handlePayOrder(record.id)}>
@@ -161,7 +161,7 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
                     );
                 }
                 // Для выполненных заказов – кнопка "Оставить отзыв"
-                if (record.status === 'delivered') {
+                if (record.status === 'DELIVERED') {
                     return (
                         <Button
                             type="link"
@@ -192,14 +192,14 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
         });
     }
 
-    // Рендер
     return (
-        <>
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <Table
                 columns={columns}
                 dataSource={orders}
                 rowKey="id"
                 loading={loading}
+                scroll={{ x: 'max-content' }}
                 pagination={{
                     current: page,
                     total,
@@ -209,16 +209,14 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
                 }}
                 locale={{ emptyText }}
             />
-
-            {/* Модальное окно отзыва */}
             <ReviewForm
                 productId={reviewModal.productId!}
                 orderId={reviewModal.orderId!}
                 visible={reviewModal.visible}
                 onClose={() => setReviewModal({ visible: false, productId: null, orderId: null })}
-                onSuccess={fetchOrders} // обновить список заказов после отправки отзыва
+                onSuccess={fetchOrders}
             />
-        </>
+        </div>
     );
 };
 

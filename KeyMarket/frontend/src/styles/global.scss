@@ -35,3 +35,20 @@ input:-webkit-autofill:active {
     box-shadow: 0 8px 24px rgba(114, 46, 209, 0.2);
   }
 }
+
+.desktop-menu {
+  display: none;
+}
+
+.mobile-menu-btn {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .desktop-menu {
+    display: block;
+  }
+  .mobile-menu-btn {
+    display: none;
+  }
+}

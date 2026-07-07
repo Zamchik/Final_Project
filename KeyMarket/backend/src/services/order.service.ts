@@ -1,6 +1,8 @@
 // Сервис управления заказами
-import { PrismaClient, OrderStatus } from '@prisma/client';
+import { PrismaClient, OrderStatus, TransactionType } from '@prisma/client';
 import { NotFoundError, ConflictError } from '../common/errors';
+
+const COMMISSION_RATE = 0.05; // 5%
 
 export class OrderService {
   constructor(private prisma: PrismaClient) { }
@@ -60,10 +62,56 @@ export class OrderService {
       throw new ConflictError('Заказ уже оплачен или отменён');
     }
 
+    // Обновляем статус заказа на DELIVERED
     const updatedOrder = await this.prisma.order.update({
       where: { id: orderId },
-      data: { status: OrderStatus.PAID },
+      data: { status: OrderStatus.DELIVERED },
       include: { items: { include: { productKey: true, product: true } } },
+    });
+
+    // Получаем информацию о товаре и продавце
+    const product = updatedOrder.items[0].product;
+    const sellerId = product.sellerId;
+    const amount = order.totalPrice;
+
+    // Рассчитываем комиссию
+    const commission = amount.mul(COMMISSION_RATE);   // amount * 0.05
+    const sellerAmount = amount.minus(commission);    // сумма, которую получит продавец
+
+    // Начисляем деньги продавцу (за вычетом комиссии)
+    await this.prisma.user.update({
+      where: { id: sellerId },
+      data: { balance: { increment: sellerAmount } },
+    });
+
+    // Создаём транзакцию для продавца (продажа)
+    await this.prisma.transaction.create({
+      data: {
+        userId: sellerId,
+        type: TransactionType.SALE,
+        amount: sellerAmount,
+        orderId,
+      },
+    });
+
+    // Создаём транзакцию для покупателя (покупка)
+    await this.prisma.transaction.create({
+      data: {
+        userId: buyerId,
+        type: TransactionType.PURCHASE,
+        amount,
+        orderId,
+      },
+    });
+
+    // Создаём транзакцию комиссии платформы
+    await this.prisma.transaction.create({
+      data: {
+        userId: sellerId,       // можно также записать на системный аккаунт, если будет
+        type: TransactionType.COMMISSION,
+        amount: commission,
+        orderId,
+      },
     });
 
     return updatedOrder;
@@ -77,25 +125,36 @@ export class OrderService {
     const [orders, total] = await Promise.all([
       this.prisma.order.findMany({
         where,
-        include: { items: { include: { product: true } } },
+        include: { items: { include: { productKey: true, product: true, } } },
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.order.count({ where }),
     ]);
+    console.log('getMyOrders — first order items:', orders[0]?.items);
     return { orders, total, page, limit };
   }
 
   // Получить продажи (для продавца)
-  async getSales(userId: number, page: number, limit: number, status?: OrderStatus) {
-    const where: any = { buyerId: userId };
+  async getSales(sellerId: number, page: number, limit: number, status?: OrderStatus) {
+    const where: any = {
+      items: { some: { product: { sellerId } } },
+    };
     if (status) where.status = status;
 
     const [orders, total] = await Promise.all([
       this.prisma.order.findMany({
         where,
-        include: { items: { include: { product: true } } },
+        include: {
+          buyer: { select: { email: true } },
+          items: {
+            include: {
+              productKey: true,
+              product: true,
+            },
+          },
+        },
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -104,7 +163,6 @@ export class OrderService {
     ]);
     return { orders, total, page, limit };
   }
-
   // Отмена заказа
   async cancelOrder(orderId: number, userId: number) {
     const order = await this.prisma.order.findUnique({

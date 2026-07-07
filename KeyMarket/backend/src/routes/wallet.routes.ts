@@ -30,7 +30,7 @@ export default async function walletRoutes(fastify: FastifyInstance) {
 
   // POST /wallet/withdraw — вывод средств (только для продавца)
   fastify.post('/withdraw', {
-    preHandler: [fastify.authenticate, requireRole('seller')],
+    preHandler: [fastify.authenticate, requireRole('SELLER')],
     schema: {
       tags: ['wallet'],
       summary: 'Запросить вывод средств (эмуляция)',

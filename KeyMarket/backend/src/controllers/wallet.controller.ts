@@ -20,6 +20,7 @@ export class WalletController {
     const userId = req.session.get('user')?.id;
     if (!userId) throw new UnauthorizedError('Unauthorized');
     const { amount } = req.body as any;
+    return this.walletService.withdraw(userId, amount);
   };
 }
 

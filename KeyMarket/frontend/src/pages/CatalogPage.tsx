@@ -1,7 +1,6 @@
 // Страница каталога товаров
 import { useEffect, useState, useCallback } from 'react';
-import { Card, Input, Select, InputNumber, Row, Col, Pagination, Spin, Empty, Typography, Rate } from 'antd';
-import { KeyOutlined } from '@ant-design/icons';
+import { Card, Input, Select, InputNumber, Row, Col, Pagination, Spin, Empty, Typography } from 'antd';
 import { Link } from 'react-router-dom';
 import apiClient from '../api/client';
 
@@ -50,7 +49,6 @@ const CatalogPage = () => {
     fetchProducts();
   }, [fetchProducts]);
 
-  // Загружаем категории
   useEffect(() => {
     apiClient.get('/categories')
       .then(({ data }) => {
@@ -62,7 +60,7 @@ const CatalogPage = () => {
   }, []);
 
   return (
-    <div style={{ padding: '0 20px' }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 16px' }}>
       <h1>Каталог товаров</h1>
 
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
@@ -111,61 +109,30 @@ const CatalogPage = () => {
         <>
           <Row gutter={[16, 16]}>
             {products.map(product => (
-              <Col xs={24} sm={12} md={8} lg={6} key={product.id}>
+              <Col xs={24} sm={12} md={6} key={product.id}>
                 <Link to={`/product/${product.id}`}>
                   <Card
                     hoverable
                     cover={
-                      // Общий контейнер, внутри которого картинка и запасная заглушка
-                      <div style={{ position: 'relative', height: 160, overflow: 'hidden' }}>
-                        {product.imageUrl ? (
-                          <>
-                            <img
-                              src={product.imageUrl}
-                              alt={product.title}
-                              style={{
-                                height: 160,
-                                width: '100%',
-                                objectFit: 'cover',
-                                position: 'relative',
-                                zIndex: 1,
-                              }}
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                              }}
-                            />
-                            {/* Запасная заглушка, которая видна только после ошибки загрузки */}
-                            <div
-                              style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: '100%',
-                                background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                zIndex: 0, // под картинкой
-                              }}
-                            >
-                              <KeyOutlined style={{ fontSize: 48, color: '#722ed1' }} />
-                            </div>
-                          </>
-                        ) : (
-                          // Если imageUrl изначально null – сразу заглушка
-                          <div
-                            style={{
-                              height: 160,
-                              background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                          >
-                            <KeyOutlined style={{ fontSize: 48, color: '#722ed1' }} />
-                          </div>
-                        )}
+                      <div style={{
+                        height: 140,
+                        background: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        <img
+                          src={product.imageUrl || '/placeholder.png'}
+                          alt={product.title}
+                          style={{
+                            maxHeight: '100%',
+                            maxWidth: '100%',
+                            objectFit: 'contain',
+                          }}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/placeholder.png';
+                          }}
+                        />
                       </div>
                     }
                   >
@@ -178,16 +145,6 @@ const CatalogPage = () => {
                           </Text>
                           <br />
                           <Text type="secondary">{product.category.name}</Text>
-                          <br />
-                          <Rate
-                            value={Number(product.rating)}
-                            disabled
-                            allowHalf
-                            style={{ fontSize: 14 }}
-                          />
-                          <Text type="secondary" style={{ fontSize: 12, marginLeft: 4 }}>
-                            {product.rating ? Number(product.rating).toFixed(1) : ''}
-                          </Text>
                         </>
                       }
                     />

@@ -8,7 +8,7 @@ import { randomUUID } from 'crypto';
 export default async function uploadRoutes(fastify: FastifyInstance) {
   // POST /upload/product-image — загрузить изображение для товара
   fastify.post('/product-image', {
-    preHandler: [fastify.authenticate, requireRole('seller')],
+    preHandler: [fastify.authenticate, requireRole('SELLER')],
     schema: {
   tags: ['upload'],
   summary: 'Загрузить изображение товара',
@@ -36,7 +36,6 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
       },
     },
   },
-  // ⚠️ body удалён – для multipart не нужен
 },
   }, async (request, reply) => {
     const data = await request.file();

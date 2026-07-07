@@ -77,9 +77,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
       response: {
         200: {
           type: 'object',
-          properties: {
-            // пустой объект – успех
-          },
+          properties: {},
         },
         400: {
           type: 'object',
@@ -134,6 +132,14 @@ export default async function orderRoutes(fastify: FastifyInstance) {
                             price: { type: 'string' },
                           },
                         },
+                        productKey: {
+                          type: 'object',
+                          properties: {
+                            id: { type: 'integer' },
+                            keyValue: { type: 'string' },
+                          },
+                          nullable: true,
+                        },
                       },
                     },
                   },
@@ -182,21 +188,33 @@ export default async function orderRoutes(fastify: FastifyInstance) {
                       email: { type: 'string' },
                     },
                   },
+                  createdAt: { type: 'string' },
                   items: {
                     type: 'array',
                     items: {
                       type: 'object',
                       properties: {
+                        id: { type: 'integer' },
+                        price: { type: 'string' },
                         product: {
                           type: 'object',
                           properties: {
+                            id: { type: 'integer' },
                             title: { type: 'string' },
+                            price: { type: 'string' },
                           },
+                        },
+                        productKey: {
+                          type: 'object',
+                          properties: {
+                            id: { type: 'integer' },
+                            keyValue: { type: 'string' },
+                          },
+                          nullable: true,
                         },
                       },
                     },
                   },
-                  createdAt: { type: 'string' },
                 },
               },
             },

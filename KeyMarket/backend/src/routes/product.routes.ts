@@ -10,7 +10,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
 
   // GET /products/my — список товаров текущего продавца
   fastify.get('/my', {
-    preHandler: [fastify.authenticate, requireRole('seller')],
+    preHandler: [fastify.authenticate, requireRole('SELLER')],
     schema: {
       tags: ['products'],
       summary: 'Получить список своих товаров (продавец)',
@@ -71,7 +71,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
 
   // POST /products — создать новый товар с ключами
   fastify.post('/', {
-    preHandler: [fastify.authenticate, requireRole('seller')],
+    preHandler: [fastify.authenticate, requireRole('SELLER')],
     schema: {
       tags: ['products'],
       summary: 'Создать новый товар с ключами',
@@ -123,7 +123,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
 
   // PUT /products/:id — обновить товар и/или добавить новые ключи
   fastify.put('/:id', {
-    preHandler: [fastify.authenticate, requireRole('seller')],
+    preHandler: [fastify.authenticate, requireRole('SELLER')],
     schema: {
       tags: ['products'],
       summary: 'Обновить товар и/или добавить новые ключи',
@@ -174,7 +174,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
 
   // DELETE /products/:id — удалить товар и все его ключи
   fastify.delete('/:id', {
-    preHandler: [fastify.authenticate, requireRole('seller')],
+    preHandler: [fastify.authenticate, requireRole('SELLER')],
     schema: {
       tags: ['products'],
       summary: 'Удалить товар и все его ключи',
@@ -203,7 +203,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
 
   // GET /products/my/:id — получить один товар для редактирования
   fastify.get('/my/:id', {
-    preHandler: [fastify.authenticate, requireRole('seller')],
+    preHandler: [fastify.authenticate, requireRole('SELLER')],
     schema: {
       tags: ['products'],
       summary: 'Получить один товар для редактирования (продавец)',

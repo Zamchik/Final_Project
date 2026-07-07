@@ -113,8 +113,12 @@ const HomePage = () => {
                   <Card
                     hoverable
                     cover={
-                      // Контейнер с запасной заглушкой на случай ошибки загрузки
-                      <div style={{ position: 'relative', height: 140, overflow: 'hidden' }}>
+                      <div style={{
+                        position: 'relative',
+                        height: 140,
+                        overflow: 'hidden',
+                        background: '#ffffff',    // ← белый фон
+                      }}>
                         {product.imageUrl ? (
                           <>
                             <img
@@ -123,41 +127,35 @@ const HomePage = () => {
                               style={{
                                 height: 140,
                                 width: '100%',
-                                objectFit: 'cover',
+                                objectFit: 'contain',
                                 position: 'relative',
                                 zIndex: 1,
                               }}
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                              }}
+                              onError={(e) => e.currentTarget.style.display = 'none'}
                             />
-                            <div
-                              style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: '100%',
-                                background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                zIndex: 0,
-                              }}
-                            >
+                            <div style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: '100%',
+                              background: '#ffffff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              zIndex: 0,
+                            }}>
                               <KeyOutlined style={{ fontSize: 48, color: '#722ed1' }} />
                             </div>
                           </>
                         ) : (
-                          <div
-                            style={{
-                              height: 140,
-                              background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                          >
+                          <div style={{
+                            height: 140,
+                            background: '#ffffff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}>
                             <KeyOutlined style={{ fontSize: 48, color: '#722ed1' }} />
                           </div>
                         )}

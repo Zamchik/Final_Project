@@ -4,7 +4,7 @@
 // Опрос статуса заказа запускается сразу, после оплаты появляется ключ.
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Descriptions, Button, Spin, Result, Typography, message, Space } from 'antd';
+import { Card, Descriptions, Button, Spin, Result, Typography, message, Space, Row, Col } from 'antd';
 import { ShoppingCartOutlined, GiftOutlined } from '@ant-design/icons';
 import apiClient from '../api/client';
 import { useAuthStore } from '../stores/authStore';
@@ -112,7 +112,7 @@ const ProductPage = () => {
       pollInterval.current = setInterval(async () => {
         try {
           const { data: updatedOrder } = await apiClient.get(`/orders/${newOrderId}`);
-          if (updatedOrder.status === 'delivered') {
+          if (updatedOrder.status === 'DELIVERED') {
             if (pollInterval.current) {
               clearInterval(pollInterval.current);
               pollInterval.current = null;
@@ -176,7 +176,13 @@ const ProductPage = () => {
     <div style={{ maxWidth: 800, margin: '0 auto' }}>
       {/* Блок изображения с защитной заглушкой */}
       {product.imageUrl ? (
-        <div style={{ position: 'relative', marginBottom: 24, textAlign: 'center' }}>
+        <div style={{
+          position: 'relative',
+          marginBottom: 24,
+          textAlign: 'center',
+          background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+          borderRadius: 12,
+        }}>
           <img
             src={product.imageUrl}
             alt={product.title}
@@ -186,42 +192,26 @@ const ProductPage = () => {
               objectFit: 'contain',
               borderRadius: 12,
             }}
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
-          {/* Заглушка, видимая при ошибке загрузки */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: 12,
-              zIndex: 0,
-            }}
-          >
-            <ShoppingCartOutlined style={{ fontSize: 72, color: '#722ed1' }} />
-          </div>
-        </div>
-      ) : (
-        // Если imageUrl вообще не задан — обычная заглушка
-        <div
-          style={{
-            height: 200,
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
             background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             borderRadius: 12,
-            marginBottom: 24,
-          }}
-        >
+            zIndex: 0,
+          }}>
+            <ShoppingCartOutlined style={{ fontSize: 72, color: '#722ed1' }} />
+          </div>
+        </div>
+      ) : (
+        <div style={{ height: 200, background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 12, marginBottom: 24 }}>
           <ShoppingCartOutlined style={{ fontSize: 72, color: '#722ed1' }} />
         </div>
       )}
@@ -292,14 +282,18 @@ const ProductPage = () => {
               </Text>
             </Descriptions.Item>
           </Descriptions>
-          <Space style={{ marginTop: 16 }}>
-            <Button type="primary" onClick={() => navigate('/cabinet')}>
-              В личный кабинет
-            </Button>
-            <Button onClick={() => navigate('/catalog')}>
-              Продолжить покупки
-            </Button>
-          </Space>
+          <Row gutter={[12, 12]} style={{ marginTop: 16 }} justify="center">
+            <Col>
+              <Button type="primary" onClick={() => navigate('/cabinet')}>
+                В личный кабинет
+              </Button>
+            </Col>
+            <Col>
+              <Button onClick={() => navigate('/catalog')}>
+                Продолжить покупки
+              </Button>
+            </Col>
+          </Row>
         </Card>
       )}
 
