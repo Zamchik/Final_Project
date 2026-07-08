@@ -5,14 +5,16 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Descriptions, Button, Spin, Result, Typography, message, Space, Row, Col } from 'antd';
-import { ShoppingCartOutlined, GiftOutlined } from '@ant-design/icons';
+import { ShoppingCartOutlined, GiftOutlined, HeartFilled } from '@ant-design/icons'; // HeartOutlined убран
 import apiClient from '../api/client';
 import { useAuthStore } from '../stores/authStore';
+import { useWishlistStore } from '../stores/wishlistStore';
 import { AxiosError } from 'axios';
 import ReviewList from '../components/ReviewList';
 
 const { Title, Text } = Typography;
 
+// Добавлено поле productType
 interface ProductDetails {
   id: number;
   title: string;
@@ -20,6 +22,7 @@ interface ProductDetails {
   price: string;
   rating: string;
   stock: number;
+  productType: string;
   category: { id: number; name: string };
   status: string;
   imageUrl: string | null;
@@ -47,6 +50,9 @@ const ProductPage = () => {
   const [product, setProduct] = useState<ProductDetails | null>(null);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState(false);
+
+  // избранное
+  const { addItem, removeItem, isInWishlist } = useWishlistStore();
 
   // Состояния для заказа
   const [orderLoading, setOrderLoading] = useState(false);
@@ -174,7 +180,7 @@ const ProductPage = () => {
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto' }}>
-      {/* Блок изображения с защитной заглушкой */}
+      {/* Блок изображения */}
       {product.imageUrl ? (
         <div style={{
           position: 'relative',
@@ -186,27 +192,10 @@ const ProductPage = () => {
           <img
             src={product.imageUrl}
             alt={product.title}
-            style={{
-              maxWidth: '100%',
-              maxHeight: 300,
-              objectFit: 'contain',
-              borderRadius: 12,
-            }}
+            style={{ maxWidth: '100%', maxHeight: 300, objectFit: 'contain', borderRadius: 12 }}
             onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: 12,
-            zIndex: 0,
-          }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 12, zIndex: 0 }}>
             <ShoppingCartOutlined style={{ fontSize: 72, color: '#722ed1' }} />
           </div>
         </div>
@@ -220,18 +209,58 @@ const ProductPage = () => {
       <Card>
         <Descriptions bordered column={1}>
           <Descriptions.Item label="Категория">{product.category.name}</Descriptions.Item>
+          <Descriptions.Item label="Тип">
+            {product.productType === 'DLC' ? 'DLC' : 'Игра'}
+          </Descriptions.Item>
           <Descriptions.Item label="Цена">
-            <Text strong style={{ fontSize: 24, color: '#fff' }}>
-              {product.price} ₽
-            </Text>
+            <Text strong style={{ fontSize: 24, color: '#fff' }}>{product.price} ₽</Text>
           </Descriptions.Item>
           <Descriptions.Item label="В наличии">{product.stock} шт.</Descriptions.Item>
           <Descriptions.Item label="Рейтинг">{product.rating ?? 0}</Descriptions.Item>
           <Descriptions.Item label="Описание">{product.description || '—'}</Descriptions.Item>
         </Descriptions>
 
-        {/* Кнопка "Купить" */}
-        <div style={{ marginTop: 20 }}>
+        {/* Кнопка избранного и покупки */}
+        <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 16 }}>
+          {/* Сердечко: всегда HeartFilled, меняется цвет, чёрная обводка */}
+          <Button
+            type="text"
+            icon={
+              isInWishlist(product.id) ? (
+                <HeartFilled style={{
+                  fontSize: 24,
+                  color: '#722ed1',
+                  stroke: 'black',
+                  strokeWidth: 48,
+                }} />
+              ) : (
+                <HeartFilled style={{
+                  fontSize: 24,
+                  color: '#ffffff',
+                  stroke: 'black',
+                  strokeWidth: 48,
+                }} />
+              )
+            }
+            onClick={() => {
+              if (!user) {
+                message.info('Войдите, чтобы добавить в избранное');
+                return;
+              }
+              if (isInWishlist(product.id)) {
+                removeItem(product.id);
+              } else {
+                addItem({
+                  id: product.id,
+                  title: product.title,
+                  price: product.price,
+                  imageUrl: product.imageUrl,
+                });
+              }
+            }}
+            style={{ background: 'transparent', border: 'none', padding: 0 }}
+          />
+
           {product.stock > 0 && !orderId && !paidOrder && (
             <Button
               type="primary"
@@ -265,7 +294,7 @@ const ProductPage = () => {
         </Card>
       )}
 
-      {/* Блок оплаченного заказа (ключ и благодарность) */}
+      {/* Блок оплаченного заказа */}
       {paidOrder && (
         <Card style={{ marginTop: 20, textAlign: 'center' }}>
           <GiftOutlined style={{ fontSize: 48, color: '#722ed1', marginBottom: 16 }} />
@@ -273,9 +302,7 @@ const ProductPage = () => {
           <Descriptions bordered column={1} style={{ marginTop: 16 }}>
             <Descriptions.Item label="Заказ №">{paidOrder.id}</Descriptions.Item>
             <Descriptions.Item label="Сумма">{paidOrder.totalPrice} ₽</Descriptions.Item>
-            <Descriptions.Item label="Товар">
-              {paidOrder.items[0]?.product.title}
-            </Descriptions.Item>
+            <Descriptions.Item label="Товар">{paidOrder.items[0]?.product.title}</Descriptions.Item>
             <Descriptions.Item label="Ключ">
               <Text copyable code style={{ fontSize: 16 }}>
                 {paidOrder.items[0]?.productKey?.keyValue}
@@ -297,7 +324,6 @@ const ProductPage = () => {
         </Card>
       )}
 
-      {/* Список отзывов */}
       <ReviewList productId={product.id} />
     </div>
   );

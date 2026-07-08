@@ -9,6 +9,8 @@ import RegisterPage from './pages/registration/RegisterPage';
 import MyProductsPage from './pages/MyProductsPage';
 import CreateEditProductPage from './pages/CreateEditProductPage';
 import AdminPage from './pages/AdminPage';
+import SellPage from './pages/SellPage';
+import WishlistPage from './pages/WishlistPage';
 
 function App() {
   return (
@@ -24,6 +26,8 @@ function App() {
         <Route path="/create-product" element={<CreateEditProductPage />} />
         <Route path="/edit-product/:id" element={<CreateEditProductPage />} />
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/sell" element={<SellPage />} />
+        <Route path="/wishlist" element={<WishlistPage />} />
       </Route>
     </Routes>
   );

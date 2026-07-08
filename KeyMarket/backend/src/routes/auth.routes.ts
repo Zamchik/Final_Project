@@ -150,4 +150,50 @@ export default async function authRoutes(fastify: FastifyInstance) {
       response: { 200: { type: 'object', properties: { verificationUrl: { type: 'string' }, previewUrl: { type: 'string' } } } },
     },
   }, controller.resendVerification);
+
+  // POST /auth/request-seller-role — запросить роль продавца
+  fastify.post('/request-seller-role', {
+    preHandler: [fastify.authenticate],
+    schema: {
+      tags: ['auth'],
+      summary: 'Запросить роль продавца (подтверждение по email)',
+      security: [{ cookieAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['password'],
+        properties: {
+          password: { type: 'string' },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            verificationUrl: { type: 'string' },
+            previewUrl: { type: 'string', nullable: true },
+          },
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+      },
+    },
+  }, controller.requestSellerRole);
+
+  // GET /auth/confirm-seller-role — подтверждение роли продавца по токену
+  fastify.get('/confirm-seller-role', {
+    schema: {
+      tags: ['auth'],
+      summary: 'Подтверждение роли продавца по токену',
+      querystring: {
+        type: 'object',
+        required: ['token'],
+        properties: {
+          token: { type: 'string' },
+        },
+      },
+      response: {
+        302: { type: 'null' },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+      },
+    },
+  }, controller.confirmSellerRole);
 }

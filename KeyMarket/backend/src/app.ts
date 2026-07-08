@@ -37,7 +37,7 @@ const app = Fastify({ logger: true });
 // Расширение типов для сессии
 declare module '@fastify/secure-session' {
   interface SessionData {
-    user: {
+    user?: {
       id: number;
       email: string;
       role: string;

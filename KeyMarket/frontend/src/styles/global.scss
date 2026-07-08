@@ -15,7 +15,6 @@ body {
   min-height: 100vh;
 }
 
-// Исправление фона при автозаполнении — такой же цвет, как у обычного поля
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
@@ -36,19 +35,9 @@ input:-webkit-autofill:active {
   }
 }
 
-.desktop-menu {
-  display: none;
-}
-
-.mobile-menu-btn {
-  display: block;
-}
-
+.desktop-menu { display: none; }
+.mobile-menu-btn { display: block; }
 @media (min-width: 768px) {
-  .desktop-menu {
-    display: block;
-  }
-  .mobile-menu-btn {
-    display: none;
-  }
+  .desktop-menu { display: block; }
+  .mobile-menu-btn { display: none; }
 }

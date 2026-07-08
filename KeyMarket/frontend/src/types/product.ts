@@ -15,4 +15,5 @@ export interface FormValues {
   status?: string;
   keys?: string;
   newKeys?: string;
+  productType?: string;
 }

@@ -16,6 +16,7 @@ interface ProductData {
   categoryId: number;
   status: string;
   imageUrl: string | null;
+  productType: string;
   keys: ProductKey[];
 }
 

@@ -1,36 +1,49 @@
 // Главная страница KeyMarket (Landing)
 import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Typography, Button, Row, Col, Card, Spin, message } from 'antd';
-import {
-  ThunderboltOutlined,
-  SafetyCertificateOutlined,
-  PercentageOutlined,
-  RocketOutlined,
-  KeyOutlined,
-} from '@ant-design/icons';
+import { Typography, Button, Row, Col, Spin, message, Space } from 'antd';
+import { ArrowRightOutlined } from '@ant-design/icons';
+import ProductCard from '../components/ProductCard';
 import apiClient from '../api/client';
 
-const { Title, Paragraph, Text } = Typography;
+const { Title, Paragraph } = Typography;
 
-// Тип для популярного товара
-interface PopularProduct {
+interface Product {
   id: number;
   title: string;
   price: string;
-  rating: string;
   imageUrl: string | null;
+  productType: string;
   category: { name: string };
 }
 
 const HomePage = () => {
-  const [popularProducts, setPopularProducts] = useState<PopularProduct[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [newProducts, setNewProducts] = useState<Product[]>([]);
+  const [popularProducts, setPopularProducts] = useState<Product[]>([]);
+  const [loadingNew, setLoadingNew] = useState(false);
+  const [loadingPopular, setLoadingPopular] = useState(false);
   const hasShownError = useRef(false);
 
   useEffect(() => {
+    const fetchNew = async () => {
+      setLoadingNew(true);
+      try {
+        const { data } = await apiClient.get('/products', {
+          params: { page: 1, limit: 8, sort: 'newest' },
+        });
+        setNewProducts(data.products);
+      } catch {
+        if (!hasShownError.current) {
+          message.error('Не удалось загрузить новинки');
+          hasShownError.current = true;
+        }
+      } finally {
+        setLoadingNew(false);
+      }
+    };
+
     const fetchPopular = async () => {
-      setLoading(true);
+      setLoadingPopular(true);
       try {
         const { data } = await apiClient.get('/products', {
           params: { page: 1, limit: 4, sort: 'price_desc' },
@@ -42,144 +55,68 @@ const HomePage = () => {
           hasShownError.current = true;
         }
       } finally {
-        setLoading(false);
+        setLoadingPopular(false);
       }
     };
+
+    fetchNew();
     fetchPopular();
   }, []);
 
   return (
     <div>
       {/* Hero-секция */}
-      <div style={{ textAlign: 'center', padding: '80px 20px 60px' }}>
+      <div style={{ textAlign: 'center', padding: '40px 20px 60px' }}>
         <Title level={1} style={{ fontSize: 48, marginBottom: 16 }}>
           Покупайте цифровые товары <span style={{ color: '#722ed1' }}>безопасно</span>
         </Title>
         <Paragraph style={{ fontSize: 18, color: '#b0b0b0', maxWidth: 600, margin: '0 auto 32px' }}>
-          KeyMarket — это маркетплейс нового поколения. Мы объединили лучшие
-          стороны существующих площадок и убрали их недостатки.
+          KeyMarket — это маркетплейс нового поколения. Мы объединили лучшие стороны существующих площадок и убрали их недостатки.
         </Paragraph>
-        <Link to="/catalog">
-          <Button type="primary" size="large" style={{ height: 48, paddingLeft: 40, paddingRight: 40 }}>
-            Перейти в каталог
-          </Button>
-        </Link>
+        <Space size="middle">
+          <Link to="/catalog">
+            <Button type="primary" size="large" style={{ height: 48, paddingLeft: 40, paddingRight: 40 }}>
+              Перейти в каталог
+            </Button>
+          </Link>
+          <Link to="/sell">
+            <Button size="large" style={{ height: 48, paddingLeft: 40, paddingRight: 40 }}>
+              Начать продавать <ArrowRightOutlined />
+            </Button>
+          </Link>
+        </Space>
       </div>
 
-      {/* Блок преимуществ */}
-      <Row gutter={[24, 24]} justify="center" style={{ maxWidth: 900, margin: '0 auto', padding: '0 20px 60px' }}>
-        {[
-          {
-            icon: <PercentageOutlined style={{ fontSize: 32, color: '#722ed1' }} />,
-            title: 'Низкая комиссия',
-            text: 'Всего 5% с продажи — это значительно ниже, чем у конкурентов.',
-          },
-          {
-            icon: <ThunderboltOutlined style={{ fontSize: 32, color: '#722ed1' }} />,
-            title: 'Мгновенная выдача',
-            text: 'Ключ приходит сразу после оплаты, без задержек и подтверждений.',
-          },
-          {
-            icon: <SafetyCertificateOutlined style={{ fontSize: 32, color: '#722ed1' }} />,
-            title: 'Безопасные сделки',
-            text: 'Платформа выступает гарантом: деньги резервируются до получения товара.',
-          },
-          {
-            icon: <RocketOutlined style={{ fontSize: 32, color: '#722ed1' }} />,
-            title: 'Простой старт',
-            text: 'Зарегистрируйтесь за минуту и начните продавать или покупать.',
-          },
-        ].map((item) => (
-          <Col xs={24} sm={12} key={item.title}>
-            <Card hoverable style={{ textAlign: 'center', height: '100%' }}>
-              <div style={{ marginBottom: 16 }}>{item.icon}</div>
-              <Title level={4}>{item.title}</Title>
-              <Paragraph type="secondary">{item.text}</Paragraph>
-            </Card>
-          </Col>
-        ))}
-      </Row>
-
       {/* Популярные товары */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px 60px' }}>
-        <Title level={2} style={{ textAlign: 'center', marginBottom: 40 }}>
+      <div style={{ padding: '0 20px 40px' }}>
+        <Title level={2} style={{ textAlign: 'left', marginBottom: 24 }}>
           Популярные товары
         </Title>
-        {loading ? (
-          <div style={{ textAlign: 'center' }}>
-            <Spin size="large" />
-          </div>
+        {loadingPopular ? (
+          <div style={{ textAlign: 'center' }}><Spin size="large" /></div>
         ) : (
-          <Row gutter={[24, 24]}>
+          <Row gutter={[16, 16]}>
             {popularProducts.map((product) => (
               <Col xs={24} sm={12} md={6} key={product.id}>
-                <Link to={`/product/${product.id}`}>
-                  <Card
-                    hoverable
-                    cover={
-                      <div style={{
-                        position: 'relative',
-                        height: 140,
-                        overflow: 'hidden',
-                        background: '#ffffff',    // ← белый фон
-                      }}>
-                        {product.imageUrl ? (
-                          <>
-                            <img
-                              src={product.imageUrl}
-                              alt={product.title}
-                              style={{
-                                height: 140,
-                                width: '100%',
-                                objectFit: 'contain',
-                                position: 'relative',
-                                zIndex: 1,
-                              }}
-                              onError={(e) => e.currentTarget.style.display = 'none'}
-                            />
-                            <div style={{
-                              position: 'absolute',
-                              top: 0,
-                              left: 0,
-                              width: '100%',
-                              height: '100%',
-                              background: '#ffffff',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              zIndex: 0,
-                            }}>
-                              <KeyOutlined style={{ fontSize: 48, color: '#722ed1' }} />
-                            </div>
-                          </>
-                        ) : (
-                          <div style={{
-                            height: 140,
-                            background: '#ffffff',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}>
-                            <KeyOutlined style={{ fontSize: 48, color: '#722ed1' }} />
-                          </div>
-                        )}
-                      </div>
-                    }
-                  >
-                    <Card.Meta
-                      title={product.title}
-                      description={
-                        <>
-                          <Text strong style={{ fontSize: 16, color: '#fff' }}>
-                            {product.price} ₽
-                          </Text>
-                          <br />
-                          <Text type="secondary">{product.category.name}</Text>
-                        </>
-                      }
-                    />
-                  </Card>
-                </Link>
+                <ProductCard product={product} />
+              </Col>
+            ))}
+          </Row>
+        )}
+      </div>
+
+      {/* Новинки */}
+      <div style={{ padding: '0 20px 60px' }}>
+        <Title level={2} style={{ textAlign: 'left', marginBottom: 24 }}>
+          Новинки
+        </Title>
+        {loadingNew ? (
+          <div style={{ textAlign: 'center' }}><Spin size="large" /></div>
+        ) : (
+          <Row gutter={[16, 16]}>
+            {newProducts.map((product) => (
+              <Col xs={24} sm={12} md={6} key={product.id}>
+                <ProductCard product={product} />
               </Col>
             ))}
           </Row>

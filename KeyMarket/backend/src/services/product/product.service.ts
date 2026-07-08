@@ -11,7 +11,7 @@ export class ProductService {
     return queries.findMyProducts(sellerId, page, limit, search, categoryId);
   }
 
-  // Создать товар с ключами
+  // Создать товар с ключами, изображением и типом товара (GAME / DLC)
   async createProduct(
     sellerId: number,
     data: {
@@ -21,6 +21,7 @@ export class ProductService {
       categoryId: number;
       keys: string[];
       imageUrl?: string | null;
+      productType?: 'GAME' | 'DLC';
     }
   ) {
     const uniqueKeys = validators.ensureNoDuplicates(data.keys);
@@ -29,10 +30,11 @@ export class ProductService {
       ...data,
       keys: uniqueKeys,
       imageUrl: data.imageUrl || null,
+      productType: data.productType || 'GAME',
     });
   }
 
-  // Обновить товар и/или добавить новые ключи
+  // Обновить товар и/или добавить новые ключи, в том числе изменить тип товара
   async updateProduct(
     productId: number,
     sellerId: number,
@@ -44,6 +46,7 @@ export class ProductService {
       status?: ProductStatus;
       imageUrl?: string | null;
       newKeys?: string[];
+      productType?: 'GAME' | 'DLC';
     }
   ) {
     const product = await queries.findProductById(productId, sellerId);
@@ -58,6 +61,7 @@ export class ProductService {
     if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
     if (data.status !== undefined) updateData.status = data.status;
     if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
+    if (data.productType !== undefined) updateData.productType = data.productType; // обновление типа
 
     if (Object.keys(updateData).length > 0) {
       ops.push(queries.updateProductFields(productId, updateData as any));
@@ -88,7 +92,7 @@ export class ProductService {
   }
 
   // Получить публичный товар по ID (для страницы товара).
-  // Возвращает товар без проданных ключей, с количеством доступных (stock).
+  // Возвращает товар без проданных ключей, с количеством доступных (stock) и типом товара.
   async getProductById(id: number) {
     const product = await prisma.product.findUnique({
       where: { id },
@@ -114,7 +118,7 @@ export class ProductService {
     });
   }
 
-  // Публичный список товаров (каталог)
+  // Публичный список товаров (каталог) с возможностью фильтрации по типу товара
   async getPublicList(options: {
     page: number;
     limit: number;
@@ -123,6 +127,7 @@ export class ProductService {
     minPrice?: number;
     maxPrice?: number;
     sort?: 'price_asc' | 'price_desc' | 'newest';
+    productType?: 'GAME' | 'DLC';
   }) {
     return queries.findPublicProducts(options);
   }

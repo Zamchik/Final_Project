@@ -17,7 +17,7 @@ import {
 import { PlusOutlined } from '@ant-design/icons';
 import apiClient from '../api/client';
 import { useAuthStore } from '../stores/authStore';
-import { AxiosError } from 'axios'; // используется для проверки ошибок запроса
+import { AxiosError } from 'axios';
 
 import { FormValues } from '../types/product';
 import { validateKeys } from '../utils/validateKeys';
@@ -44,7 +44,6 @@ const CreateEditProductPage = () => {
   const [loadingForm, setLoadingForm] = useState(false);
   const [keysPreview, setKeysPreview] = useState<string[]>([]);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
 
   const categories = useCategories(!!user);
   const safeCategories = Array.isArray(categories) ? categories : [];
@@ -79,6 +78,7 @@ const CreateEditProductPage = () => {
         price: Number(productData.price),
         categoryId: productData.categoryId,
         status: productData.status,
+        productType: productData.productType || 'GAME',
       });
       if (productData.imageUrl) {
         setImageUrl(productData.imageUrl);
@@ -88,16 +88,15 @@ const CreateEditProductPage = () => {
 
   // Загрузка изображения с проверкой размера
   const handleUpload = async (file: File) => {
-    // Проверяем размер файла на клиенте (максимум 5 МБ)
     const MAX_FILE_SIZE = 5 * 1024 * 1024;
     if (file.size > MAX_FILE_SIZE) {
       message.error('Файл слишком большой. Максимальный размер: 5 МБ.');
-      return false; // отменяем автоматическую загрузку
+      return false;
     }
 
     const formData = new FormData();
     formData.append('file', file);
-    setUploading(true);
+    // индикация загрузки не требуется, т.к. Upload сам показывает прогресс
     try {
       const { data } = await apiClient.post('/upload/product-image', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -105,16 +104,13 @@ const CreateEditProductPage = () => {
       setImageUrl(data.imageUrl);
       message.success('Изображение загружено');
     } catch (err) {
-      // Если сервер вернул 413 (Payload Too Large) – показываем точное сообщение
       if (err instanceof AxiosError && err.response?.status === 413) {
         message.error('Файл слишком большой. Максимальный размер: 5 МБ.');
       } else {
         message.error('Ошибка загрузки изображения');
       }
-    } finally {
-      setUploading(false);
     }
-    return false; // предотвращаем автоматическую отправку формы
+    return false;
   };
 
   // Отправка формы
@@ -127,6 +123,7 @@ const CreateEditProductPage = () => {
         price: values.price,
         categoryId: values.categoryId,
         imageUrl, // текущее состояние imageUrl
+        productType: values.productType || 'GAME',
       };
 
       if (isEdit && id) {
@@ -188,6 +185,23 @@ const CreateEditProductPage = () => {
             <Select
               placeholder="Выберите категорию"
               options={safeCategories.map((c) => ({ value: c.id, label: c.name }))}
+            />
+          </Form.Item>
+
+          {/* Тип товара (GAME / DLC) */}
+          {/* Тип товара (GAME / DLC) */}
+          <Form.Item
+            name="productType"
+            label="Тип товара"
+            rules={[{ required: true, message: 'Выберите тип товара' }]}
+            initialValue="GAME"
+          >
+            <Select
+              placeholder="Выберите тип"
+              options={[
+                { value: 'GAME', label: 'Игра' },
+                { value: 'DLC', label: 'DLC' },
+              ]}
             />
           </Form.Item>
 

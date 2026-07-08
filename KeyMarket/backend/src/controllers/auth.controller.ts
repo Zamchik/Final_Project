@@ -5,10 +5,10 @@ import { UnauthorizedError, BadRequestError, ForbiddenError } from '../common/er
 import { NotificationType } from '@prisma/client';
 
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
-   // POST /auth/register — регистрация нового пользователя.
-   // Отправляет письмо и уведомление асинхронно, не задерживая ответ.
+  // POST /auth/register — регистрация нового пользователя.
+  // Отправляет письмо и уведомление асинхронно, не задерживая ответ.
   register = async (req: FastifyRequest<{ Body: { email: string; password: string } }>, reply: FastifyReply) => {
     const { email, password } = req.body;
     const user = await this.authService.register(email, password);
@@ -43,8 +43,8 @@ export class AuthController {
     });
   };
 
-   // POST /auth/login — вход в систему.
-   // Проверяет подтверждение email и отсутствие бана.
+  // POST /auth/login — вход в систему.
+  // Проверяет подтверждение email и отсутствие бана.
   login = async (req: FastifyRequest<{ Body: { email: string; password: string } }>, reply: FastifyReply) => {
     const { email, password } = req.body;
     const user = await this.authService.login(email, password);
@@ -62,13 +62,15 @@ export class AuthController {
     return { user: user };
   };
 
-   // POST /auth/logout — выход из системы.
-  logout = async (req: FastifyRequest) => {
-    (req.session as any).destroy(); // используем приведение к any, т.к. типы могут не содержать destroy
-    return {};
-  };
+  // POST /auth/logout — выход из системы.
+  logout = async (req: FastifyRequest, reply: FastifyReply) => {
+  req.session.set('user', undefined);
+  // Принудительно удаляем куку на клиенте
+  reply.clearCookie('session', { path: '/' });
+  return {};
+};
 
-   // GET /auth/me — получить данные текущего пользователя
+  // GET /auth/me — получить данные текущего пользователя
   getMe = async (req: FastifyRequest) => {
     const userId = req.session.get('user')?.id;
     if (!userId) throw new UnauthorizedError('Unauthorized');
@@ -83,8 +85,8 @@ export class AuthController {
     return this.authService.changePassword(userId, oldPassword, newPassword);
   };
 
-   // GET /auth/verify-email — подтверждение email по токену.
-   // Перенаправляет на фронтенд с сообщением об успехе.
+  // GET /auth/verify-email — подтверждение email по токену.
+  // Перенаправляет на фронтенд с сообщением об успехе.
   verifyEmail = async (req: FastifyRequest<{ Querystring: { token: string } }>, reply: FastifyReply) => {
     const { token } = req.query;
     const result = await this.authService.verifyEmail(token);
@@ -102,5 +104,52 @@ export class AuthController {
     const { email } = req.body;
     const data = await this.authService.resendVerification(email);
     return data; // { verificationUrl, previewUrl }
+  };
+
+  // ================== Новые методы для становления продавцом ==================
+
+  /**
+   * POST /auth/request-seller-role — запрос на получение роли продавца.
+   * Требует пароль для подтверждения личности, затем отправляет ссылку на email.
+   */
+  requestSellerRole = async (req: FastifyRequest, reply: FastifyReply) => {
+    const user = req.session.get('user');
+    if (!user) throw new UnauthorizedError('Unauthorized');
+
+    const { password } = req.body as any;
+    if (!password) throw new BadRequestError('Пароль обязателен');
+
+    // Проверяем пароль через новый метод сервиса
+    const isValid = await this.authService.verifyUserPassword(user.id, password);
+    if (!isValid) {
+      throw new BadRequestError('Неверный пароль');
+    }
+
+    // Отправляем письмо с токеном подтверждения роли продавца
+    const data = await this.authService.requestSellerRole(user.id, user.email);
+    return data;
+  };
+
+  /**
+   * GET /auth/confirm-seller-role — подтверждение роли продавца по JWT-токену.
+   * После успешной проверки обновляет роль в базе и сессии, редиректит в кабинет.
+   */
+  confirmSellerRole = async (
+    req: FastifyRequest<{ Querystring: { token: string } }>,
+    reply: FastifyReply
+  ) => {
+    const { token } = req.query;
+    const updatedUser = await this.authService.confirmSellerRole(token);
+
+    // Обновляем сессию — теперь пользователь SELLER
+    req.session.set('user', {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      role: updatedUser.role,
+    });
+
+    // Редирект на фронтенд в кабинет с параметром role=SELLER
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    reply.redirect(`${frontendUrl}/cabinet?role=SELLER`);
   };
 }

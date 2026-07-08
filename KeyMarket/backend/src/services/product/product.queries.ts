@@ -27,7 +27,7 @@ export const findMyProducts = async (
   return { products, total, page, limit };
 };
 
-// Создание товара с ключами и, опционально, изображением.
+// Создание товара с ключами и, опционально, изображением и типом товара.
 export const createProductWithKeys = async (
   sellerId: number,
   data: {
@@ -37,6 +37,7 @@ export const createProductWithKeys = async (
     categoryId: number;
     keys: string[];
     imageUrl?: string | null;
+    productType?: 'GAME' | 'DLC';
   }
 ) => {
   return prisma.product.create({
@@ -47,6 +48,7 @@ export const createProductWithKeys = async (
       price: data.price,
       categoryId: data.categoryId,
       imageUrl: data.imageUrl || null,
+      productType: data.productType || 'GAME',
       stock: data.keys.length,
       keys: { create: data.keys.map((key) => ({ keyValue: key })) },
     },
@@ -61,7 +63,6 @@ export const updateProductFields = (productId: number, data: Prisma.ProductUpdat
 };
 
 // Добавление новых ключей (createMany).
-// Убрали async – возвращает PrismaPromise.
 export const addProductKeys = (productId: number, keys: string[]) => {
   return prisma.productKey.createMany({
     data: keys.map((key) => ({ productId, keyValue: key })),
@@ -69,7 +70,6 @@ export const addProductKeys = (productId: number, keys: string[]) => {
 };
 
 // Увеличение стока товара.
-// Убрали async – возвращает PrismaPromise.
 export const incrementStock = (productId: number, amount: number) => {
   return prisma.product.update({
     where: { id: productId },
@@ -107,7 +107,6 @@ export const findExistingKeys = async (keys: string[]) => {
 };
 
 // Публичный список товаров с фильтрацией и пагинацией.
-// Теперь включает imageUrl.
 export const findPublicProducts = async (options: {
   page: number;
   limit: number;
@@ -116,6 +115,7 @@ export const findPublicProducts = async (options: {
   minPrice?: number;
   maxPrice?: number;
   sort?: 'price_asc' | 'price_desc' | 'newest';
+  productType?: 'GAME' | 'DLC'
 }) => {
   const where: Prisma.ProductWhereInput = { status: 'ACTIVE' };
 
@@ -124,6 +124,10 @@ export const findPublicProducts = async (options: {
   }
   if (options.categoryId) {
     where.categoryId = options.categoryId;
+  }
+  // Фильтр по типу товара, если передан
+  if (options.productType) {
+    where.productType = options.productType;
   }
   if (options.minPrice !== undefined || options.maxPrice !== undefined) {
     where.price = {};
@@ -144,6 +148,7 @@ export const findPublicProducts = async (options: {
         price: true,
         rating: true,
         imageUrl: true,
+        productType: true,
         category: { select: { id: true, name: true } },
         createdAt: true,
       },

@@ -23,13 +23,12 @@ function verifyPassword(password: string, stored: string): boolean {
 }
 
 export class AuthService {
-  // Теперь принимаем EmailService вторым параметром
   constructor(
     private prisma: PrismaClient,
     private emailService: EmailService
   ) { }
 
-  // Регистрация нового пользователя (без изменений)
+  // Регистрация нового пользователя
   async register(email: string, password: string) {
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) throw new ConflictError('Email already registered');
@@ -44,7 +43,7 @@ export class AuthService {
     return { id: user.id, email: user.email, role: user.role };
   }
 
-  // Вход в систему (без изменений)
+  // Вход в систему
   async login(email: string, password: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) throw new UnauthorizedError('Invalid email or password');
@@ -59,7 +58,7 @@ export class AuthService {
     };
   }
 
-  // Получить пользователя по ID (без изменений)
+  // Получить пользователя по ID
   async getUserById(id: number) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundError('User not found');
@@ -71,7 +70,7 @@ export class AuthService {
     };
   }
 
-  // Сменить пароль пользователя (без изменений)
+  // Сменить пароль пользователя
   async changePassword(userId: number, oldPassword: string, newPassword: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundError('Пользователь не найден');
@@ -86,14 +85,14 @@ export class AuthService {
     return { success: true };
   }
 
-  // Генерирует JWT-токен для подтверждения email (без изменений)
+  // Генерирует JWT-токен для подтверждения email
   async generateVerificationToken(userId: number) {
     return jwt.sign({ userId }, process.env.JWT_SECRET || 'supersecretkey', {
       expiresIn: '24h',
     });
   }
 
-  // Проверяет токен подтверждения email и активирует пользователя (без изменений)
+  // Проверяет токен подтверждения email и активирует пользователя
   async verifyEmail(token: string) {
     try {
       const payload = jwt.verify(token, process.env.JWT_SECRET || 'supersecretkey') as { userId: number };
@@ -132,5 +131,85 @@ export class AuthService {
     }
 
     return { verificationUrl: link, previewUrl };
+  }
+
+  // Проверяет правильность пароля для указанного пользователя.
+  // Используется при запросе роли SELLER для подтверждения личности.
+  async verifyUserPassword(userId: number, password: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundError('Пользователь не найден');
+    return verifyPassword(password, user.passwordHash);
+  }
+
+  // Генерирует JWT-токен для подтверждения получения роли продавца.
+  // Токен содержит userId и тип 'seller_role', срок действия 1 час.
+  async generateSellerRoleToken(userId: number): Promise<string> {
+    return jwt.sign(
+      { userId, type: 'seller_role' },
+      process.env.JWT_SECRET || 'supersecretkey',
+      { expiresIn: '1h' }
+    );
+  }
+
+  // Инициирует процесс становления продавцом:
+  // проверяет, что пользователь – BUYER, генерирует токен и отправляет письмо.
+  // Возвращает ссылку для подтверждения и (если есть) preview-ссылку Ethereal.
+  async requestSellerRole(userId: number, email: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundError('Пользователь не найден');
+    if (user.role !== UserRole.BUYER) {
+      throw new ConflictError('Вы уже являетесь продавцом или администратором');
+    }
+
+    const token = await this.generateSellerRoleToken(userId);
+    const link = `http://localhost:3000/auth/confirm-seller-role?token=${token}`;
+
+    let previewUrl: string | null = null;
+    try {
+      const info = await this.emailService.send(
+        email,
+        'Подтверждение статуса продавца в KeyMarket',
+        `<h1>Стать продавцом</h1>
+         <p>Для активации статуса продавца перейдите по ссылке:</p>
+         <a href="${link}">${link}</a>
+         <p>Ссылка действительна 1 час.</p>`
+      );
+      previewUrl = nodemailer.getTestMessageUrl(info) || null;
+      if (!previewUrl && (info as any).messageId) {
+        previewUrl = `https://ethereal.email/message/${(info as any).messageId}`;
+      }
+    } catch (err) {
+      // ошибка отправки не прерывает операцию – пользователь получит ссылку, но без превью
+    }
+
+    return { verificationUrl: link, previewUrl };
+  }
+
+  // Подтверждает роль продавца по JWT-токену.
+  // Меняет роль пользователя на SELLER и возвращает обновлённые данные.
+  async confirmSellerRole(token: string) {
+    try {
+      const payload = jwt.verify(
+        token,
+        process.env.JWT_SECRET || 'supersecretkey'
+      ) as { userId: number; type: string };
+
+      if (payload.type !== 'seller_role') {
+        throw new BadRequestError('Неверный тип токена');
+      }
+
+      const user = await this.prisma.user.update({
+        where: { id: payload.userId },
+        data: { role: UserRole.SELLER },
+        select: { id: true, email: true, role: true },
+      });
+
+      return user;
+    } catch (err) {
+      if (err instanceof jwt.JsonWebTokenError) {
+        throw new BadRequestError('Недействительный или просроченный токен');
+      }
+      throw err;
+    }
   }
 }

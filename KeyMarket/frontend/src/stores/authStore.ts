@@ -20,6 +20,7 @@ interface AuthState {
   register: (email: string, password: string) => Promise<{ message: string; verificationUrl?: string; previewUrl?: string | null }>;
   logout: () => Promise<void>;
   fetchUser: (force?: boolean) => Promise<void>;
+  requestSellerRole: (password: string) => Promise<{ verificationUrl: string; previewUrl: string | null }>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -86,5 +87,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ loading: false });
       }
     }
+  },
+
+  // Запрос роли продавца
+  requestSellerRole: async (password: string) => {
+    const { data } = await apiClient.post('/auth/request-seller-role', { password });
+    message.success('Письмо с подтверждением отправлено на ваш email.');
+    return data as { verificationUrl: string; previewUrl: string | null };
   },
 }));

@@ -1,11 +1,8 @@
 // Страница каталога товаров
 import { useEffect, useState, useCallback } from 'react';
-import { Card, Input, Select, InputNumber, Row, Col, Pagination, Spin, Empty, Typography, message } from 'antd';
-import { Link } from 'react-router-dom';
+import { Select, InputNumber, Row, Col, Pagination, Spin, Empty, message, Segmented } from 'antd';
+import ProductCard from '../components/ProductCard';
 import apiClient from '../api/client';
-
-const { Meta } = Card;
-const { Text } = Typography;
 
 interface Product {
   id: number;
@@ -13,6 +10,7 @@ interface Product {
   price: string;
   rating: string;
   imageUrl: string | null;
+  productType: string;
   category: { id: number; name: string };
   createdAt: string;
 }
@@ -23,18 +21,17 @@ const CatalogPage = () => {
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
 
-  const [search, setSearch] = useState('');
   const [categoryId, setCategoryId] = useState<number | undefined>(undefined);
   const [minPrice, setMinPrice] = useState<number | undefined>(undefined);
   const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
-
+  const [productType, setProductType] = useState<string | undefined>(undefined);
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await apiClient.get('/products', {
-        params: { page, limit: 12, search, categoryId, minPrice, maxPrice },
+        params: { page, limit: 12, categoryId, minPrice, maxPrice, productType },
       });
       setProducts(data.products);
       setTotal(data.total);
@@ -43,7 +40,7 @@ const CatalogPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, search, categoryId, minPrice, maxPrice]);
+  }, [page, categoryId, minPrice, maxPrice, productType]);
 
   useEffect(() => {
     fetchProducts();
@@ -51,35 +48,24 @@ const CatalogPage = () => {
 
   useEffect(() => {
     apiClient.get('/categories')
-      .then(({ data }) => {
-        setCategories(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {
-        message.error('Не удалось загрузить категории');
-        setCategories([]);
-      });
+      .then(({ data }) => setCategories(Array.isArray(data) ? data : []))
+      .catch(() => message.error('Не удалось загрузить категории'));
   }, []);
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 16px' }}>
       <h1>Каталог товаров</h1>
 
+      {/* Фильтры */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} md={6}>
-          <Input.Search
-            placeholder="Поиск по названию"
-            allowClear
-            onSearch={(value) => { setSearch(value); setPage(1); }}
-          />
-        </Col>
         <Col xs={24} sm={12} md={6}>
           <Select
             placeholder="Категория"
             allowClear
             style={{ width: '100%' }}
             value={categoryId}
-            onChange={(val: number | undefined) => { setCategoryId(val); setPage(1); }}
-            options={(Array.isArray(categories) ? categories : []).map(c => ({ value: c.id, label: c.name }))}
+            onChange={(val) => { setCategoryId(val); setPage(1); }}
+            options={categories.map(c => ({ value: c.id, label: c.name }))}
           />
         </Col>
         <Col xs={12} sm={6} md={3}>
@@ -88,7 +74,7 @@ const CatalogPage = () => {
             min={0}
             style={{ width: '100%' }}
             value={minPrice}
-            onChange={(val: number | null) => { setMinPrice(val ?? undefined); setPage(1); }}
+            onChange={(val) => { setMinPrice(val ?? undefined); setPage(1); }}
           />
         </Col>
         <Col xs={12} sm={6} md={3}>
@@ -97,11 +83,26 @@ const CatalogPage = () => {
             min={0}
             style={{ width: '100%' }}
             value={maxPrice}
-            onChange={(val: number | null) => { setMaxPrice(val ?? undefined); setPage(1); }}
+            onChange={(val) => { setMaxPrice(val ?? undefined); setPage(1); }}
+          />
+        </Col>
+        <Col xs={24} sm={12} md={4}>
+          <Segmented
+            options={[
+              { value: '', label: 'Все' },
+              { value: 'GAME', label: 'Игры' },
+              { value: 'DLC', label: 'DLC' },
+            ]}
+            value={productType || ''}
+            onChange={(val) => {
+              setProductType(val === '' ? undefined : val as string);
+              setPage(1);
+            }}
           />
         </Col>
       </Row>
 
+      {/* Список товаров */}
       {loading ? (
         <Spin style={{ display: 'block', marginTop: 40 }} />
       ) : products.length === 0 ? (
@@ -111,50 +112,10 @@ const CatalogPage = () => {
           <Row gutter={[16, 16]}>
             {products.map(product => (
               <Col xs={24} sm={12} md={6} key={product.id}>
-                <Link to={`/product/${product.id}`}>
-                  <Card
-                    hoverable
-                    cover={
-                      <div style={{
-                        height: 140,
-                        background: '#ffffff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}>
-                        <img
-                          src={product.imageUrl || '/placeholder.png'}
-                          alt={product.title}
-                          style={{
-                            maxHeight: '100%',
-                            maxWidth: '100%',
-                            objectFit: 'contain',
-                          }}
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = '/placeholder.png';
-                          }}
-                        />
-                      </div>
-                    }
-                  >
-                    <Meta
-                      title={product.title}
-                      description={
-                        <>
-                          <Text strong style={{ fontSize: 16, color: '#fff' }}>
-                            {product.price} ₽
-                          </Text>
-                          <br />
-                          <Text type="secondary">{product.category.name}</Text>
-                        </>
-                      }
-                    />
-                  </Card>
-                </Link>
+                <ProductCard product={product} />
               </Col>
             ))}
           </Row>
-
           <div style={{ marginTop: 24, textAlign: 'center' }}>
             <Pagination
               current={page}

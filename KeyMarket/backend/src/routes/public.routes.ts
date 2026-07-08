@@ -23,6 +23,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
           minPrice: { type: 'number' },
           maxPrice: { type: 'number' },
           sort: { type: 'string', enum: ['price_asc', 'price_desc', 'newest'] },
+          productType: { type: 'string', enum: ['GAME', 'DLC'] },
         },
       },
       response: {
@@ -39,6 +40,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
                   price: { type: 'string' },
                   rating: { type: 'string' },
                   imageUrl: { type: 'string', nullable: true },
+                  productType: { type: 'string' },
                   category: {
                     type: 'object',
                     properties: {
@@ -58,7 +60,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (req: FastifyRequest) => {
-    const { page = 1, limit = 12, search, categoryId, minPrice, maxPrice, sort } = req.query as any;
+    const { page = 1, limit = 12, search, categoryId, minPrice, maxPrice, sort, productType } = req.query as any;
     return productService.getPublicList({
       page: Number(page),
       limit: Number(limit),
@@ -67,6 +69,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       minPrice: minPrice ? Number(minPrice) : undefined,
       maxPrice: maxPrice ? Number(maxPrice) : undefined,
       sort,
+      productType,
     });
   });
 
@@ -91,6 +94,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
             rating: { type: 'string' },
             stock: { type: 'integer' },
             imageUrl: { type: 'string', nullable: true },
+            productType: { type: 'string' },
             category: {
               type: 'object',
               properties: {
@@ -106,7 +110,6 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     },
   }, async (req: FastifyRequest, reply: FastifyReply) => {
     const { id } = req.params as any;
-    // Вызываем метод сервиса вместо прямого prisma
     const product = await productService.getProductById(Number(id));
     if (!product) {
       return reply.status(404).send({ error: 'Товар не найден' });

@@ -1,3 +1,5 @@
+// backend/prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -48,6 +50,11 @@ enum NotificationType {
   WELCOME
 }
 
+enum ProductType {
+  GAME
+  DLC
+}
+
 // ------------------- Models -------------------
 
 model User {
@@ -91,6 +98,8 @@ model Product {
   stock       Int           @default(0)
   rating      Decimal       @default(0)
   status      ProductStatus @default(ACTIVE)
+  // Тип товара (GAME или DLC), по умолчанию GAME
+  productType ProductType   @default(GAME) @map("product_type")
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
   imageUrl    String?       @map("image_url")
