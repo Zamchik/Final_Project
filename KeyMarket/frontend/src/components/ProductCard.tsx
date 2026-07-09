@@ -1,4 +1,4 @@
-import { Card, Button, Typography, Tag, message } from 'antd';
+import { Button, Typography, Tag, message } from 'antd';
 import { HeartFilled } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
@@ -48,36 +48,60 @@ const ProductCard = ({ product }: ProductCardProps) => {
   };
 
   return (
-    <Link to={`/product/${product.id}`}>
-      <Card
-        hoverable
-        bodyStyle={{ padding: 0 }}
-        style={{ position: 'relative', overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column' }}
-        cover={
+    <Link to={`/product/${product.id}`} style={{ textDecoration: 'none' }}>
+      <div
+        style={{
+          borderRadius: 8,
+          background: '#2a2a2a',
+          overflow: 'hidden',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+          cursor: 'pointer',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'translateY(-4px)';
+          e.currentTarget.style.boxShadow = '0 8px 24px rgba(114, 46, 209, 0.2)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = '';
+          e.currentTarget.style.boxShadow = '';
+        }}
+      >
+        {/* Изображение с адаптивной высотой */}
+        <div style={{ position: 'relative', width: '100%', aspectRatio: '4 / 3', background: '#1a1a1a' }}>
+          <img
+            src={product.imageUrl || '/placeholder.png'}
+            alt={product.title}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+            }}
+            onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
+          />
+          {/* Тег типа и сердечко остаются на месте */}
           <div style={{
-            height: 140,
-            background: '#f5f5f5',
+            position: 'absolute',
+            top: 12,
+            left: 12,
+            right: 12,
             display: 'flex',
+            justifyContent: 'space-between',
             alignItems: 'center',
-            justifyContent: 'center',
-            position: 'relative',
-            overflow: 'hidden',
+            zIndex: 2,
           }}>
-            <img
-              src={product.imageUrl || '/placeholder.png'}
-              alt={product.title}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-              }}
-              onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
-            />
+            {product.productType && (
+              <Tag color="purple" style={{ fontSize: 14, lineHeight: '20px', margin: 0 }}>
+                {product.productType === 'DLC' ? 'DLC' : 'Игра'}
+              </Tag>
+            )}
             <Button
               type="text"
               icon={
                 <HeartFilled style={{
-                  fontSize: 20,
+                  fontSize: 24,
                   color: inWishlist ? '#722ed1' : '#ffffff',
                   stroke: 'black',
                   strokeWidth: 48,
@@ -85,82 +109,57 @@ const ProductCard = ({ product }: ProductCardProps) => {
               }
               onClick={handleWishlist}
               style={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
                 background: 'transparent',
                 border: 'none',
                 padding: 0,
-                zIndex: 2,
                 lineHeight: 1,
+                marginLeft: 'auto',
               }}
             />
           </div>
-        }
-      >
-        {/* Информационная часть – нижний отступ 8px */}
-        <div style={{ padding: '4px 8px 8px 8px' }}>
-          {/* Тип товара */}
-          <div style={{ height: 18, marginBottom: 10 }}>
-            {product.productType && (
-              <Tag color="purple" style={{ width: 'fit-content', fontSize: 11, lineHeight: '16px' }}>
-                {product.productType === 'DLC' ? 'DLC' : 'Игра'}
-              </Tag>
-            )}
-          </div>
+        </div>
 
-          {/* Название */}
-          <div style={{ height: '2.2em', marginBottom: 2 }}>
+        {/* Информация о товаре (без изменений) */}
+        <div style={{ padding: '12px 16px 16px 16px', flex: 1 }}>
+          <div style={{ marginBottom: 8 }}>
+            <Text strong style={{ fontSize: 24, color: '#fff', lineHeight: 1.2 }}>
+              {product.price} ₽
+            </Text>
+          </div>
+          <div style={{ height: '2.6em', marginBottom: 16 }}>
             <Paragraph
               strong
               ellipsis={{ rows: 2 }}
-              style={{
-                fontSize: 13,
-                color: '#fff',
-                lineHeight: 1.1,
-                marginBottom: 0,
-              }}
+              style={{ fontSize: 18, color: '#fff', lineHeight: 1.3, marginBottom: 0 }}
             >
               {product.title}
             </Paragraph>
           </div>
-
-          {/* Цена */}
-          <div style={{ height: '1.1em' }}>
-            <Text strong style={{ fontSize: 13, color: '#fff' }}>
-              {product.price} ₽
-            </Text>
-          </div>
-
-          {/* Категория */}
-          <div style={{ height: '1.1em' }}>
+          <div style={{ marginBottom: 4 }}>
             {product.category && (
-              <Text type="secondary" style={{ fontSize: 11, lineHeight: 1.1 }}>
+              <Text type="secondary" style={{ fontSize: 15, lineHeight: 1.4 }}>
                 {product.category.name}
               </Text>
             )}
           </div>
-
-          {/* Продажи */}
           {product.sales !== undefined && product.sales !== null && (
-            <div style={{ height: '1.1em' }}>
-              <Text type="secondary" style={{ fontSize: 11, lineHeight: 1.1 }}>
+            <div>
+              <Text type="secondary" style={{ fontSize: 15, lineHeight: 1.4 }}>
                 {formatSales(product.sales)}
               </Text>
             </div>
           )}
         </div>
 
-        {/* Кнопка "Купить" прижата к низу */}
-        <div style={{ marginTop: 'auto', width: '100%' }}>
+        <div style={{ width: '100%' }}>
           <Button
             type="primary"
             block
             style={{
               background: '#722ed1',
               borderColor: '#722ed1',
-              height: 32,
-              fontSize: 13,
+              height: 48,
+              fontSize: 18,
               fontWeight: 500,
               borderRadius: '0 0 8px 8px',
             }}
@@ -168,7 +167,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
             Купить
           </Button>
         </div>
-      </Card>
+      </div>
     </Link>
   );
 };

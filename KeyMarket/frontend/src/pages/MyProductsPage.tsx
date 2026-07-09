@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Table, Button, Space, Input, message, Popconfirm } from 'antd';
+import { Table, Button, Input, message, Popconfirm } from 'antd';
 import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import { useAuthStore } from '../stores/authStore';
@@ -80,7 +80,7 @@ const MyProductsPage = () => {
       title: 'Действия',
       key: 'actions',
       render: (_: unknown, record: ProductItem) => (
-        <Space>
+        <div style={{ display: 'flex', gap: 8 }}>
           <Link to={`/edit-product/${record.id}`}>
             <Button type="link">Редактировать</Button>
           </Link>
@@ -92,7 +92,7 @@ const MyProductsPage = () => {
               Удалить
             </Button>
           </Popconfirm>
-        </Space>
+        </div>
       ),
     },
   ];
@@ -103,17 +103,17 @@ const MyProductsPage = () => {
   return (
     <div style={{ overflowX: 'auto', paddingBottom: 24 }}>
       <h1>Мои товары</h1>
-      <Space style={{ marginBottom: 16 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: 16, paddingTop: 8, paddingBottom: 8, alignItems: 'center' }}>
         <Input.Search
           placeholder="Поиск по названию"
           onSearch={(value) => setSearch(value)}
           allowClear
-          style={{ width: 300 }}
+          style={{ flex: '1 1 200px', minWidth: 150 }}
         />
-        <Link to="/create-product">
-          <Button type="primary">Добавить товар</Button>
+        <Link to="/create-product" style={{ flexShrink: 0 }}>
+          <Button type="primary" style={{ whiteSpace: 'nowrap' }}>Добавить товар</Button>
         </Link>
-      </Space>
+      </div>
       <Table
         columns={columns}
         dataSource={products}

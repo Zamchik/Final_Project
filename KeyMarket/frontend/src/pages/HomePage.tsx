@@ -66,30 +66,29 @@ const HomePage = () => {
 
   return (
     <div>
-      {/* Hero-секция с адаптивными классами и кнопками в wrap */}
+      {/* Hero-секция */}
       <div className="hero-section" style={{ textAlign: 'center', padding: '40px 20px 60px' }}>
-        <Title level={1} className="hero-title" style={{ fontSize: 48, marginBottom: 16 }}>
+        <Title level={1} className="hero-title" style={{ fontSize: 72, marginBottom: 20 }}>
           Покупайте цифровые товары <span style={{ color: '#722ed1' }}>безопасно</span>
         </Title>
-        <Paragraph className="hero-paragraph" style={{ fontSize: 18, color: '#b0b0b0', maxWidth: 600, margin: '0 auto 32px' }}>
+        <Paragraph className="hero-paragraph" style={{ fontSize: 26, color: '#b0b0b0', maxWidth: 800, margin: '0 auto 40px' }}>
           KeyMarket — это маркетплейс нового поколения. Мы объединили лучшие стороны существующих площадок и убрали их недостатки.
         </Paragraph>
-        {/* Оборачиваем кнопки в flex-контейнер с переносом */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 16 }}>
           <Link to="/catalog">
-            <Button type="primary" size="large" style={{ height: 48, paddingLeft: 40, paddingRight: 40 }}>
+            <Button type="primary" size="large" style={{ height: 56, paddingLeft: 48, paddingRight: 48, fontSize: 18 }}>
               Перейти в каталог
             </Button>
           </Link>
           <Link to="/sell">
-            <Button size="large" style={{ height: 48, paddingLeft: 40, paddingRight: 40 }}>
+            <Button size="large" style={{ height: 56, paddingLeft: 48, paddingRight: 48, fontSize: 18 }}>
               Начать продавать <ArrowRightOutlined />
             </Button>
           </Link>
         </div>
       </div>
 
-      {/* Популярные товары – убрали padding, он теперь от Layout */}
+      {/* Популярные товары */}
       <div style={{ paddingBottom: 40 }}>
         <Title level={2} style={{ textAlign: 'left', marginBottom: 24 }}>
           Популярные товары
@@ -97,9 +96,9 @@ const HomePage = () => {
         {loadingPopular ? (
           <div style={{ textAlign: 'center' }}><Spin size="large" /></div>
         ) : (
-          <Row gutter={[16, 16]}>
+          <Row gutter={[24, 24]}>
             {popularProducts.map((product) => (
-              <Col xs={12} sm={8} md={6} lg={4} key={product.id}>
+              <Col xs={12} sm={12} md={8} lg={8} xl={6} xxl={4} key={product.id}>
                 <ProductCard product={product} />
               </Col>
             ))}
@@ -115,9 +114,9 @@ const HomePage = () => {
         {loadingNew ? (
           <div style={{ textAlign: 'center' }}><Spin size="large" /></div>
         ) : (
-          <Row gutter={[16, 16]}>
+          <Row gutter={[24, 24]}>
             {newProducts.map((product) => (
-              <Col xs={12} sm={8} md={6} lg={4} key={product.id}>
+              <Col xs={12} sm={12} md={8} lg={8} xl={6} xxl={4} key={product.id}>
                 <ProductCard product={product} />
               </Col>
             ))}

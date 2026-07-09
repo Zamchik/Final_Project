@@ -54,11 +54,11 @@ const CatalogPage = () => {
   }, []);
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 16px' }}>
+    <div>
       <h1>Каталог товаров</h1>
 
       {/* Фильтры */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} md={6}>
           <Select
             placeholder="Категория"
@@ -110,9 +110,9 @@ const CatalogPage = () => {
         <Empty description="Товары не найдены" />
       ) : (
         <>
-          <Row gutter={[16, 16]}>
+          <Row gutter={[24, 24]}>
             {products.map(product => (
-              <Col xs={12} sm={8} md={6} lg={4} key={product.id}>
+              <Col xs={12} sm={12} md={8} lg={8} xl={6} xxl={4} key={product.id}>
                 <ProductCard product={product} />
               </Col>
             ))}

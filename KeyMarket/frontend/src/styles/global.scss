@@ -7,6 +7,7 @@ body {
   background: $bg-body;
   font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
   color: $text-primary;
+  font-size: 20px;
 }
 
 #root {
@@ -31,7 +32,12 @@ input:-webkit-autofill:active {
   }
 }
 
-// ===== Мобильные по умолчанию (< 1200px) =====
+.ant-card-cover {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+// Мобильные по умолчанию (< 1200px)
 .desktop-icons {
   display: none !important;
 }
@@ -41,18 +47,14 @@ input:-webkit-autofill:active {
 .mobile-bottom-nav {
   display: flex;
 }
-
-// Класс для скрытия текста/элементов на мобильных (кроме кнопки каталога)
 .hide-on-mobile {
   display: none;
 }
-
-// Кнопка каталога: на мобильных скрываем, на десктопе показываем как flex
 .catalog-button {
-  display: none;            // скрыта по умолчанию (мобильные)
+  display: none;
 }
 
-// ===== Десктоп (≥ 1200px) =====
+// Десктоп (≥ 1200px) 
 @media (min-width: 1200px) {
   .desktop-icons {
     display: flex !important;
@@ -68,14 +70,14 @@ input:-webkit-autofill:active {
     display: none;
   }
   .hide-on-mobile {
-    display: revert;         // восстанавливаем исходное значение элемента
+    display: revert;
   }
   .catalog-button {
-    display: flex;           // показываем кнопку каталога
+    display: flex;
   }
 }
 
-// ===== Узкие телефоны (≤ 767px) – дополнительная подстройка =====
+// Узкие телефоны (≤ 767px)
 @media (max-width: 767px) {
   .desktop-footer {
     display: none;
@@ -90,19 +92,10 @@ input:-webkit-autofill:active {
     padding: 20px 10px 30px !important;
   }
   .header-search {
-    margin-left: 16px !important;
+    margin-left: 12px !important;
     margin-right: 4px !important;
   }
   .main-content {
-    padding: 8px 8px 80px !important;
-  }
-  .ant-row {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    justify-content: center;
-  }
-  .ant-col {
-    padding-left: 4px !important;
-    padding-right: 4px !important;
+    padding: 16px 16px 80px !important;
   }
 }

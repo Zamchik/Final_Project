@@ -1,5 +1,5 @@
 // Страница создания и редактирования товара
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Form,
@@ -7,17 +7,15 @@ import {
   InputNumber,
   Select,
   Button,
-  Upload,
   message,
   Space,
-  Card,
   Typography,
   Tag,
   Modal,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import Cropper from 'react-easy-crop';
-import type { Area } from 'react-easy-crop';
+import ReactCrop, { type Crop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 import apiClient from '../api/client';
 import { useAuthStore } from '../stores/authStore';
 import { AxiosError } from 'axios';
@@ -30,47 +28,6 @@ import { KeyPreviewList } from '../components/KeyPreviewList';
 
 const { TextArea } = Input;
 const { Text } = Typography;
-
-// Вспомогательная функция для создания обрезанного изображения
-const createImage = (url: string): Promise<HTMLImageElement> =>
-  new Promise((resolve, reject) => {
-    const image = new Image();
-    image.addEventListener('load', () => resolve(image));
-    image.addEventListener('error', (error) => reject(error));
-    image.src = url;
-  });
-
-const getCroppedImg = async (
-  imageSrc: string,
-  pixelCrop: Area
-): Promise<Blob> => {
-  const image = await createImage(imageSrc);
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas context not available');
-
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
-
-  ctx.drawImage(
-    image,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
-    0,
-    0,
-    pixelCrop.width,
-    pixelCrop.height
-  );
-
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (blob) resolve(blob);
-      else reject(new Error('Canvas is empty'));
-    }, 'image/jpeg');
-  });
-};
 
 const CreateEditProductPage = () => {
   const { id } = useParams();
@@ -97,21 +54,23 @@ const CreateEditProductPage = () => {
   const [cropModalVisible, setCropModalVisible] = useState(false);
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [cropImageSrc, setCropImageSrc] = useState<string>('');
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [crop, setCrop] = useState<Crop>({
+    unit: '%',
+    width: 80,
+    height: 60,   // 4:3
+    x: 10,
+    y: 10,
+  });
+  const [completedCrop, setCompletedCrop] = useState<Crop | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
-  // Защита маршрута
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
-    if (!fetched && !authLoading) {
-      fetchUser();
-    }
-    if (fetched && !user) {
-      navigate('/login');
-    }
+    if (!fetched && !authLoading) fetchUser();
+    if (fetched && !user) navigate('/login');
   }, [fetched, authLoading, user, navigate, fetchUser]);
 
-  // Сброс формы при переходе в режим создания
   useEffect(() => {
     if (!isEdit) {
       form.resetFields();
@@ -120,7 +79,6 @@ const CreateEditProductPage = () => {
     }
   }, [isEdit, form]);
 
-  // Заполнение формы при редактировании
   useEffect(() => {
     if (isEdit && productData && safeCategories.length > 0) {
       form.setFieldsValue({
@@ -131,47 +89,65 @@ const CreateEditProductPage = () => {
         status: productData.status,
         productType: productData.productType || 'GAME',
       });
-      if (productData.imageUrl) {
-        setImageUrl(productData.imageUrl);
-      }
+      if (productData.imageUrl) setImageUrl(productData.imageUrl);
     }
   }, [isEdit, productData, safeCategories, form]);
 
-  // Обработчик выбора файла – открывает модалку для кадрирования
-  const handleBeforeUpload = (file: File) => {
-    // Проверяем размер файла
-    const MAX_FILE_SIZE = 5 * 1024 * 1024;
-    if (file.size > MAX_FILE_SIZE) {
-      message.error('Файл слишком большой. Максимальный размер: 5 МБ.');
-      return false;
-    }
+  const handleUploadClick = () => fileInputRef.current?.click();
 
-    // Создаём объект URL для предпросмотра
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      message.error('Файл слишком большой. Максимальный размер: 5 МБ.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       setCropImageSrc(reader.result as string);
       setCropFile(file);
       setCropModalVisible(true);
-      setCroppedAreaPixels(null);
-      setCrop({ x: 0, y: 0 });
-      setZoom(1);
+      setCompletedCrop(null);
+      setCrop({ unit: '%', width: 80, height: 60, x: 10, y: 10 });
     };
     reader.readAsDataURL(file);
-
-    return false; // предотвращаем автоматическую загрузку
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Обработчик подтверждения кадрирования
   const handleCropConfirm = async () => {
-    if (!croppedAreaPixels || !cropImageSrc) return;
+    if (!completedCrop || !cropImageSrc || !imgRef.current) return;
     try {
-      const croppedBlob = await getCroppedImg(cropImageSrc, croppedAreaPixels);
-      // Создаём объект File из Blob
-      const newFile = new File([croppedBlob], cropFile?.name || 'cropped.jpg', {
-        type: 'image/jpeg',
+      const canvas = document.createElement('canvas');
+      const image = imgRef.current;
+      const scaleX = image.naturalWidth / image.width;
+      const scaleY = image.naturalHeight / image.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas context not available');
+
+      canvas.width = completedCrop.width * scaleX;
+      canvas.height = completedCrop.height * scaleY;
+
+      ctx.drawImage(
+        image,
+        completedCrop.x * scaleX,
+        completedCrop.y * scaleY,
+        completedCrop.width * scaleX,
+        completedCrop.height * scaleY,
+        0,
+        0,
+        completedCrop.width * scaleX,
+        completedCrop.height * scaleY,
+      );
+
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((b) => {
+          if (b) resolve(b);
+          else reject(new Error('Canvas is empty'));
+        }, 'image/jpeg');
       });
 
-      // Загружаем на сервер
+      const newFile = new File([blob], cropFile?.name || 'cropped.jpg', { type: 'image/jpeg' });
       const formData = new FormData();
       formData.append('file', newFile);
       const { data } = await apiClient.post('/upload/product-image', formData, {
@@ -189,11 +165,6 @@ const CreateEditProductPage = () => {
     }
   };
 
-  const onCropComplete = useCallback((_: Area, croppedAreaPixels: Area) => {
-    setCroppedAreaPixels(croppedAreaPixels);
-  }, []);
-
-  // Отправка формы
   const onFinish = async (values: FormValues) => {
     setLoadingForm(true);
     try {
@@ -205,22 +176,15 @@ const CreateEditProductPage = () => {
         imageUrl,
         productType: values.productType || 'GAME',
       };
-
       if (isEdit && id) {
         if (values.newKeys) {
-          payload.newKeys = values.newKeys
-            .split('\n')
-            .map((k) => k.trim())
-            .filter((k) => k.length > 0);
+          payload.newKeys = values.newKeys.split('\n').map(k => k.trim()).filter(k => k.length > 0);
         }
         if (values.status) payload.status = values.status;
         await apiClient.put(`/products/${id}`, payload);
         message.success('Товар обновлён');
       } else {
-        payload.keys = (values.keys ?? '')
-          .split('\n')
-          .map((k) => k.trim())
-          .filter((k) => k.length > 0);
+        payload.keys = (values.keys ?? '').split('\n').map(k => k.trim()).filter(k => k.length > 0);
         await apiClient.post('/products', payload);
         message.success('Товар создан');
       }
@@ -239,86 +203,48 @@ const CreateEditProductPage = () => {
   return (
     <div style={{ maxWidth: 600, margin: '0 auto' }}>
       <h1>{isEdit ? 'Редактирование товара' : 'Добавить товар'}</h1>
-      <Card>
+      <div style={{
+        background: '#2a2a2a',
+        borderRadius: 8,
+        padding: 24,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+      }}>
         <Form form={form} layout="vertical" onFinish={onFinish}>
-          {/* Название */}
-          <Form.Item
-            name="title"
-            label="Название"
-            rules={[{ required: true, message: 'Введите название' }]}
-          >
+          <Form.Item name="title" label="Название" rules={[{ required: true, message: 'Введите название' }]}>
             <Input />
           </Form.Item>
-
-          {/* Описание */}
           <Form.Item name="description" label="Описание">
             <TextArea rows={4} />
           </Form.Item>
-
-          {/* Категория */}
-          <Form.Item
-            name="categoryId"
-            label="Категория"
-            rules={[{ required: true, message: 'Выберите категорию' }]}
-          >
+          <Form.Item name="categoryId" label="Категория" rules={[{ required: true, message: 'Выберите категорию' }]}>
             <Select
               placeholder="Выберите категорию"
-              options={safeCategories.map((c) => ({ value: c.id, label: c.name }))}
+              options={safeCategories.map(c => ({ value: c.id, label: c.name }))}
             />
           </Form.Item>
-
-          {/* Тип товара */}
-          <Form.Item
-            name="productType"
-            label="Тип товара"
-            rules={[{ required: true, message: 'Выберите тип товара' }]}
-            initialValue="GAME"
-          >
-            <Select
-              placeholder="Выберите тип"
-              options={[
-                { value: 'GAME', label: 'Игра' },
-                { value: 'DLC', label: 'DLC' },
-              ]}
-            />
+          <Form.Item name="productType" label="Тип товара" rules={[{ required: true }]} initialValue="GAME">
+            <Select options={[{ value: 'GAME', label: 'Игра' }, { value: 'DLC', label: 'DLC' }]} />
           </Form.Item>
-
-          {/* Цена */}
-          <Form.Item
-            name="price"
-            label="Цена"
-            rules={[{ required: true, message: 'Введите цену' }]}
-          >
+          <Form.Item name="price" label="Цена" rules={[{ required: true, message: 'Введите цену' }]}>
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
-
-          {/* Статус (только при редактировании) */}
           {isEdit && (
             <Form.Item name="status" label="Статус">
-              <Select
-                options={[
-                  { value: 'active', label: 'Активный' },
-                  { value: 'inactive', label: 'Неактивный' },
-                ]}
-              />
+              <Select options={[{ value: 'active', label: 'Активный' }, { value: 'inactive', label: 'Неактивный' }]} />
             </Form.Item>
           )}
 
-          {/* Изображение товара с кадрированием */}
+          {/* Блок загрузки изображения с превью 4:3 */}
           <Form.Item label="Изображение товара">
-            <Upload
-              listType="picture-card"
-              showUploadList={false}
-              beforeUpload={handleBeforeUpload}
-              accept="image/*"
-            >
+            <div style={{ marginBottom: 8 }}>
               {imageUrl ? (
                 <div style={{
-                  width: 120,
-                  height: 90,      // соотношение 4:3
+                  width: '100%',
+                  aspectRatio: '4 / 3',
                   overflow: 'hidden',
                   borderRadius: 8,
                   border: '1px solid #434343',
+                  background: '#1a1a1a',
                 }}>
                   <img
                     src={imageUrl}
@@ -326,88 +252,67 @@ const CreateEditProductPage = () => {
                     style={{
                       width: '100%',
                       height: '100%',
-                      objectFit: 'cover',   // эмуляция карточки
+                      objectFit: 'contain',
                     }}
                   />
                 </div>
               ) : (
-                <div>
-                  <PlusOutlined />
-                  <div style={{ marginTop: 8 }}>Загрузить</div>
+                <div
+                  onClick={handleUploadClick}
+                  style={{
+                    width: '100%',
+                    aspectRatio: '4 / 3',
+                    background: '#1a1a1a',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    border: '1px dashed #434343',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <PlusOutlined style={{ fontSize: 24, marginBottom: 8, color: '#fff' }} />
+                  <span style={{ color: '#fff' }}>Загрузить изображение</span>
                 </div>
               )}
-            </Upload>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleFileChange}
+            />
+            <Button onClick={handleUploadClick}>
+              {imageUrl ? 'Изменить изображение' : 'Выбрать файл'}
+            </Button>
             <Text type="secondary" style={{ display: 'block', marginTop: 4 }}>
               При загрузке откроется инструмент кадрирования. Рекомендуемый формат — 4:3.
             </Text>
           </Form.Item>
 
-          {/* Поле для ключей (только при создании) */}
           {!isEdit && (
-            <Form.Item
-              name="keys"
-              label="Ключи (по одному на строку)"
-              rules={[{ validator: validateKeys }]}
-              extra={
-                <Text type="secondary">
-                  Формат ключа: XXXXX-XXXXX-XXXXX (Steam). Каждый ключ с новой строки.
-                </Text>
-              }
+            <Form.Item name="keys" label="Ключи (по одному на строку)" rules={[{ validator: validateKeys }]}
+              extra={<Text type="secondary">Формат ключа: XXXXX-XXXXX-XXXXX (Steam). Каждый ключ с новой строки.</Text>}
             >
-              <TextArea
-                rows={6}
-                placeholder="XXXXX-XXXXX-XXXXX"
-                onChange={(e) => {
-                  const lines = e.target.value
-                    .split('\n')
-                    .filter((line) => line.trim().length > 0);
-                  setKeysPreview(lines);
-                }}
-              />
+              <TextArea rows={6} placeholder="XXXXX-XXXXX-XXXXX" onChange={e => setKeysPreview(e.target.value.split('\n').filter(l => l.trim()))} />
             </Form.Item>
           )}
 
-          {/* Новые ключи и текущие ключи (только при редактировании) */}
           {isEdit && (
             <>
-              <Form.Item
-                name="newKeys"
-                label="Новые ключи (по одному на строку)"
-                rules={[
-                  {
-                    validator: (_: unknown, value: string | undefined) => {
-                      if (!value || !value.trim()) return Promise.resolve();
-                      return validateKeys(_, value);
-                    },
-                  },
-                ]}
-                extra={
-                  <Text type="secondary">
-                    Необязательно. Формат ключа: XXXXX-XXXXX-XXXXX (Steam).
-                  </Text>
-                }
+              <Form.Item name="newKeys" label="Новые ключи"
+                rules={[{ validator: (_: unknown, value: string | undefined) => !value?.trim() ? Promise.resolve() : validateKeys(_, value) }]}
+                extra={<Text type="secondary">Необязательно. Формат ключа: XXXXX-XXXXX-XXXXX (Steam).</Text>}
               >
-                <TextArea
-                  rows={4}
-                  placeholder="XXXXX-XXXXX-XXXXX"
-                  onChange={(e) => {
-                    const lines = e.target.value
-                      .split('\n')
-                      .filter((line) => line.trim().length > 0);
-                    setKeysPreview(lines);
-                  }}
-                />
+                <TextArea rows={4} placeholder="XXXXX-XXXXX-XXXXX" onChange={e => setKeysPreview(e.target.value.split('\n').filter(l => l.trim()))} />
               </Form.Item>
-
               {productData && productData.keys.length > 0 && (
                 <Form.Item label="Текущие ключи">
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {productData.keys.map((key) => (
-                      <Tag
-                        key={key.id}
-                        color={key.isSold ? 'red' : 'green'}
-                        style={{ fontFamily: 'monospace' }}
-                      >
+                    {productData.keys.map(key => (
+                      <Tag key={key.id} color={key.isSold ? 'red' : 'green'} style={{ fontFamily: 'monospace' }}>
                         {key.keyValue} {key.isSold ? '(продан)' : '(в наличии)'}
                       </Tag>
                     ))}
@@ -428,9 +333,8 @@ const CreateEditProductPage = () => {
             </Space>
           </Form.Item>
         </Form>
-      </Card>
+      </div>
 
-      {/* Модальное окно кадрирования */}
       <Modal
         title="Обрежьте изображение"
         open={cropModalVisible}
@@ -439,19 +343,17 @@ const CreateEditProductPage = () => {
         okText="Сохранить"
         cancelText="Отмена"
         width={600}
-        bodyStyle={{ height: 400, position: 'relative', background: '#f0f0f0' }}
+        styles={{ body: { background: '#f0f0f0' } }}
       >
         {cropImageSrc && (
-          <Cropper
-            image={cropImageSrc}
+          <ReactCrop
             crop={crop}
-            zoom={zoom}
+            onChange={(c) => setCrop(c)}
+            onComplete={(c) => setCompletedCrop(c)}
             aspect={4 / 3}
-            objectFit="cover"
-            onCropChange={setCrop}
-            onCropComplete={onCropComplete}
-            onZoomChange={setZoom}
-          />
+          >
+            <img ref={imgRef} src={cropImageSrc} alt="Обрезка" style={{ maxWidth: '100%' }} />
+          </ReactCrop>
         )}
       </Modal>
     </div>

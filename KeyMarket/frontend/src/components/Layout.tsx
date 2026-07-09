@@ -1,10 +1,11 @@
 // Главный Layout приложения (шапка, контент, футер)
 import { useEffect, useState } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { Layout as AntLayout, Spin, Row, Col, Typography, Button, Drawer, Input, Badge, Dropdown, Menu, message } from 'antd';
+import { Layout as AntLayout, Spin, Row, Col, Typography, Button, Drawer, Input, Badge, Dropdown, Menu, message, Divider } from 'antd';
 import {
   AppstoreOutlined, UserOutlined, PlusSquareOutlined, ShopOutlined, HeartOutlined,
   DashboardOutlined, MenuOutlined, SearchOutlined, ShoppingCartOutlined, LogoutOutlined,
+  GithubOutlined, TwitterOutlined, InstagramOutlined, YoutubeOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../stores/authStore';
 import { useWishlistStore } from '../stores/wishlistStore';
@@ -13,7 +14,7 @@ import MobileBottomNav from './MobileBottomNav';
 import '../styles/global.scss';
 
 const { Header, Content, Footer } = AntLayout;
-const { Text } = Typography;
+const { Text, Title } = Typography;
 
 const MainLayout = () => {
   const user = useAuthStore((s) => s.user);
@@ -70,14 +71,14 @@ const MainLayout = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 16px',
-          height: 64,
+          padding: '0 32px',
+          height: 88,
         }}
       >
-        {/* Левая часть: логотип + Каталог (чуть опущены) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        {/* Левая часть: логотип + Каталог */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }}>
-            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="48" height="48" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect width="40" height="40" rx="8" fill="#722ed1" />
               <line x1="16" y1="6" x2="16" y2="32" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" />
               <line x1="18" y1="20" x2="30" y2="10" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" />
@@ -86,40 +87,43 @@ const MainLayout = () => {
               <line x1="16" y1="29" x2="8" y2="29" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
               <line x1="16" y1="33" x2="8" y2="33" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
             </svg>
-            <span className="hide-on-mobile" style={{ color: '#fff', fontSize: 23, fontWeight: 700, letterSpacing: 1, marginLeft: 4 }}>
+            <span className="hide-on-mobile" style={{ color: '#fff', fontSize: 30, fontWeight: 700, letterSpacing: 1, marginLeft: 6 }}>
               eyMarket
             </span>
           </Link>
 
+          {/* Каталог – иконка и текст выровнены по центру */}
           <div
-            className="catalog-button"
             style={{
-              flexDirection: 'column',
+              display: 'inline-flex',
               alignItems: 'center',
+              gap: 8,
               cursor: 'pointer',
-              paddingTop: 12,
+              color: '#fff',
+              fontSize: 16,
             }}
             onClick={() => navigate('/catalog')}
           >
-            <AppstoreOutlined style={{ color: '#fff', fontSize: 20 }} />
-            <Text style={{ color: '#fff', fontSize: 10, marginTop: 2 }}>Каталог</Text>
+            <AppstoreOutlined style={{ color: '#fff', fontSize: 28 }} />
+            <span className="hide-on-mobile">Каталог</span>
           </div>
         </div>
 
         {/* Центр: поиск */}
-        <div className="header-search" style={{ flex: 1, display: 'flex', justifyContent: 'center', marginLeft: 8 }}>
+        <div className="header-search" style={{ flex: 1, display: 'flex', justifyContent: 'center', marginLeft: 24, marginRight: 24, padding: '12px 0' }}>
           <Input.Search
             placeholder="Поиск по названию..."
             allowClear
+            size="large"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             onSearch={handleSearch}
-            style={{ width: '100%', marginRight: 8 }}
+            style={{ width: '100%' }}
             enterButton={<SearchOutlined />}
           />
         </div>
 
-        {/* Правая часть: иконки с подписями (немного опущены) */}
+        {/* Правая часть: иконки с подписями */}
         <div className="desktop-icons" style={{ display: 'flex', alignItems: 'center', gap: 16, paddingTop: 12 }}>
           {user?.role === 'SELLER' && (
             <>
@@ -127,15 +131,15 @@ const MainLayout = () => {
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
                 onClick={() => navigate('/my-products')}
               >
-                <ShopOutlined style={{ color: '#fff', fontSize: 20 }} />
-                <Text style={{ color: '#fff', fontSize: 10, marginTop: 2 }}>Мои товары</Text>
+                <ShopOutlined style={{ color: '#fff', fontSize: 28 }} />
+                <Text style={{ color: '#fff', fontSize: 16, marginTop: 2 }}>Мои товары</Text>
               </div>
               <div
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
                 onClick={() => navigate('/create-product')}
               >
-                <PlusSquareOutlined style={{ color: '#fff', fontSize: 20 }} />
-                <Text style={{ color: '#fff', fontSize: 10, marginTop: 2 }}>Создать</Text>
+                <PlusSquareOutlined style={{ color: '#fff', fontSize: 28 }} />
+                <Text style={{ color: '#fff', fontSize: 16, marginTop: 2 }}>Создать</Text>
               </div>
             </>
           )}
@@ -151,9 +155,9 @@ const MainLayout = () => {
             }}
           >
             <Badge count={wishlistCount} size="small" offset={[-2, 2]}>
-              <HeartOutlined style={{ color: '#fff', fontSize: 20 }} />
+              <HeartOutlined style={{ color: '#fff', fontSize: 28 }} />
             </Badge>
-            <Text style={{ color: '#fff', fontSize: 10, marginTop: 2 }}>Избранное</Text>
+            <Text style={{ color: '#fff', fontSize: 16, marginTop: 2 }}>Избранное</Text>
           </div>
 
           <div
@@ -166,22 +170,22 @@ const MainLayout = () => {
               navigate('/cabinet');
             }}
           >
-            <ShoppingCartOutlined style={{ color: '#fff', fontSize: 20 }} />
-            <Text style={{ color: '#fff', fontSize: 10, marginTop: 2 }}>Заказы</Text>
+            <ShoppingCartOutlined style={{ color: '#fff', fontSize: 28 }} />
+            <Text style={{ color: '#fff', fontSize: 16, marginTop: 2 }}>Заказы</Text>
           </div>
 
           {user && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
               <NotificationBell />
-              <Text style={{ color: '#fff', fontSize: 10, marginTop: 2 }}>Уведомления</Text>
+              <Text style={{ color: '#fff', fontSize: 16, marginTop: 2 }}>Уведомления</Text>
             </div>
           )}
 
           {user ? (
             <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
-                <UserOutlined style={{ color: '#fff', fontSize: 20 }} />
-                <Text style={{ color: '#fff', fontSize: 10, marginTop: 2 }}>Профиль</Text>
+                <UserOutlined style={{ color: '#fff', fontSize: 28 }} />
+                <Text style={{ color: '#fff', fontSize: 16, marginTop: 2 }}>Профиль</Text>
               </div>
             </Dropdown>
           ) : (
@@ -189,15 +193,15 @@ const MainLayout = () => {
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
               onClick={() => navigate('/login')}
             >
-              <UserOutlined style={{ color: '#fff', fontSize: 20 }} />
-              <Text style={{ color: '#fff', fontSize: 10, marginTop: 2 }}>Войти</Text>
+              <UserOutlined style={{ color: '#fff', fontSize: 28 }} />
+              <Text style={{ color: '#fff', fontSize: 16, marginTop: 2 }}>Войти</Text>
             </div>
           )}
 
           <Button
             className="mobile-menu-btn"
             type="text"
-            icon={<MenuOutlined style={{ color: '#fff', fontSize: 20 }} />}
+            icon={<MenuOutlined style={{ color: '#fff', fontSize: 28 }} />}
             onClick={() => setMobileMenuVisible(true)}
           />
         </div>
@@ -207,7 +211,7 @@ const MainLayout = () => {
         placement="right"
         open={mobileMenuVisible}
         onClose={() => setMobileMenuVisible(false)}
-        bodyStyle={{ padding: 0 }}
+        styles={{ body: { padding: 0 } }}
         width={250}
       >
         <Menu
@@ -233,17 +237,63 @@ const MainLayout = () => {
         />
       </Drawer>
 
-      <Content className="main-content" style={{ padding: '16px 16px 80px', maxWidth: 1200, margin: '0 auto', width: '100%' }}>
+      <Content className="main-content" style={{ padding: '32px 32px 80px', maxWidth: 2000, margin: '0 auto', width: '100%' }}>
         <Outlet />
       </Content>
 
-      <Footer className="desktop-footer" style={{ textAlign: 'center', background: '#141414', padding: '24px 16px', color: '#b0b0b0' }}>
-        <Row gutter={[16, 16]} justify="center">
-          <Col><Link to="/" style={{ color: '#b0b0b0' }}>Главная</Link></Col>
-          <Col><Link to="/catalog" style={{ color: '#b0b0b0' }}>Каталог</Link></Col>
-          <Col><Text type="secondary">|</Text></Col>
-          <Col><Text type="secondary">© 2026 KeyMarket. Все права защищены.</Text></Col>
+      {/* Футер с иконками соцсетей */}
+      <Footer className="desktop-footer" style={{
+        background: 'linear-gradient(180deg, #141414 0%, #0d0d0d 100%)',
+        padding: '48px 32px 24px',
+        color: '#b0b0b0',
+        borderTop: '1px solid #333',
+      }}>
+        <Row gutter={[32, 32]} justify="center" style={{ maxWidth: 1200, margin: '0 auto' }}>
+          {/* Партнёрам */}
+          <Col xs={24} sm={8}>
+            <Title level={5} style={{ color: '#fff', marginBottom: 16 }}>Партнёрам</Title>
+            <Link to="/sell" style={{ color: '#b0b0b0', display: 'block', marginBottom: 8 }}>Стать продавцом</Link>
+            <Text style={{ color: '#b0b0b0', display: 'block', marginBottom: 8 }}>Партнерская программа</Text>
+            <Text style={{ color: '#b0b0b0', display: 'block', marginBottom: 8 }}>Правила для Продавца</Text>
+            <Text style={{ color: '#b0b0b0', display: 'block' }}>Автоматическое B2B решение</Text>
+          </Col>
+
+          {/* Покупателям */}
+          <Col xs={24} sm={8}>
+            <Title level={5} style={{ color: '#fff', marginBottom: 16 }}>Покупателям</Title>
+            <Text style={{ color: '#b0b0b0', display: 'block', marginBottom: 8 }}>Часто задаваемые вопросы</Text>
+            <Text style={{ color: '#b0b0b0', display: 'block' }}>Политика возврата средств</Text>
+          </Col>
+
+          {/* KeyMarket */}
+          <Col xs={24} sm={8}>
+            <Title level={5} style={{ color: '#fff', marginBottom: 16 }}>KeyMarket</Title>
+            <Text style={{ color: '#b0b0b0', display: 'block', marginBottom: 8 }}>Контакты</Text>
+            <Text style={{ color: '#b0b0b0', display: 'block', marginBottom: 8 }}>Отзывы</Text>
+            <Text style={{ color: '#b0b0b0', display: 'block', marginBottom: 8 }}>Публичная оферта</Text>
+            <Text style={{ color: '#b0b0b0', display: 'block', marginBottom: 8 }}>Политика конфиденциальности</Text>
+            <Text style={{ color: '#b0b0b0', display: 'block' }}>Информация для правообладателей</Text>
+          </Col>
         </Row>
+
+        {/* Соцсети – не кликабельные, просто иконки */}
+        <div style={{ marginTop: 24, display: 'flex', justifyContent: 'center', gap: 16, fontSize: 24, color: '#b0b0b0' }}>
+          <GithubOutlined />
+          <TwitterOutlined />
+          <InstagramOutlined />
+          <YoutubeOutlined />
+        </div>
+
+        <Divider style={{ borderColor: '#333', marginTop: 24, marginBottom: 16 }} />
+
+        <div style={{ textAlign: 'center', maxWidth: 1200, margin: '0 auto' }}>
+          <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
+            KeyMarket Ltd. Все права защищены.
+          </Text>
+          <Text type="secondary" style={{ fontSize: 13 }}>
+            Поддержка: support@keymarket.net
+          </Text>
+        </div>
       </Footer>
 
       <MobileBottomNav />
