@@ -1,9 +1,7 @@
 // Страница личного кабинета
-// Показывает профиль, позволяет вывести средства (только продавцам),
-// сменить пароль, просматривать историю покупок и продаж.
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuthStore } from '../stores/authStore';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Descriptions, Spin, Modal, InputNumber, Input, message, Tabs, Card, Row, Col,
   Avatar, Typography,
@@ -18,23 +16,21 @@ import OrdersList from '../components/OrdersList';
 const { Text } = Typography;
 
 const CabinetPage = () => {
-  // Получаем данные из стора, включая fetched
   const { user, loading, fetched, fetchUser, logout } = useAuthStore();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'profile';
 
-  // Состояния для модального окна вывода средств (только для продавцов)
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState<number | null>(null);
   const [withdrawSubmitting, setWithdrawSubmitting] = useState(false);
 
-  // Состояния для модального окна смены пароля
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
 
-  // Защита маршрута
   useEffect(() => {
     if (!fetched && !loading) {
       fetchUser();
@@ -48,7 +44,6 @@ const CabinetPage = () => {
     }
   }, [fetched, loading, user, navigate, fetchUser]);
 
-  // Обновление баланса при возвращении на вкладку (после оплаты)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && user) {
@@ -61,7 +56,10 @@ const CabinetPage = () => {
     };
   }, [user, fetchUser]);
 
-  // Вывод средств (только для продавца)
+  const handleTabChange = useCallback((key: string) => {
+    setSearchParams({ tab: key });
+  }, [setSearchParams]);
+
   const handleWithdraw = async () => {
     if (!withdrawAmount || withdrawAmount <= 0) {
       message.warning('Введите сумму вывода');
@@ -82,7 +80,6 @@ const CabinetPage = () => {
     }
   };
 
-  // Смена пароля
   const handleChangePassword = async () => {
     if (!oldPassword || !newPassword || !confirmPassword) {
       message.warning('Заполните все поля');
@@ -112,13 +109,11 @@ const CabinetPage = () => {
     }
   };
 
-  // Рендеринг
   if (loading || !fetched) {
     return <Spin style={{ display: 'block', marginTop: 40 }} />;
   }
   if (!user) return null;
 
-  // Вкладки личного кабинета
   const tabItems = [
     {
       key: 'profile',
@@ -135,7 +130,6 @@ const CabinetPage = () => {
                 <Descriptions.Item label="Роль">
                   {user.role === 'BUYER' ? 'Покупатель' : user.role === 'SELLER' ? 'Продавец' : user.role === 'ADMIN' ? 'Администратор' : user.role}
                 </Descriptions.Item>
-                {/* Баланс показываем только продавцам */}
                 {user.role === 'SELLER' && (
                   <Descriptions.Item label="Баланс">
                     <Text strong style={{ fontSize: 18, color: '#52c41a' }}>
@@ -147,9 +141,7 @@ const CabinetPage = () => {
             </Col>
           </Row>
 
-          {/* Карточки действий */}
           <Row gutter={[16, 16]} style={{ marginTop: 24 }} align="stretch">
-            {/* Вывод средств – только для продавца */}
             {user.role === 'SELLER' && (
               <Col xs={24} sm={12} md={6}>
                 <Card
@@ -164,7 +156,6 @@ const CabinetPage = () => {
               </Col>
             )}
 
-            {/* Смена пароля */}
             <Col xs={24} sm={12} md={6}>
               <Card
                 hoverable
@@ -177,7 +168,6 @@ const CabinetPage = () => {
               </Card>
             </Col>
 
-            {/* Выход */}
             <Col xs={24} sm={12} md={6}>
               <Card
                 hoverable
@@ -200,7 +190,6 @@ const CabinetPage = () => {
     },
   ];
 
-  // Вкладка "Продажи" – только для продавцов
   if (user.role === 'SELLER') {
     tabItems.push({
       key: 'sales',
@@ -212,9 +201,8 @@ const CabinetPage = () => {
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto' }}>
       <h1>Личный кабинет</h1>
-      <Tabs defaultActiveKey="profile" items={tabItems} />
+      <Tabs activeKey={activeTab} onChange={handleTabChange} items={tabItems} />
 
-      {/* Модальное окно вывода средств */}
       <Modal title="Вывод средств" open={isWithdrawModalOpen} onOk={handleWithdraw}
         onCancel={() => { setIsWithdrawModalOpen(false); setWithdrawAmount(null); }}
         confirmLoading={withdrawSubmitting} okText="Вывести" cancelText="Отмена">
@@ -228,7 +216,6 @@ const CabinetPage = () => {
         />
       </Modal>
 
-      {/* Модальное окно смены пароля */}
       <Modal title="Смена пароля" open={isPasswordModalOpen} onOk={handleChangePassword}
         onCancel={() => { setIsPasswordModalOpen(false); setOldPassword(''); setNewPassword(''); setConfirmPassword(''); }}
         confirmLoading={passwordSubmitting} okText="Сменить" cancelText="Отмена">

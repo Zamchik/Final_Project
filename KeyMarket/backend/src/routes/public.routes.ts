@@ -41,6 +41,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
                   rating: { type: 'string' },
                   imageUrl: { type: 'string', nullable: true },
                   productType: { type: 'string' },
+                  sales: { type: 'integer' },
                   category: {
                     type: 'object',
                     properties: {

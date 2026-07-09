@@ -9,6 +9,7 @@ import {
 import { useAuthStore } from '../stores/authStore';
 import { useWishlistStore } from '../stores/wishlistStore';
 import NotificationBell from './NotificationBell';
+import MobileBottomNav from './MobileBottomNav';
 import '../styles/global.scss';
 
 const { Header, Content, Footer } = AntLayout;
@@ -22,13 +23,11 @@ const MainLayout = () => {
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
 
-  // Количество товаров в избранном (для бейджика)
   const wishlistCount = useWishlistStore((s) => s.items.length);
 
   const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
   const [searchValue, setSearchValue] = useState('');
 
-  // Проверка сессии при монтировании
   useEffect(() => {
     if (!fetched && !loading) {
       fetchUser();
@@ -43,14 +42,12 @@ const MainLayout = () => {
     );
   }
 
-  // Поиск: при отправке переходим в каталог с параметром поиска
   const handleSearch = (value: string) => {
     if (value.trim()) {
       navigate(`/catalog?search=${encodeURIComponent(value.trim())}`);
     }
   };
 
-  // Элементы выпадающего меню для авторизованного пользователя
   const userMenuItems = [
     { key: 'cabinet', label: 'Личный кабинет', icon: <UserOutlined />, onClick: () => navigate('/cabinet') },
     ...(user?.role === 'SELLER' ? [
@@ -77,10 +74,9 @@ const MainLayout = () => {
           height: 64,
         }}
       >
-        {/* Левая часть: логотип + Каталог */}
+        {/* Левая часть: логотип + Каталог (чуть опущены) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }}>
-            {/* SVG логотипа */}
             <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect width="40" height="40" rx="8" fill="#722ed1" />
               <line x1="16" y1="6" x2="16" y2="32" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" />
@@ -90,36 +86,41 @@ const MainLayout = () => {
               <line x1="16" y1="29" x2="8" y2="29" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
               <line x1="16" y1="33" x2="8" y2="33" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
             </svg>
-            <span style={{ color: '#fff', fontSize: 23, fontWeight: 700, letterSpacing: 1, marginLeft: 4 }}>
+            <span className="hide-on-mobile" style={{ color: '#fff', fontSize: 23, fontWeight: 700, letterSpacing: 1, marginLeft: 4 }}>
               eyMarket
             </span>
           </Link>
-          <Button
-            type="text"
-            icon={<AppstoreOutlined style={{ color: '#fff', fontSize: 20 }} />}
+
+          <div
+            className="catalog-button"
+            style={{
+              flexDirection: 'column',
+              alignItems: 'center',
+              cursor: 'pointer',
+              paddingTop: 12,
+            }}
             onClick={() => navigate('/catalog')}
-            style={{ color: '#fff' }}
           >
-            Каталог
-          </Button>
+            <AppstoreOutlined style={{ color: '#fff', fontSize: 20 }} />
+            <Text style={{ color: '#fff', fontSize: 10, marginTop: 2 }}>Каталог</Text>
+          </div>
         </div>
 
-        {/* Центр: поиск на всю ширину */}
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', margin: '0 16px' }}>
+        {/* Центр: поиск */}
+        <div className="header-search" style={{ flex: 1, display: 'flex', justifyContent: 'center', marginLeft: 8 }}>
           <Input.Search
             placeholder="Поиск по названию..."
             allowClear
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             onSearch={handleSearch}
-            style={{ width: '100%' }}
+            style={{ width: '100%', marginRight: 8 }}
             enterButton={<SearchOutlined />}
           />
         </div>
 
-        {/* Правая часть: иконки с подписями */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          {/* Блок для продавца: "Мои товары" и "Создать" */}
+        {/* Правая часть: иконки с подписями (немного опущены) */}
+        <div className="desktop-icons" style={{ display: 'flex', alignItems: 'center', gap: 16, paddingTop: 12 }}>
           {user?.role === 'SELLER' && (
             <>
               <div
@@ -139,7 +140,6 @@ const MainLayout = () => {
             </>
           )}
 
-          {/* Избранное */}
           <div
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
             onClick={() => {
@@ -156,7 +156,6 @@ const MainLayout = () => {
             <Text style={{ color: '#fff', fontSize: 10, marginTop: 2 }}>Избранное</Text>
           </div>
 
-          {/* Заказы */}
           <div
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
             onClick={() => {
@@ -171,7 +170,6 @@ const MainLayout = () => {
             <Text style={{ color: '#fff', fontSize: 10, marginTop: 2 }}>Заказы</Text>
           </div>
 
-          {/* Уведомления (только для авторизованных) */}
           {user && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
               <NotificationBell />
@@ -179,7 +177,6 @@ const MainLayout = () => {
             </div>
           )}
 
-          {/* Профиль / Войти */}
           {user ? (
             <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
@@ -197,18 +194,15 @@ const MainLayout = () => {
             </div>
           )}
 
-          {/* Мобильный бургер */}
           <Button
             className="mobile-menu-btn"
             type="text"
             icon={<MenuOutlined style={{ color: '#fff', fontSize: 20 }} />}
             onClick={() => setMobileMenuVisible(true)}
-            style={{ display: 'none' }}
           />
         </div>
       </Header>
 
-      {/* Боковое меню для мобильных устройств */}
       <Drawer
         placement="right"
         open={mobileMenuVisible}
@@ -239,24 +233,20 @@ const MainLayout = () => {
         />
       </Drawer>
 
-      <Content style={{ padding: '20px', maxWidth: 1200, margin: '0 auto', width: '100%' }}>
+      <Content className="main-content" style={{ padding: '16px 16px 80px', maxWidth: 1200, margin: '0 auto', width: '100%' }}>
         <Outlet />
       </Content>
 
-      {/* Футер */}
-      <Footer style={{ textAlign: 'center', background: '#141414', padding: '24px 16px', color: '#b0b0b0' }}>
+      <Footer className="desktop-footer" style={{ textAlign: 'center', background: '#141414', padding: '24px 16px', color: '#b0b0b0' }}>
         <Row gutter={[16, 16]} justify="center">
           <Col><Link to="/" style={{ color: '#b0b0b0' }}>Главная</Link></Col>
           <Col><Link to="/catalog" style={{ color: '#b0b0b0' }}>Каталог</Link></Col>
           <Col><Text type="secondary">|</Text></Col>
           <Col><Text type="secondary">© 2026 KeyMarket. Все права защищены.</Text></Col>
         </Row>
-        <div style={{ marginTop: 8 }}>
-          <Text type="secondary">
-            Маркетплейс цифровых товаров. Безопасные сделки, низкая комиссия, мгновенная выдача.
-          </Text>
-        </div>
       </Footer>
+
+      <MobileBottomNav />
     </AntLayout>
   );
 };

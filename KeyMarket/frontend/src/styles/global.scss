@@ -1,13 +1,11 @@
-@use 'variables' as *;
-// Глобальные стили KeyMarket
+@use "variables" as *;
 
-// Сброс отступов и базовые настройки
 html,
 body {
   margin: 0;
   padding: 0;
   background: $bg-body;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
   color: $text-primary;
 }
 
@@ -25,19 +23,86 @@ input:-webkit-autofill:active {
   transition: background-color 5000s ease-in-out 0s;
 }
 
-// Плавные переходы для карточек
 .ant-card {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-
   &:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 24px rgba(114, 46, 209, 0.2);
   }
 }
 
-.desktop-menu { display: none; }
-.mobile-menu-btn { display: block; }
-@media (min-width: 768px) {
-  .desktop-menu { display: block; }
-  .mobile-menu-btn { display: none; }
+// ===== Мобильные по умолчанию (< 1200px) =====
+.desktop-icons {
+  display: none !important;
+}
+.mobile-menu-btn {
+  display: block !important;
+}
+.mobile-bottom-nav {
+  display: flex;
+}
+
+// Класс для скрытия текста/элементов на мобильных (кроме кнопки каталога)
+.hide-on-mobile {
+  display: none;
+}
+
+// Кнопка каталога: на мобильных скрываем, на десктопе показываем как flex
+.catalog-button {
+  display: none;            // скрыта по умолчанию (мобильные)
+}
+
+// ===== Десктоп (≥ 1200px) =====
+@media (min-width: 1200px) {
+  .desktop-icons {
+    display: flex !important;
+    gap: 16px;
+  }
+  .mobile-menu-btn {
+    display: none !important;
+  }
+  .desktop-footer {
+    display: block;
+  }
+  .mobile-bottom-nav {
+    display: none;
+  }
+  .hide-on-mobile {
+    display: revert;         // восстанавливаем исходное значение элемента
+  }
+  .catalog-button {
+    display: flex;           // показываем кнопку каталога
+  }
+}
+
+// ===== Узкие телефоны (≤ 767px) – дополнительная подстройка =====
+@media (max-width: 767px) {
+  .desktop-footer {
+    display: none;
+  }
+  .hero-title {
+    font-size: 28px !important;
+  }
+  .hero-paragraph {
+    font-size: 14px !important;
+  }
+  .hero-section {
+    padding: 20px 10px 30px !important;
+  }
+  .header-search {
+    margin-left: 16px !important;
+    margin-right: 4px !important;
+  }
+  .main-content {
+    padding: 8px 8px 80px !important;
+  }
+  .ant-row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    justify-content: center;
+  }
+  .ant-col {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
 }

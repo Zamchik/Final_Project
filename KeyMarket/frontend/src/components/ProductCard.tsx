@@ -14,6 +14,7 @@ interface ProductCardProps {
     imageUrl: string | null;
     productType?: string;
     category?: { name: string };
+    sales?: number;
   };
 }
 
@@ -41,27 +42,34 @@ const ProductCard = ({ product }: ProductCardProps) => {
     }
   };
 
+  const formatSales = (count: number) => {
+    if (count > 1000) return '1000+ продаж';
+    return `${count} продаж`;
+  };
+
   return (
     <Link to={`/product/${product.id}`}>
       <Card
         hoverable
-        style={{ position: 'relative', overflow: 'hidden', height: '100%' }}
+        bodyStyle={{ padding: 0 }}
+        style={{ position: 'relative', overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column' }}
         cover={
           <div style={{
             height: 140,
-            background: '#ffffff',
+            background: '#f5f5f5',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            position: 'relative'
+            position: 'relative',
+            overflow: 'hidden',
           }}>
             <img
               src={product.imageUrl || '/placeholder.png'}
               alt={product.title}
               style={{
-                maxHeight: '100%',
-                maxWidth: '100%',
-                objectFit: 'contain'
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
               }}
               onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
             />
@@ -90,25 +98,26 @@ const ProductCard = ({ product }: ProductCardProps) => {
           </div>
         }
       >
-        <div style={{ display: 'flex', flexDirection: 'column', padding: '4px 0' }}>
-          {/* Тип товара – фиксированная высота */}
-          <div style={{ height: 24, marginBottom: 4 }}>
+        {/* Информационная часть – нижний отступ 8px */}
+        <div style={{ padding: '4px 8px 8px 8px' }}>
+          {/* Тип товара */}
+          <div style={{ height: 18, marginBottom: 10 }}>
             {product.productType && (
-              <Tag color="purple" style={{ width: 'fit-content', fontSize: 12, lineHeight: '20px' }}>
+              <Tag color="purple" style={{ width: 'fit-content', fontSize: 11, lineHeight: '16px' }}>
                 {product.productType === 'DLC' ? 'DLC' : 'Игра'}
               </Tag>
             )}
           </div>
 
-          {/* Название – всегда 2 строки с многоточием */}
-          <div style={{ height: '2.6em', marginBottom: 4 }}>
+          {/* Название */}
+          <div style={{ height: '2.2em', marginBottom: 2 }}>
             <Paragraph
               strong
               ellipsis={{ rows: 2 }}
               style={{
-                fontSize: 16,
+                fontSize: 13,
                 color: '#fff',
-                lineHeight: 1.3,
+                lineHeight: 1.1,
                 marginBottom: 0,
               }}
             >
@@ -117,20 +126,47 @@ const ProductCard = ({ product }: ProductCardProps) => {
           </div>
 
           {/* Цена */}
-          <div style={{ height: '1.3em', marginBottom: 4 }}>
-            <Text strong style={{ fontSize: 16, color: '#fff' }}>
+          <div style={{ height: '1.1em' }}>
+            <Text strong style={{ fontSize: 13, color: '#fff' }}>
               {product.price} ₽
             </Text>
           </div>
 
           {/* Категория */}
-          <div style={{ height: '1.3em' }}>
+          <div style={{ height: '1.1em' }}>
             {product.category && (
-              <Text type="secondary" style={{ lineHeight: 1.3 }}>
+              <Text type="secondary" style={{ fontSize: 11, lineHeight: 1.1 }}>
                 {product.category.name}
               </Text>
             )}
           </div>
+
+          {/* Продажи */}
+          {product.sales !== undefined && product.sales !== null && (
+            <div style={{ height: '1.1em' }}>
+              <Text type="secondary" style={{ fontSize: 11, lineHeight: 1.1 }}>
+                {formatSales(product.sales)}
+              </Text>
+            </div>
+          )}
+        </div>
+
+        {/* Кнопка "Купить" прижата к низу */}
+        <div style={{ marginTop: 'auto', width: '100%' }}>
+          <Button
+            type="primary"
+            block
+            style={{
+              background: '#722ed1',
+              borderColor: '#722ed1',
+              height: 32,
+              fontSize: 13,
+              fontWeight: 500,
+              borderRadius: '0 0 8px 8px',
+            }}
+          >
+            Купить
+          </Button>
         </div>
       </Card>
     </Link>

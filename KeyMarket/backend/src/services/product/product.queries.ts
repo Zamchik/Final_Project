@@ -151,6 +151,11 @@ export const findPublicProducts = async (options: {
         productType: true,
         category: { select: { id: true, name: true } },
         createdAt: true,
+        _count: {
+          select: {
+            keys: { where: { soldAt: { not: null } } },
+          },
+        },
       },
       skip: (options.page - 1) * options.limit,
       take: options.limit,
@@ -159,5 +164,10 @@ export const findPublicProducts = async (options: {
     prisma.product.count({ where }),
   ]);
 
-  return { products, total, page: options.page, limit: options.limit };
+  const productsWithSales = products.map(p => ({
+    ...p,
+    sales: p._count.keys,
+  }));
+
+  return { products: productsWithSales, total, page: options.page, limit: options.limit };
 };

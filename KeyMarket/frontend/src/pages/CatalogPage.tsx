@@ -13,6 +13,7 @@ interface Product {
   productType: string;
   category: { id: number; name: string };
   createdAt: string;
+  sales: number;
 }
 
 const CatalogPage = () => {
@@ -111,7 +112,7 @@ const CatalogPage = () => {
         <>
           <Row gutter={[16, 16]}>
             {products.map(product => (
-              <Col xs={24} sm={12} md={4} lg={4} key={product.id}>
+              <Col xs={12} sm={8} md={6} lg={4} key={product.id}>
                 <ProductCard product={product} />
               </Col>
             ))}

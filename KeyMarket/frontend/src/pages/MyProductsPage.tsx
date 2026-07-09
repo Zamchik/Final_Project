@@ -14,7 +14,6 @@ interface ProductItem {
 }
 
 const MyProductsPage = () => {
-  // теперь забираем fetched для точной проверки сессии
   const user = useAuthStore((s) => s.user);
   const loading = useAuthStore((s) => s.loading);
   const fetched = useAuthStore((s) => s.fetched);
@@ -27,13 +26,10 @@ const MyProductsPage = () => {
   const [search, setSearch] = useState('');
   const [loadingData, setLoadingData] = useState(false);
 
-  // Защита маршрута с использованием fetched
   useEffect(() => {
-    // Если проверка сессии ещё не запускалась – запускаем
     if (!fetched && !loading) {
       fetchUser();
     }
-    // Когда проверка завершена и пользователь отсутствует – редирект на вход
     if (fetched && !user) {
       navigate('/login');
     }
@@ -101,14 +97,11 @@ const MyProductsPage = () => {
     },
   ];
 
-  // Пока идёт проверка сессии (loading или ещё не fetched) – показываем пустоту/спиннер
   if (loading || !fetched) return null;
-
-  // Если проверка завершена и пользователя нет – размонтируемся (редирект уже произошёл)
   if (!user) return null;
 
   return (
-    <div>
+    <div style={{ overflowX: 'auto', paddingBottom: 24 }}>
       <h1>Мои товары</h1>
       <Space style={{ marginBottom: 16 }}>
         <Input.Search
@@ -126,6 +119,7 @@ const MyProductsPage = () => {
         dataSource={products}
         rowKey="id"
         loading={loadingData}
+        scroll={{ x: 'max-content' }}
         pagination={{
           current: page,
           total,
