@@ -57,6 +57,8 @@ const MainLayout = () => {
       { key: 'my-products', label: 'Мои товары', icon: <ShopOutlined />, onClick: () => navigate('/my-products') },
       { key: 'create-product', label: 'Добавить товар', icon: <PlusSquareOutlined />, onClick: () => navigate('/create-product') },
     ] : []),
+    { key: 'wishlist', label: 'Избранное', icon: <HeartOutlined />, onClick: () => navigate('/wishlist') },
+    { key: 'orders', label: 'Заказы', icon: <ShoppingCartOutlined />, onClick: () => navigate('/cabinet') },
     ...(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN' ? [
       { key: 'admin', label: 'Админ-панель', icon: <DashboardOutlined />, onClick: () => navigate('/admin') },
     ] : []),
@@ -117,15 +119,24 @@ const MainLayout = () => {
 
         {/* Правая часть: иконки с подписями */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          {/* Кнопка «Создать товар» (только для продавца) */}
+          {/* Блок для продавца: "Мои товары" и "Создать" */}
           {user?.role === 'SELLER' && (
-            <div
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
-              onClick={() => navigate('/create-product')}
-            >
-              <PlusSquareOutlined style={{ color: '#fff', fontSize: 20 }} />
-              <Text style={{ color: '#fff', fontSize: 10, marginTop: 2 }}>Создать</Text>
-            </div>
+            <>
+              <div
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
+                onClick={() => navigate('/my-products')}
+              >
+                <ShopOutlined style={{ color: '#fff', fontSize: 20 }} />
+                <Text style={{ color: '#fff', fontSize: 10, marginTop: 2 }}>Мои товары</Text>
+              </div>
+              <div
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
+                onClick={() => navigate('/create-product')}
+              >
+                <PlusSquareOutlined style={{ color: '#fff', fontSize: 20 }} />
+                <Text style={{ color: '#fff', fontSize: 10, marginTop: 2 }}>Создать</Text>
+              </div>
+            </>
           )}
 
           {/* Избранное */}
@@ -151,7 +162,7 @@ const MainLayout = () => {
             onClick={() => {
               if (!user) {
                 message.info('Войдите, чтобы посмотреть заказы');
-                return; // только уведомление, без перехода
+                return;
               }
               navigate('/cabinet');
             }}
@@ -186,7 +197,7 @@ const MainLayout = () => {
             </div>
           )}
 
-          {/* Мобильный бургер (скрыт на больших экранах) */}
+          {/* Мобильный бургер */}
           <Button
             className="mobile-menu-btn"
             type="text"

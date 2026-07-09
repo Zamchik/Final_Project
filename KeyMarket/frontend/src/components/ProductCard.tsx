@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useWishlistStore } from '../stores/wishlistStore';
 
-const { Text } = Typography;
+const { Paragraph, Text } = Typography;
 
 interface ProductCardProps {
   product: {
@@ -90,46 +90,47 @@ const ProductCard = ({ product }: ProductCardProps) => {
           </div>
         }
       >
-        {/* Кастомное содержимое карточки */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '4px 0' }}>
-          {product.productType && (
-            <Tag
-              color="purple"
+        <div style={{ display: 'flex', flexDirection: 'column', padding: '4px 0' }}>
+          {/* Тип товара – фиксированная высота */}
+          <div style={{ height: 24, marginBottom: 4 }}>
+            {product.productType && (
+              <Tag color="purple" style={{ width: 'fit-content', fontSize: 12, lineHeight: '20px' }}>
+                {product.productType === 'DLC' ? 'DLC' : 'Игра'}
+              </Tag>
+            )}
+          </div>
+
+          {/* Название – всегда 2 строки с многоточием */}
+          <div style={{ height: '2.6em', marginBottom: 4 }}>
+            <Paragraph
+              strong
+              ellipsis={{ rows: 2 }}
               style={{
-                width: 'fit-content',
-                fontSize: 12,
-                lineHeight: '20px',
+                fontSize: 16,
+                color: '#fff',
+                lineHeight: 1.3,
                 marginBottom: 0,
               }}
             >
-              {product.productType === 'DLC' ? 'DLC' : 'Игра'}
-            </Tag>
-          )}
-          {/* Название с ограничением в две строки и многоточием */}
-          <Text
-            strong
-            style={{
-              fontSize: 16,
-              color: '#fff',
-              lineHeight: 1.3,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              maxHeight: '2.6em', // 2 * 1.3
-            }}
-          >
-            {product.title}
-          </Text>
-          <Text strong style={{ fontSize: 16, color: '#fff' }}>
-            {product.price} ₽
-          </Text>
-          {product.category && (
-            <Text type="secondary" style={{ lineHeight: 1.3 }}>
-              {product.category.name}
+              {product.title}
+            </Paragraph>
+          </div>
+
+          {/* Цена */}
+          <div style={{ height: '1.3em', marginBottom: 4 }}>
+            <Text strong style={{ fontSize: 16, color: '#fff' }}>
+              {product.price} ₽
             </Text>
-          )}
+          </div>
+
+          {/* Категория */}
+          <div style={{ height: '1.3em' }}>
+            {product.category && (
+              <Text type="secondary" style={{ lineHeight: 1.3 }}>
+                {product.category.name}
+              </Text>
+            )}
+          </div>
         </div>
       </Card>
     </Link>

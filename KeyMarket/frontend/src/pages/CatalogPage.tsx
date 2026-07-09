@@ -111,7 +111,7 @@ const CatalogPage = () => {
         <>
           <Row gutter={[16, 16]}>
             {products.map(product => (
-              <Col xs={24} sm={12} md={6} key={product.id}>
+              <Col xs={24} sm={12} md={4} lg={4} key={product.id}>
                 <ProductCard product={product} />
               </Col>
             ))}
