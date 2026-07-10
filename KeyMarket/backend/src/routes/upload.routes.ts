@@ -7,12 +7,11 @@ import { randomUUID } from 'crypto';
 import sharp from 'sharp';
 
 export default async function uploadRoutes(fastify: FastifyInstance) {
-  // POST /upload/product-image — загрузить изображение для товара с обрезкой до 4:3
   fastify.post('/product-image', {
     preHandler: [fastify.authenticate, requireRole('SELLER')],
     schema: {
       tags: ['upload'],
-      summary: 'Загрузить изображение товара',
+      summary: 'Загрузить изображение товара с обрезкой до 4:3',
       description:
         'Принимает файл в multipart/form-data.\n\n' +
         'Пример curl:\n\n' +
@@ -50,8 +49,8 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: 'Разрешены только изображения' });
     }
 
-    // Создаём папку для загрузок, если её нет
-    const uploadDir = path.join(__dirname, '../../uploads');
+    // Создаём папку для загрузок относительно рабочей директории (на Render это /opt/render/project/src/KeyMarket/backend/uploads)
+    const uploadDir = path.join(process.cwd(), 'uploads');
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
@@ -72,12 +71,12 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
     try {
       await sharp(buffer)
         .resize({
-          width: 800,            // фиксированная ширина для качества
-          height: 600,           // высота 4:3
-          fit: 'cover',          // обрезает до 4:3, центрируя
+          width: 800,
+          height: 600,
+          fit: 'cover',
           position: 'center',
         })
-        .jpeg({ quality: 90 })   // сохраняем как JPEG с хорошим качеством
+        .jpeg({ quality: 90 })
         .toFile(filePath);
     } catch (err) {
       return reply.status(400).send({ error: 'Ошибка обработки изображения' });
