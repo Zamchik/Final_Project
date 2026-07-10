@@ -35,14 +35,14 @@ export class AdminController {
 
   getProducts = async (req: FastifyRequest) => {
     this.ensureAdmin(req);
-    const { page = 1, limit = 20 } = req.query as any;
-    return this.adminService.getProducts(Number(page), Number(limit));
+    const { page = 1, limit = 20, search, status } = req.query as any;
+    return this.adminService.getProducts(Number(page), Number(limit), search, status);
   };
 
   getOrders = async (req: FastifyRequest) => {
     this.ensureAdmin(req);
-    const { page = 1, limit = 20 } = req.query as any;
-    return this.adminService.getOrders(Number(page), Number(limit));
+    const { page = 1, limit = 20, search, status } = req.query as any;
+    return this.adminService.getOrders(Number(page), Number(limit), search, status);
   };
 
   private ensureAdmin(req: FastifyRequest) {

@@ -81,28 +81,50 @@ export class AdminService {
     return { success: true };
   }
 
-  async getProducts(page: number, limit: number) {
+  async getProducts(page: number, limit: number, search?: string, status?: string) {
+    const where: any = {};
+    if (search) {
+      where.title = { contains: search, mode: 'insensitive' };
+    }
+    if (status) {
+      where.status = status;
+    }
     const [products, total] = await Promise.all([
       this.prisma.product.findMany({
-        include: { category: true },
+        where,
+        include: {
+          category: true,
+          seller: { select: { email: true } },
+        },
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.product.count(),
+      this.prisma.product.count({ where }),
     ]);
     return { products, total, page, limit };
   }
 
-  async getOrders(page: number, limit: number) {
+  async getOrders(page: number, limit: number, search?: string, status?: string) {
+    const where: any = {};
+    if (search) {
+      where.buyer = { email: { contains: search, mode: 'insensitive' } };
+    }
+    if (status) {
+      where.status = status;
+    }
     const [orders, total] = await Promise.all([
       this.prisma.order.findMany({
-        include: { buyer: { select: { email: true } }, items: { include: { product: true } } },
+        where,
+        include: {
+          buyer: { select: { email: true } },
+          items: { include: { product: true } },
+        },
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.order.count(),
+      this.prisma.order.count({ where }),
     ]);
     return { orders, total, page, limit };
   }
