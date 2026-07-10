@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import apiClient from '../api/client';
 import { message } from 'antd';
 import { AxiosError } from 'axios';
+import { useWishlistStore } from './wishlistStore';
 
 interface User {
   id: number;
@@ -33,10 +34,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const { data } = await apiClient.post('/auth/login', { email, password });
       set({ user: data.user, fetched: true });
+      // Подгружаем избранное для вошедшего пользователя
+      useWishlistStore.getState().loadWishlist(data.user.id);
       message.success('Вход выполнен');
     } catch (err) {
       const error = err as AxiosError<{ error: string }>;
-      // 403 может быть из-за неподтверждённого email или бана
       if (error.response?.status === 403) {
         const msg = error.response?.data?.error || '';
         if (msg.includes('заблокирован') || msg.includes('бан')) {
@@ -44,17 +46,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         } else {
           message.error('Email не подтверждён. Проверьте почту и перейдите по ссылке.');
         }
-        // Пробрасываем ошибку, чтобы LoginPage мог показать кнопку повторной отправки
         throw error;
       }
       message.error(error.response?.data?.error || 'Ошибка входа');
     }
   },
 
-  // Регистрация (без изменений, только возвращаемый тип)
+  // Регистрация
   register: async (email, password) => {
     const { data } = await apiClient.post('/auth/register', { email, password });
-    // Не устанавливаем пользователя – нужно подтверждение email
     message.success(data.message || 'Регистрация успешна. Проверьте почту для подтверждения.');
     return data as { message: string; verificationUrl?: string; previewUrl?: string | null };
   },
@@ -62,28 +62,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   // Выход
   logout: async () => {
     await apiClient.post('/auth/logout');
+    // Очищаем текущее избранное перед сбросом пользователя
+    useWishlistStore.getState().clearWishlist();
     set({ user: null, fetched: false });
   },
 
-  // Проверка сессии (запрос /auth/me)
+  // Проверка сессии
   fetchUser: async (force = false) => {
-    // Если данные уже загружены – не делаем повторный запрос, если не принудительно
     if (get().fetched && !force) return;
     set({ loading: true });
     try {
       const { data } = await apiClient.get('/auth/me');
       set({ user: data, fetched: true, loading: false });
+      // Если сессия восстановлена (например, после обновления страницы), загружаем избранное
+      if (data?.id) {
+        useWishlistStore.getState().loadWishlist(data.id);
+      }
     } catch (err) {
       const error = err as AxiosError<{ error: string }>;
-      // Если сессия невалидна (401) или пользователь забанен (403) – сбрасываем пользователя
       if (error.response?.status === 401 || error.response?.status === 403) {
         if (error.response?.status === 403) {
           message.error('Ваш аккаунт заблокирован');
         }
         set({ user: null, fetched: true, loading: false });
-        // Дополнительно можно вызвать logout для очистки кук, но сессия уже недействительна
       } else {
-        // Другие ошибки – просто завершаем загрузку, не сбрасывая пользователя
         set({ loading: false });
       }
     }
