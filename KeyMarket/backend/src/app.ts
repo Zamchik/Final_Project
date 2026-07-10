@@ -98,7 +98,7 @@ async function setup() {
   app.register(multipart, { limits: { fileSize: 5 * 1024 * 1024 } });
   app.register(cors, corsOptions);
 
-  const uploadDir = path.join(process.cwd(), 'uploads');
+  const uploadDir = path.resolve(process.cwd(), 'uploads');
   if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
     app.log.info(`Created upload directory: ${uploadDir}`);
