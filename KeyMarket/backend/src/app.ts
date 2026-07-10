@@ -7,6 +7,7 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
+import fs from 'fs';
 import path from 'path';
 
 import authRoutes from './routes/auth.routes';
@@ -29,12 +30,10 @@ import { createTestTransport } from './config/mail';
 import { EmailService } from './services/email.service';
 import { NotificationService } from './services/notification.service';
 
-// Импорт кастомных ошибок для глобального обработчика
 import { AppError } from './common/errors';
 
 const app = Fastify({ logger: true, trustProxy: true });
 
-// Расширение типов для сессии
 declare module '@fastify/secure-session' {
   interface SessionData {
     user?: {
@@ -45,7 +44,6 @@ declare module '@fastify/secure-session' {
   }
 }
 
-// Расширение типов Fastify для декораторов
 declare module 'fastify' {
   interface FastifyInstance {
     emailService: import('./services/email.service').EmailService;
@@ -53,7 +51,6 @@ declare module 'fastify' {
   }
 }
 
-// Асинхронная функция инициализации всего приложения
 async function setup() {
   // Email и уведомления
   const mailTransport = await createTestTransport();
@@ -95,17 +92,21 @@ async function setup() {
     },
   });
 
-  app.register(swaggerUi, {
-    routePrefix: '/docs',
-  });
+  app.register(swaggerUi, { routePrefix: '/docs' });
 
   // Плагины
-  app.register(multipart, { limits: { fileSize: 5 * 1024 * 1024 } }); // до 5 МБ
+  app.register(multipart, { limits: { fileSize: 5 * 1024 * 1024 } });
   app.register(cors, corsOptions);
 
-  // раздача статических файлов (изображения товаров)
+  const uploadDir = path.join(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+    app.log.info(`Created upload directory: ${uploadDir}`);
+  }
+
+  // Раздача статических файлов (изображения товаров)
   app.register(fastifyStatic, {
-    root: path.join(process.cwd(), 'uploads'),
+    root: uploadDir,
     prefix: '/uploads/',
   });
 
@@ -114,7 +115,6 @@ async function setup() {
     cookie: sessionCookieOptions,
   });
 
-  // Декоратор authenticate
   app.decorate('authenticate', authenticate);
 
   // Маршруты
@@ -131,21 +131,17 @@ async function setup() {
   app.register(reviewRoutes, { prefix: '/reviews' });
   app.register(uploadRoutes, { prefix: '/upload' });
 
-  // Health check
   app.get('/health', async () => ({ status: 'ok' }));
 
-  // Глобальный обработчик ошибок (после всех маршрутов)
   app.setErrorHandler(async (error: Error, request, reply) => {
     app.log.error(error);
 
-    // Если ошибка – наша кастомная, используем её статус
     if (error instanceof AppError) {
       return reply.status(error.statusCode).send({
         error: error.message,
       });
     }
 
-    // Ошибки валидации Fastify
     const fastifyError = error as any;
     if (fastifyError.validation) {
       return reply.status(400).send({
@@ -154,13 +150,11 @@ async function setup() {
       });
     }
 
-    // Неизвестные ошибки – 500
     return reply.status(500).send({
       error: 'Internal server error',
     });
   });
 
-  // Запуск сервера
   try {
     const port = process.env.PORT ? Number(process.env.PORT) : 3000;
     await app.listen({ port, host: '0.0.0.0' });
