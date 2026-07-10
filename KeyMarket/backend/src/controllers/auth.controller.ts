@@ -99,7 +99,6 @@ export class AuthController {
     return data;
   };
 
-  // ------------------ Методы для становления продавцом ------------------
   requestSellerRole = async (req: FastifyRequest, reply: FastifyReply) => {
     const user = req.session.get('user');
     if (!user) throw new UnauthorizedError('Unauthorized');
@@ -133,7 +132,6 @@ export class AuthController {
     reply.redirect(`${frontendUrl}/cabinet?role=SELLER`);
   };
 
-  // ------------------ Методы для восстановления пароля ------------------
   // POST /auth/forgot-password – запрос на восстановление пароля
   forgotPassword = async (
     req: FastifyRequest<{ Body: { email: string } }>,

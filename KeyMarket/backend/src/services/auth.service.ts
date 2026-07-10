@@ -95,7 +95,7 @@ export class AuthService {
     return { verificationUrl: link, previewUrl };
   }
 
-  // ---------- Продавец ----------
+  // Продавец
   async verifyUserPassword(userId: number, password: string): Promise<boolean> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundError('Пользователь не найден');
@@ -145,7 +145,7 @@ export class AuthService {
     }
   }
 
-  // ---------- Восстановление пароля ----------
+  // Восстановление пароля
   async forgotPassword(email: string): Promise<{ resetUrl: string; previewUrl: string | null } | null> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) return null;

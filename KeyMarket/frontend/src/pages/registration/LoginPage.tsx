@@ -96,7 +96,7 @@ const LoginPage = () => {
         title="Подтверждение email"
         open={isModalOpen}
         onOk={() => {
-          window.location.href = verificationUrl; // переход по ссылке подтверждения
+          window.location.href = verificationUrl;
           setIsModalOpen(false);
           navigate('/login');
         }}
