@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/app.ts",
     "build": "tsc",
-    "start": "node dist/app.js",
+    "start": "npx tsx src/app.ts",
     "test": "jest --runInBand --forceExit --detectOpenHandles"
   },
   "keywords": [],
@@ -31,7 +31,8 @@
     "nodemailer": "^9.0.1",
     "pg": "^8.21.0",
     "sharp": "^0.35.3",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "tsx": "^4.22.3"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -45,7 +46,6 @@
     "prisma": "^7.8.0",
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.11",
-    "tsx": "^4.22.3",
     "typescript": "^6.0.3"
   }
 }

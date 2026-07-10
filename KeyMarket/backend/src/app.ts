@@ -118,18 +118,18 @@ async function setup() {
   app.decorate('authenticate', authenticate);
 
   // Маршруты
-  app.register(authRoutes,         { prefix: '/auth' });
-  app.register(categoryRoutes,     { prefix: '/categories' });
-  app.register(productRoutes,      { prefix: '/products' });
-  app.register(publicRoutes,       { prefix: '/products' });
-  app.register(walletRoutes,       { prefix: '/wallet' });
-  app.register(orderRoutes,        { prefix: '/orders' });
-  app.register(adminRoutes,        { prefix: '/admin' });
-  app.register(paymentRoutes,      { prefix: '/payments' });
-  app.register(mockPaymentRoutes,  { prefix: '/mock-payment' });
+  app.register(authRoutes, { prefix: '/auth' });
+  app.register(categoryRoutes, { prefix: '/categories' });
+  app.register(productRoutes, { prefix: '/products' });
+  app.register(publicRoutes, { prefix: '/products' });
+  app.register(walletRoutes, { prefix: '/wallet' });
+  app.register(orderRoutes, { prefix: '/orders' });
+  app.register(adminRoutes, { prefix: '/admin' });
+  app.register(paymentRoutes, { prefix: '/payments' });
+  app.register(mockPaymentRoutes, { prefix: '/mock-payment' });
   app.register(notificationRoutes, { prefix: '/notifications' });
-  app.register(reviewRoutes,       { prefix: '/reviews' });
-  app.register(uploadRoutes,       { prefix: '/upload' });
+  app.register(reviewRoutes, { prefix: '/reviews' });
+  app.register(uploadRoutes, { prefix: '/upload' });
 
   // Health check
   app.get('/health', async () => ({ status: 'ok' }));
@@ -162,7 +162,8 @@ async function setup() {
 
   // Запуск сервера
   try {
-    await app.listen({ port: 3000, host: '0.0.0.0' });
+    const port = process.env.PORT ? Number(process.env.PORT) : 3000;
+    await app.listen({ port, host: '0.0.0.0' });
     app.log.info('Server running on http://localhost:3000');
     app.log.info('Swagger docs: http://localhost:3000/docs');
   } catch (err) {
