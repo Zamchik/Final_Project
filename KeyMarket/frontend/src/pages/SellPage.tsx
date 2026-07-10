@@ -1,5 +1,3 @@
-// frontend/src/pages/SellPage.tsx
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Typography, Button, Row, Col, Card, Modal, Input, message } from 'antd';
@@ -26,7 +24,6 @@ const SellPage = () => {
   const [loading, setLoading] = useState(false);
   const [resultData, setResultData] = useState<{ verificationUrl: string; previewUrl: string | null } | null>(null);
 
-  // Обработчик нажатия на основную кнопку в зависимости от роли
   const handlePrimaryAction = () => {
     if (!user) {
       navigate('/register');
@@ -39,7 +36,6 @@ const SellPage = () => {
     }
   };
 
-  // Отправка запроса на получение роли продавца
   const handleSubmitPassword = async () => {
     if (!password.trim()) {
       message.warning('Введите пароль');
@@ -50,7 +46,6 @@ const SellPage = () => {
       const data = await requestSellerRole(password);
       setIsModalOpen(false);
       setResultData(data);
-      // Покажем модальное окно с результатом и ссылкой на Ethereal
     } catch (err) {
       const error = err as AxiosError<{ error: string }>;
       message.error(error.response?.data?.error || 'Ошибка подтверждения');
@@ -59,7 +54,6 @@ const SellPage = () => {
     }
   };
 
-  // Какую кнопку показывать под преимуществами
   const renderPrimaryButton = () => {
     if (!user) {
       return (
@@ -169,7 +163,7 @@ const SellPage = () => {
         open={!!resultData}
         onOk={() => setResultData(null)}
         onCancel={() => setResultData(null)}
-        okText="Понятно"
+        okText="Закрыть"
         cancelButtonProps={{ style: { display: 'none' } }}
       >
         <p>На ваш email отправлена ссылка для подтверждения статуса продавца.</p>
@@ -187,6 +181,11 @@ const SellPage = () => {
             Открыть письмо в Ethereal
           </Button>
         )}
+        <div style={{ marginTop: 12 }}>
+          <Button type="primary" onClick={() => window.open(resultData?.verificationUrl, '_blank')}>
+            Открыть ссылку подтверждения
+          </Button>
+        </div>
       </Modal>
     </div>
   );

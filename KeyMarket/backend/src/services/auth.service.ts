@@ -161,7 +161,8 @@ export class AuthService {
     }
 
     const token = await this.generateSellerRoleToken(userId);
-    const link = `http://localhost:3000/auth/confirm-seller-role?token=${token}`;
+    const appBaseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+    const link = `${appBaseUrl}/auth/confirm-seller-role?token=${token}`;
 
     let previewUrl: string | null = null;
     try {
@@ -169,16 +170,16 @@ export class AuthService {
         email,
         'Подтверждение статуса продавца в KeyMarket',
         `<h1>Стать продавцом</h1>
-         <p>Для активации статуса продавца перейдите по ссылке:</p>
-         <a href="${link}">${link}</a>
-         <p>Ссылка действительна 1 час.</p>`
+       <p>Для активации статуса продавца перейдите по ссылке:</p>
+       <a href="${link}">${link}</a>
+       <p>Ссылка действительна 1 час.</p>`
       );
       previewUrl = nodemailer.getTestMessageUrl(info) || null;
       if (!previewUrl && (info as any).messageId) {
         previewUrl = `https://ethereal.email/message/${(info as any).messageId}`;
       }
     } catch (err) {
-      // ошибка отправки не прерывает операцию – пользователь получит ссылку, но без превью
+      // ошибка отправки не прерывает операцию
     }
 
     return { verificationUrl: link, previewUrl };

@@ -37,7 +37,6 @@ const RegisterPage = () => {
     window.location.href = verificationUrl;
   };
 
-
   return (
     <div style={{ maxWidth: 400, margin: '40px auto' }}>
       <Card title="Регистрация">
