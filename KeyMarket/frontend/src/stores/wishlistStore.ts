@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useAuthStore } from './authStore';
 
 interface WishlistItem {
   id: number;
@@ -23,6 +24,8 @@ export const useWishlistStore = create<WishlistState>()(
     (set, get) => ({
       items: [],
       addItem: (item) => {
+        const user = useAuthStore.getState().user;
+        if (!user) return;
         if (!get().items.find((i) => i.id === item.id)) {
           set({ items: [...get().items, item] });
         }
@@ -34,7 +37,6 @@ export const useWishlistStore = create<WishlistState>()(
     }),
     {
       name: 'keymarket-wishlist',
-      getStorage: () => localStorage,
     }
   )
 );
