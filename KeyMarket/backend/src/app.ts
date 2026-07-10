@@ -32,7 +32,7 @@ import { NotificationService } from './services/notification.service';
 // Импорт кастомных ошибок для глобального обработчика
 import { AppError } from './common/errors';
 
-const app = Fastify({ logger: true });
+const app = Fastify({ logger: true, trustProxy: true });
 
 // Расширение типов для сессии
 declare module '@fastify/secure-session' {
