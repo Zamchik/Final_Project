@@ -8,22 +8,18 @@ export class AuthController {
   constructor(private authService: AuthService) { }
 
   // POST /auth/register — регистрация нового пользователя.
-  // Письмо отправляется асинхронно, previewUrl формируется мгновенно.
   register = async (req: FastifyRequest<{ Body: { email: string; password: string } }>, reply: FastifyReply) => {
     const { email, password } = req.body;
     const user = await this.authService.register(email, password);
 
-    // Генерируем токен и ссылку для подтверждения
     const token = await this.authService.generateVerificationToken(user.id);
     const appBaseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
     const verificationUrl = `${appBaseUrl}/auth/verify-email?token=${token}`;
 
-    // previewUrl сразу (общий ящик, не ждём отправки)
     const previewUrl = process.env.SMTP_USER
       ? 'https://ethereal.email/messages'
       : null;
 
-    // Отправляем письмо асинхронно, ошибка не влияет на ответ
     req.server.emailService.send(
       email,
       'Подтвердите регистрацию в KeyMarket',
@@ -33,7 +29,6 @@ export class AuthController {
        <a href="${verificationUrl}">${verificationUrl}</a>`
     ).catch(mailErr => req.server.log.error(`Ошибка отправки письма подтверждения: ${(mailErr as Error).message}`));
 
-    // Приветственное уведомление – тоже асинхронно
     req.server.notificationService.create(
       user.id,
       NotificationType.WELCOME,
@@ -43,7 +38,7 @@ export class AuthController {
     reply.status(201).send({
       message: 'Регистрация успешна. Проверьте почту для подтверждения.',
       verificationUrl,
-      previewUrl,   // всегда строка или null
+      previewUrl,
     });
   };
 
@@ -101,7 +96,7 @@ export class AuthController {
   ) => {
     const { email } = req.body;
     const data = await this.authService.resendVerification(email);
-    return data; // { verificationUrl, previewUrl }
+    return data;
   };
 
   // ------------------ Методы для становления продавцом ------------------
@@ -136,5 +131,33 @@ export class AuthController {
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     reply.redirect(`${frontendUrl}/cabinet?role=SELLER`);
+  };
+
+  // ------------------ Методы для восстановления пароля ------------------
+  // POST /auth/forgot-password – запрос на восстановление пароля
+  forgotPassword = async (
+    req: FastifyRequest<{ Body: { email: string } }>,
+    reply: FastifyReply
+  ) => {
+    const { email } = req.body;
+    const data = await this.authService.forgotPassword(email);
+    if (!data) {
+      return { message: 'Если такой email зарегистрирован, на него отправлена инструкция.' };
+    }
+    return {
+      message: 'Инструкция отправлена.',
+      resetUrl: data.resetUrl,
+      previewUrl: data.previewUrl,
+    };
+  };
+
+  // POST /auth/reset-password – установка нового пароля
+  resetPassword = async (
+    req: FastifyRequest<{ Body: { token: string; newPassword: string } }>,
+    reply: FastifyReply
+  ) => {
+    const { token, newPassword } = req.body;
+    await this.authService.resetPassword(token, newPassword);
+    return { message: 'Пароль успешно изменён.' };
   };
 }

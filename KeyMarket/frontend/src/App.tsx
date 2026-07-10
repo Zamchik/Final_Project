@@ -11,6 +11,8 @@ import CreateEditProductPage from './pages/CreateEditProductPage';
 import AdminPage from './pages/AdminPage';
 import SellPage from './pages/SellPage';
 import WishlistPage from './pages/WishlistPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 
 function App() {
   return (
@@ -28,6 +30,8 @@ function App() {
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/sell" element={<SellPage />} />
         <Route path="/wishlist" element={<WishlistPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Route>
     </Routes>
   );

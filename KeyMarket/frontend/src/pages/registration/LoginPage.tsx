@@ -78,6 +78,10 @@ const LoginPage = () => {
         <div style={{ marginTop: 16, textAlign: 'center' }}>
           Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
         </div>
+        {/* Ссылка для восстановления пароля */}
+        <div style={{ marginTop: 8, textAlign: 'center' }}>
+          <Link to="/forgot-password">Забыли пароль?</Link>
+        </div>
         {showResend && (
           <div style={{ marginTop: 16, textAlign: 'center' }}>
             <Button type="link" onClick={handleResend}>

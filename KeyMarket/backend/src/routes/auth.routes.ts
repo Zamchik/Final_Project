@@ -196,4 +196,57 @@ export default async function authRoutes(fastify: FastifyInstance) {
       },
     },
   }, controller.confirmSellerRole);
+
+    // POST /auth/forgot-password
+  fastify.post('/forgot-password', {
+    schema: {
+      tags: ['auth'],
+      summary: 'Запросить восстановление пароля',
+      body: {
+        type: 'object',
+        required: ['email'],
+        properties: {
+          email: { type: 'string', format: 'email' },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            message: { type: 'string' },
+          },
+        },
+      },
+    },
+  }, controller.forgotPassword);
+
+  // POST /auth/reset-password
+  fastify.post('/reset-password', {
+    schema: {
+      tags: ['auth'],
+      summary: 'Установить новый пароль по токену',
+      body: {
+        type: 'object',
+        required: ['token', 'newPassword'],
+        properties: {
+          token: { type: 'string' },
+          newPassword: { type: 'string', minLength: 6 },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            message: { type: 'string' },
+          },
+        },
+        400: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+          },
+        },
+      },
+    },
+  }, controller.resetPassword);
 }
