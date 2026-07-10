@@ -14,7 +14,8 @@ export class MockPaymentGateway implements PaymentGateway {
         mockStore.set(externalId, { refId, amount, userId, state: 'in-progress' });
 
         // Ссылка на страницу имитации оплаты (будет обрабатываться нашим же бэкендом)
-        const paymentUrl = `http://localhost:3000/mock-payment/${externalId}`;
+        const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+        const paymentUrl = `${baseUrl}/mock-payment/${externalId}`;
 
         return { externalId, paymentUrl };
     }
