@@ -105,7 +105,7 @@ async function setup() {
 
   // раздача статических файлов (изображения товаров)
   app.register(fastifyStatic, {
-    root: path.join(__dirname, '..', 'uploads'), // папка uploads в корне backend/
+    root: path.join(process.cwd(), 'uploads'),
     prefix: '/uploads/',
   });
 
