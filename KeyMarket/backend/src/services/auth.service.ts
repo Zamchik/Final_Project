@@ -115,20 +115,19 @@ export class AuthService {
     const token = await this.generateVerificationToken(user.id);
     const link = `http://localhost:3000/auth/verify-email?token=${token}`;
 
-    let previewUrl: string | null = null;
-    try {
-      const info = await this.emailService.send(
-        email,
-        'Подтвердите регистрацию в KeyMarket',
-        `<h1>Подтверждение email</h1><p>Перейдите по ссылке: <a href="${link}">${link}</a></p>`
-      );
-      previewUrl = nodemailer.getTestMessageUrl(info) || null;
-      if (!previewUrl && (info as any).messageId) {
-        previewUrl = `https://ethereal.email/message/${(info as any).messageId}`;
-      }
-    } catch (err) {
-      // ошибка отправки не прерывает операцию
-    }
+    // previewUrl сразу
+    const previewUrl = process.env.SMTP_USER
+      ? 'https://ethereal.email/messages'
+      : null;
+
+    // Асинхронная отправка
+    this.emailService.send(
+      email,
+      'Подтвердите регистрацию в KeyMarket',
+      `<h1>Подтверждение email</h1><p>Перейдите по ссылке: <a href="${link}">${link}</a></p>`
+    ).catch(err => {
+      // просто логируем, если нужно
+    });
 
     return { verificationUrl: link, previewUrl };
   }
