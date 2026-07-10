@@ -73,6 +73,7 @@ const MainLayout = () => {
           justifyContent: 'space-between',
           padding: '0 32px',
           height: 88,
+          width: '100%'
         }}
       >
         {/* Левая часть: логотип + Каталог */}
@@ -142,6 +143,17 @@ const MainLayout = () => {
                 <Text style={{ color: '#fff', fontSize: 16, marginTop: 2 }}>Создать</Text>
               </div>
             </>
+          )}
+
+          {/* Админ-панель – только для ADMIN и SUPER_ADMIN */}
+          {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+            <div
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
+              onClick={() => navigate('/admin')}
+            >
+              <DashboardOutlined style={{ color: '#fff', fontSize: 28 }} />
+              <Text style={{ color: '#fff', fontSize: 16, marginTop: 2 }}>Админ</Text>
+            </div>
           )}
 
           <div

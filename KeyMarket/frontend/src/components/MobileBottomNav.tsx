@@ -6,6 +6,7 @@ import {
   ShoppingCartOutlined,
   PlusSquareOutlined,
   ShopOutlined,
+  DashboardOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../stores/authStore';
@@ -26,7 +27,7 @@ const MobileBottomNav = () => {
   };
 
   const iconStyle = (path: string, tab?: string) => ({
-    fontSize: 20,
+    fontSize: 22,
     color: isActive(path, tab) ? '#722ed1' : '#b0b0b0',
   });
 
@@ -69,6 +70,13 @@ const MobileBottomNav = () => {
             <PlusSquareOutlined style={iconStyle('/create-product')} />
           </div>
         </>
+      )}
+
+      {/* Админ-панель – только для ADMIN и SUPER_ADMIN */}
+      {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+        <div onClick={() => handleClick('/admin')} style={{ textAlign: 'center', cursor: 'pointer' }}>
+          <DashboardOutlined style={iconStyle('/admin')} />
+        </div>
       )}
 
       <div onClick={() => handleClick('/wishlist')} style={{ textAlign: 'center', cursor: 'pointer' }}>

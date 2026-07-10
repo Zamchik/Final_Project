@@ -72,11 +72,16 @@ const ProductCard = ({ product }: ProductCardProps) => {
           e.currentTarget.style.boxShadow = '';
         }}
       >
+        {/* Изображение */}
         <div style={{ position: 'relative', width: '100%', aspectRatio: '4 / 3', background: '#1a1a1a' }}>
           <img
             src={product.imageUrl || '/placeholder.png'}
             alt={product.title}
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+            }}
             onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
           />
           <div style={{
@@ -105,14 +110,21 @@ const ProductCard = ({ product }: ProductCardProps) => {
                 }} />
               }
               onClick={handleWishlist}
-              style={{ background: 'transparent', border: 'none', padding: 0, lineHeight: 1, marginLeft: 'auto' }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                lineHeight: 1,
+                marginLeft: 'auto',
+              }}
             />
           </div>
         </div>
 
+        {/* Информация о товаре */}
         <div style={{ padding: '12px 16px 16px 16px', flex: 1 }}>
           <div style={{ marginBottom: 8 }}>
-            <Text strong style={{ fontSize: 24, color: '#fff', lineHeight: 1.2 }}>
+            <Text strong style={{ fontSize: 20, color: '#fff', lineHeight: 1.2 }}>
               {product.price} ₽
             </Text>
           </div>
@@ -120,21 +132,21 @@ const ProductCard = ({ product }: ProductCardProps) => {
             <Paragraph
               strong
               ellipsis={{ rows: 2 }}
-              style={{ fontSize: 18, color: '#fff', lineHeight: 1.3, marginBottom: 0 }}
+              style={{ fontSize: 16, color: '#fff', lineHeight: 1.3, marginBottom: 0 }}
             >
               {product.title}
             </Paragraph>
           </div>
           <div style={{ marginBottom: 4 }}>
             {product.category && (
-              <Text type="secondary" style={{ fontSize: 15, lineHeight: 1.4 }}>
+              <Text type="secondary" style={{ fontSize: 14, lineHeight: 1.4 }}>
                 {product.category.name}
               </Text>
             )}
           </div>
           {product.sales !== undefined && product.sales !== null && (
             <div>
-              <Text type="secondary" style={{ fontSize: 15, lineHeight: 1.4 }}>
+              <Text type="secondary" style={{ fontSize: 14, lineHeight: 1.4 }}>
                 {formatSales(product.sales)}
               </Text>
             </div>
@@ -148,8 +160,8 @@ const ProductCard = ({ product }: ProductCardProps) => {
             style={{
               background: '#722ed1',
               borderColor: '#722ed1',
-              height: 48,
-              fontSize: 18,
+              height: 40,
+              fontSize: 16,
               fontWeight: 500,
               borderRadius: '0 0 8px 8px',
             }}

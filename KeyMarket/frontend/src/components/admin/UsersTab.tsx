@@ -1,4 +1,3 @@
-// Вкладка управления пользователями (админ‑панель)
 import { useEffect, useState, useCallback } from 'react';
 import { Table, Button, Select, Input, Space, message, Popconfirm } from 'antd';
 import apiClient from '../../api/client';
@@ -33,7 +32,6 @@ const UsersTab = () => {
   const [loading, setLoading] = useState(false);
   const currentUser = useAuthStore((s) => s.user);
 
-  // Загрузка списка пользователей
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
@@ -51,7 +49,6 @@ const UsersTab = () => {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  // Бан
   const handleBan = async (userId: number) => {
     try {
       await apiClient.put(`/admin/users/${userId}/ban`);
@@ -62,7 +59,6 @@ const UsersTab = () => {
     }
   };
 
-  // Разбан
   const handleUnban = async (userId: number) => {
     try {
       await apiClient.put(`/admin/users/${userId}/unban`);
@@ -73,7 +69,6 @@ const UsersTab = () => {
     }
   };
 
-  // Смена роли (отправляем значение в верхнем регистре)
   const handleChangeRole = async (userId: number, newRole: string) => {
     try {
       await apiClient.put(`/admin/users/${userId}/role`, { role: newRole });
@@ -85,7 +80,6 @@ const UsersTab = () => {
     }
   };
 
-  // Колонки таблицы
   const columns = [
     { title: 'ID', dataIndex: 'id', key: 'id' },
     { title: 'Email', dataIndex: 'email', key: 'email' },
@@ -107,7 +101,6 @@ const UsersTab = () => {
       key: 'actions',
       render: (_: unknown, record: UserItem) => (
         <Space>
-          {/* Кнопки бана/разбана не показываются для SUPER_ADMIN */}
           {record.role !== 'SUPER_ADMIN' && (
             <>
               {record.bannedAt ? (
@@ -121,8 +114,6 @@ const UsersTab = () => {
               )}
             </>
           )}
-
-          {/* Выбор роли скрыт для SUPER_ADMIN */}
           {record.role !== 'SUPER_ADMIN' && (
             <Select
               value={record.role}
@@ -143,35 +134,37 @@ const UsersTab = () => {
     },
   ];
 
-  // Рендер
   return (
     <div>
-      <Space style={{ marginBottom: 16 }}>
-        <Input.Search
-          placeholder="Поиск по email"
-          allowClear
-          onSearch={setSearch}
-          style={{ width: 300 }}
-        />
-        <Select
-          placeholder="Фильтр по роли"
-          allowClear
-          value={roleFilter}
-          onChange={setRoleFilter}
-          options={[
-            { value: 'BUYER', label: 'Покупатели' },
-            { value: 'SELLER', label: 'Продавцы' },
-            { value: 'ADMIN', label: 'Админы' },
-            { value: 'SUPER_ADMIN', label: 'Супер‑админы' },
-          ]}
-          style={{ width: 150 }}
-        />
-      </Space>
+      <div style={{ overflowX: 'auto', marginBottom: 16 }}>
+        <Space>
+          <Input.Search
+            placeholder="Поиск по email"
+            allowClear
+            onSearch={setSearch}
+            style={{ width: 300 }}
+          />
+          <Select
+            placeholder="Фильтр по роли"
+            allowClear
+            value={roleFilter}
+            onChange={(val: string | undefined) => { setRoleFilter(val); setPage(1); }}
+            options={[
+              { value: 'BUYER', label: 'Покупатели' },
+              { value: 'SELLER', label: 'Продавцы' },
+              { value: 'ADMIN', label: 'Админы' },
+              { value: 'SUPER_ADMIN', label: 'Супер‑админы' },
+            ]}
+            style={{ width: 150 }}
+          />
+        </Space>
+      </div>
       <Table
         columns={columns}
         dataSource={users}
         rowKey="id"
         loading={loading}
+        scroll={{ x: 'max-content' }}
         pagination={{
           current: page,
           total,

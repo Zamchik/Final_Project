@@ -1,14 +1,16 @@
-// Сервис администратора
 import { PrismaClient, UserRole } from '@prisma/client';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../common/errors';
 
 export class AdminService {
-  constructor(private prisma: PrismaClient) { }
+  constructor(private prisma: PrismaClient) {}
 
-  async getUsers(page: number, limit: number, search?: string) {
+  async getUsers(page: number, limit: number, search?: string, role?: string) {
     const where: any = {};
     if (search) {
       where.email = { contains: search, mode: 'insensitive' };
+    }
+    if (role) {
+      where.role = role.toUpperCase();
     }
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
@@ -64,12 +66,10 @@ export class AdminService {
       throw new BadRequestError('Недопустимая роль');
     }
 
-    // Запрещаем менять роль супер‑админа
     if (user.role === UserRole.SUPER_ADMIN) {
       throw new ForbiddenError('Нельзя изменить роль супер‑администратора');
     }
 
-    // Только SUPER_ADMIN может назначать роль SUPER_ADMIN
     if (role === UserRole.SUPER_ADMIN && adminRole !== 'SUPER_ADMIN') {
       throw new ForbiddenError('Только супер‑администратор может назначать эту роль');
     }
@@ -81,7 +81,6 @@ export class AdminService {
     return { success: true };
   }
 
-  // Просмотр товаров и заказов для админа можно оставить без изменений
   async getProducts(page: number, limit: number) {
     const [products, total] = await Promise.all([
       this.prisma.product.findMany({

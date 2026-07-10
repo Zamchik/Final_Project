@@ -1,5 +1,3 @@
-// Вкладка просмотра товаров (админ-панель)
-// Показывает все товары с поиском и фильтрацией по статусу
 import { useEffect, useState, useCallback } from 'react';
 import { Table, Input, Select, Space, message, Tag } from 'antd';
 import apiClient from '../../api/client';
@@ -23,7 +21,6 @@ const ProductsTab = () => {
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
-  // Загрузка товаров
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
@@ -43,7 +40,6 @@ const ProductsTab = () => {
     fetchProducts();
   }, [fetchProducts]);
 
-  // Колонки таблицы
   const columns = [
     { title: 'ID', dataIndex: 'id', key: 'id' },
     { title: 'Название', dataIndex: 'title', key: 'title' },
@@ -65,30 +61,33 @@ const ProductsTab = () => {
 
   return (
     <div>
-      <Space style={{ marginBottom: 16 }}>
-        <Input.Search
-          placeholder="Поиск по названию"
-          allowClear
-          onSearch={setSearch}
-          style={{ width: 300 }}
-        />
-        <Select
-          placeholder="Фильтр по статусу"
-          allowClear
-          value={statusFilter}
-          onChange={setStatusFilter}
-          options={[
-            { value: 'ACTIVE', label: 'Активные' },
-            { value: 'INACTIVE', label: 'Неактивные' },
-          ]}
-          style={{ width: 150 }}
-        />
-      </Space>
+      <div style={{ overflowX: 'auto', marginBottom: 16 }}>
+        <Space>
+          <Input.Search
+            placeholder="Поиск по названию"
+            allowClear
+            onSearch={setSearch}
+            style={{ width: 300 }}
+          />
+          <Select
+            placeholder="Фильтр по статусу"
+            allowClear
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[
+              { value: 'ACTIVE', label: 'Активные' },
+              { value: 'INACTIVE', label: 'Неактивные' },
+            ]}
+            style={{ width: 150 }}
+          />
+        </Space>
+      </div>
       <Table
         columns={columns}
         dataSource={products}
         rowKey="id"
         loading={loading}
+        scroll={{ x: 'max-content' }}
         pagination={{
           current: page,
           total,
