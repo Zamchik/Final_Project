@@ -1,5 +1,4 @@
 // Хранилище Zustand для аутентификации
-// Управляет состоянием пользователя, загрузкой и сессионными запросами
 import { create } from 'zustand';
 import apiClient from '../api/client';
 import { message } from 'antd';
@@ -34,8 +33,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const { data } = await apiClient.post('/auth/login', { email, password });
       set({ user: data.user, fetched: true });
-      // Подгружаем избранное для вошедшего пользователя
-      useWishlistStore.getState().loadWishlist(data.user.id);
+
+      // Загружаем избранное для пользователя
+      const stored = localStorage.getItem(`keymarket-wishlist-${data.user.id}`);
+      if (stored) {
+        try {
+          const items = JSON.parse(stored);
+          useWishlistStore.getState().setItems(items);
+        } catch {
+          useWishlistStore.getState().setItems([]);
+        }
+      } else {
+        useWishlistStore.getState().setItems([]);
+      }
+
       message.success('Вход выполнен');
     } catch (err) {
       const error = err as AxiosError<{ error: string }>;
@@ -61,22 +72,38 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   // Выход
   logout: async () => {
+    const userId = get().user?.id;
+    if (userId) {
+      // Сохраняем текущее избранное перед выходом
+      const items = useWishlistStore.getState().items;
+      localStorage.setItem(`keymarket-wishlist-${userId}`, JSON.stringify(items));
+    }
+
     await apiClient.post('/auth/logout');
-    // Очищаем текущее избранное перед сбросом пользователя
-    useWishlistStore.getState().clearWishlist();
+    useWishlistStore.getState().setItems([]);
     set({ user: null, fetched: false });
   },
 
-  // Проверка сессии
+  // Проверка сессии (при обновлении страницы)
   fetchUser: async (force = false) => {
     if (get().fetched && !force) return;
     set({ loading: true });
     try {
       const { data } = await apiClient.get('/auth/me');
       set({ user: data, fetched: true, loading: false });
-      // Если сессия восстановлена (например, после обновления страницы), загружаем избранное
+
       if (data?.id) {
-        useWishlistStore.getState().loadWishlist(data.id);
+        const stored = localStorage.getItem(`keymarket-wishlist-${data.id}`);
+        if (stored) {
+          try {
+            const items = JSON.parse(stored);
+            useWishlistStore.getState().setItems(items);
+          } catch {
+            useWishlistStore.getState().setItems([]);
+          }
+        } else {
+          useWishlistStore.getState().setItems([]);
+        }
       }
     } catch (err) {
       const error = err as AxiosError<{ error: string }>;
