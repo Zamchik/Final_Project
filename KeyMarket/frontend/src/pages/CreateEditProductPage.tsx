@@ -168,23 +168,41 @@ const CreateEditProductPage = () => {
   const onFinish = async (values: FormValues) => {
     setLoadingForm(true);
     try {
+      // Проверка обязательных ключей при создании
+      if (!isEdit) {
+        const keysString = values.keys ?? '';
+        const trimmedKeys = keysString.split('\n').map(k => k.trim()).filter(k => k.length > 0);
+        if (trimmedKeys.length === 0) {
+          message.error('Добавьте хотя бы один ключ');
+          setLoadingForm(false);
+          return;
+        }
+      }
+
       const payload: Record<string, unknown> = {
         title: values.title,
         description: values.description,
         price: values.price,
         categoryId: values.categoryId,
-        imageUrl,
+        imageUrl: imageUrl || null,
         productType: values.productType || 'GAME',
       };
+
       if (isEdit && id) {
         if (values.newKeys) {
-          payload.newKeys = values.newKeys.split('\n').map(k => k.trim()).filter(k => k.length > 0);
+          payload.newKeys = values.newKeys
+            .split('\n')
+            .map(k => k.trim())
+            .filter(k => k.length > 0);
         }
         if (values.status) payload.status = values.status;
         await apiClient.put(`/products/${id}`, payload);
         message.success('Товар обновлён');
       } else {
-        payload.keys = (values.keys ?? '').split('\n').map(k => k.trim()).filter(k => k.length > 0);
+        payload.keys = (values.keys ?? '')
+          .split('\n')
+          .map(k => k.trim())
+          .filter(k => k.length > 0);
         await apiClient.post('/products', payload);
         message.success('Товар создан');
       }
@@ -192,6 +210,7 @@ const CreateEditProductPage = () => {
     } catch (err) {
       const error = err as AxiosError<{ error: string }>;
       message.error(error.response?.data?.error || 'Ошибка сохранения');
+      console.error('Ошибка сохранения товара:', error);
     } finally {
       setLoadingForm(false);
     }
