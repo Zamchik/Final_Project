@@ -104,6 +104,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
               },
             },
             status: { type: 'string' },
+            salesCount: { type: 'integer' },
           },
         },
         404: { type: 'object', properties: { error: { type: 'string' } } },

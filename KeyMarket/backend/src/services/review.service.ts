@@ -2,7 +2,7 @@ import { PrismaClient, OrderStatus } from '@prisma/client';
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '../common/errors';
 
 export class ReviewService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private prisma: PrismaClient) { }
 
   async create(userId: number, productId: number, orderId: number, rating: number, comment?: string) {
     const order = await this.prisma.order.findUnique({ where: { id: orderId } });
@@ -25,6 +25,16 @@ export class ReviewService {
     const review = await this.prisma.review.create({
       data: { userId, productId, orderId, rating, comment: comment || '' },
       include: { user: { select: { email: true } } },
+    });
+
+    // Обновляем средний рейтинг товара
+    const aggregation = await this.prisma.review.aggregate({
+      where: { productId },
+      _avg: { rating: true },
+    });
+    await this.prisma.product.update({
+      where: { id: productId },
+      data: { rating: aggregation._avg.rating ?? 0 },
     });
 
     return review;

@@ -38,6 +38,9 @@ const ProductCard = ({ product }: ProductCardProps) => {
         title: product.title,
         price: product.price,
         imageUrl: product.imageUrl,
+        productType: product.productType,
+        category: product.category,
+        sales: product.sales,
       });
     }
   };
@@ -69,19 +72,13 @@ const ProductCard = ({ product }: ProductCardProps) => {
           e.currentTarget.style.boxShadow = '';
         }}
       >
-        {/* Изображение с адаптивной высотой */}
         <div style={{ position: 'relative', width: '100%', aspectRatio: '4 / 3', background: '#1a1a1a' }}>
           <img
             src={product.imageUrl || '/placeholder.png'}
             alt={product.title}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-            }}
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
             onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
           />
-          {/* Тег типа и сердечко остаются на месте */}
           <div style={{
             position: 'absolute',
             top: 12,
@@ -108,18 +105,11 @@ const ProductCard = ({ product }: ProductCardProps) => {
                 }} />
               }
               onClick={handleWishlist}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                padding: 0,
-                lineHeight: 1,
-                marginLeft: 'auto',
-              }}
+              style={{ background: 'transparent', border: 'none', padding: 0, lineHeight: 1, marginLeft: 'auto' }}
             />
           </div>
         </div>
 
-        {/* Информация о товаре (без изменений) */}
         <div style={{ padding: '12px 16px 16px 16px', flex: 1 }}>
           <div style={{ marginBottom: 8 }}>
             <Text strong style={{ fontSize: 24, color: '#fff', lineHeight: 1.2 }}>

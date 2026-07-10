@@ -15,9 +15,10 @@ interface Review {
 
 interface ReviewListProps {
   productId: number;
+  fontSize?: number;
 }
 
-const ReviewList = ({ productId }: ReviewListProps) => {
+const ReviewList = ({ productId, fontSize = 18 }: ReviewListProps) => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -44,7 +45,6 @@ const ReviewList = ({ productId }: ReviewListProps) => {
 
   return (
     <div style={{ marginTop: 24 }}>
-      <h3>Отзывы</h3>
       <List
         loading={loading}
         dataSource={reviews}
@@ -57,10 +57,10 @@ const ReviewList = ({ productId }: ReviewListProps) => {
         }}
         renderItem={(item) => (
           <List.Item>
-            <div>
-              <Rate value={item.rating} disabled style={{ fontSize: 16 }} />
-              <Text type="secondary"> от {item.user.email}</Text>
-              {item.comment && <p>{item.comment}</p>}
+            <div style={{ fontSize }}>
+              <Rate value={item.rating} disabled style={{ fontSize }} />
+              <Text type="secondary" style={{ fontSize }}> от {item.user.email}</Text>
+              {item.comment && <p style={{ fontSize, marginTop: 4 }}>{item.comment}</p>}
             </div>
           </List.Item>
         )}

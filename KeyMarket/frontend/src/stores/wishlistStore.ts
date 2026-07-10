@@ -1,4 +1,3 @@
-// Хранилище избранного (localStorage + Zustand)
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -7,6 +6,9 @@ interface WishlistItem {
   title: string;
   price: string;
   imageUrl: string | null;
+  productType?: string;
+  category?: { name: string };
+  sales?: number;
 }
 
 interface WishlistState {

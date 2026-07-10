@@ -1,20 +1,17 @@
-// Страница карточки товара (публичная)
-// Отображает детальную информацию о товаре и кнопку "Купить".
-// После создания заказа показывает блок с кнопками "Оплатить" и "Отменить".
-// Опрос статуса заказа запускается сразу, после оплаты появляется ключ.
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Descriptions, Button, Spin, Result, Typography, message, Space, Row, Col } from 'antd';
-import { ShoppingCartOutlined, GiftOutlined, HeartFilled } from '@ant-design/icons'; // HeartOutlined убран
+import {
+  Card, Descriptions, Button, Spin, Result, Typography, message, Space, Row, Col, Tag, Tabs, Rate,
+} from 'antd';
+import { ShoppingCartOutlined, GiftOutlined, HeartFilled } from '@ant-design/icons';
 import apiClient from '../api/client';
 import { useAuthStore } from '../stores/authStore';
 import { useWishlistStore } from '../stores/wishlistStore';
 import { AxiosError } from 'axios';
 import ReviewList from '../components/ReviewList';
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 
-// Добавлено поле productType
 interface ProductDetails {
   id: number;
   title: string;
@@ -23,6 +20,7 @@ interface ProductDetails {
   rating: string;
   stock: number;
   productType: string;
+  salesCount: number;
   category: { id: number; name: string };
   status: string;
   imageUrl: string | null;
@@ -50,26 +48,34 @@ const ProductPage = () => {
   const [product, setProduct] = useState<ProductDetails | null>(null);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState(false);
+  const [reviewCount, setReviewCount] = useState(0);
+  const [averageRating, setAverageRating] = useState(0);
+  const [showFullDescription, setShowFullDescription] = useState(false);
 
-  // избранное
   const { addItem, removeItem, isInWishlist } = useWishlistStore();
 
-  // Состояния для заказа
   const [orderLoading, setOrderLoading] = useState(false);
   const [orderId, setOrderId] = useState<number | null>(null);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [paidOrder, setPaidOrder] = useState<PaidOrder | null>(null);
 
-  // useRef для интервала опроса
   const pollInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Загрузка товара
   useEffect(() => {
     const fetchProduct = async () => {
       setFetching(true);
       try {
         const { data } = await apiClient.get(`/products/${id}`);
         setProduct(data);
+
+        try {
+          const { data: ratingData } = await apiClient.get(`/products/${id}/rating`);
+          setReviewCount(ratingData.count || 0);
+          setAverageRating(ratingData.average || 0);
+        } catch {
+          setReviewCount(0);
+          setAverageRating(0);
+        }
       } catch {
         setError(true);
       } finally {
@@ -79,14 +85,12 @@ const ProductPage = () => {
     if (id) fetchProduct();
   }, [id]);
 
-  // Очистка интервала при размонтировании
   useEffect(() => {
     return () => {
       if (pollInterval.current) clearInterval(pollInterval.current);
     };
   }, []);
 
-  // Создание заказа и запуск опроса
   const handleBuy = async () => {
     if (!user) {
       message.info('Войдите, чтобы совершать покупки');
@@ -97,24 +101,16 @@ const ProductPage = () => {
 
     setOrderLoading(true);
     try {
-      // 1. Создаём заказ
-      const { data: orderData } = await apiClient.post('/orders', {
-        productId: product.id,
-      });
+      const { data: orderData } = await apiClient.post('/orders', { productId: product.id });
       const newOrderId = orderData.id;
       setOrderId(newOrderId);
 
-      // 2. Создаём платёж
-      const { data: paymentData } = await apiClient.post(
-        `/payments/orders/${newOrderId}/create-payment`
-      );
+      const { data: paymentData } = await apiClient.post(`/payments/orders/${newOrderId}/create-payment`);
       setPaymentUrl(paymentData.paymentUrl);
 
-      // 3. Открываем страницу оплаты
       window.open(paymentData.paymentUrl, '_blank');
       message.success('Перейдите на открывшуюся страницу для оплаты');
 
-      // 4. Запускаем опрос статуса заказа каждые 2 секунды
       pollInterval.current = setInterval(async () => {
         try {
           const { data: updatedOrder } = await apiClient.get(`/orders/${newOrderId}`);
@@ -125,14 +121,13 @@ const ProductPage = () => {
             }
             setPaidOrder(updatedOrder);
             message.success('Заказ оплачен! Ключ готов.');
-            // Копируем первый ключ в буфер обмена
             const keyValue = updatedOrder.items[0]?.productKey?.keyValue;
             if (keyValue) {
               await navigator.clipboard.writeText(keyValue);
             }
           }
         } catch {
-          // Игнорируем ошибки опроса, чтобы не мешать пользователю
+          // ignore polling errors
         }
       }, 2000);
     } catch (err) {
@@ -143,7 +138,6 @@ const ProductPage = () => {
     }
   };
 
-  // Повторно открыть страницу оплаты
   const handleOpenPayment = () => {
     if (paymentUrl) {
       window.open(paymentUrl, '_blank');
@@ -151,12 +145,10 @@ const ProductPage = () => {
     }
   };
 
-  // Отменить заказ
   const handleCancelOrder = async () => {
     if (!orderId) return;
     try {
       await apiClient.post(`/orders/${orderId}/cancel`);
-      // Останавливаем опрос
       if (pollInterval.current) {
         clearInterval(pollInterval.current);
         pollInterval.current = null;
@@ -170,7 +162,6 @@ const ProductPage = () => {
     }
   };
 
-  // Рендер
   if (fetching || loading) {
     return <Spin style={{ display: 'block', marginTop: 40 }} />;
   }
@@ -178,125 +169,119 @@ const ProductPage = () => {
     return <Result status="404" title="Товар не найден" />;
   }
 
+  const inWishlist = isInWishlist(product.id);
+  const descriptionLength = product.description?.length || 0;
+  const isLongDescription = descriptionLength > 200;
+
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto' }}>
-      {/* Блок изображения */}
-      {product.imageUrl ? (
-        <div style={{
-          position: 'relative',
-          marginBottom: 24,
-          textAlign: 'center',
-          background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
-          borderRadius: 12,
-        }}>
-          <img
-            src={product.imageUrl}
-            alt={product.title}
-            style={{ maxWidth: '100%', maxHeight: 300, objectFit: 'contain', borderRadius: 12 }}
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-          />
-          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 12, zIndex: 0 }}>
-            <ShoppingCartOutlined style={{ fontSize: 72, color: '#722ed1' }} />
+    <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+      <Row gutter={[32, 24]} style={{ alignItems: 'stretch' }}>
+        {/* Левая колонка: фото */}
+        <Col xs={24} md={10}>
+          <div style={{
+            width: '100%',
+            aspectRatio: '4 / 3',
+            background: '#1a1a1a',
+            borderRadius: 12,
+            overflow: 'hidden',
+            border: '1px solid #333',
+          }}>
+            <img
+              src={product.imageUrl || '/placeholder.png'}
+              alt={product.title}
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
+            />
           </div>
-        </div>
-      ) : (
-        <div style={{ height: 200, background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 12, marginBottom: 24 }}>
-          <ShoppingCartOutlined style={{ fontSize: 72, color: '#722ed1' }} />
-        </div>
-      )}
+        </Col>
 
-      <Title level={2}>{product.title}</Title>
-      <Card>
-        <Descriptions bordered column={1}>
-          <Descriptions.Item label="Категория">{product.category.name}</Descriptions.Item>
-          <Descriptions.Item label="Тип">
-            {product.productType === 'DLC' ? 'DLC' : 'Игра'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Цена">
-            <Text strong style={{ fontSize: 24, color: '#fff' }}>{product.price} ₽</Text>
-          </Descriptions.Item>
-          <Descriptions.Item label="В наличии">{product.stock} шт.</Descriptions.Item>
-          <Descriptions.Item label="Рейтинг">{product.rating ?? 0}</Descriptions.Item>
-          <Descriptions.Item label="Описание">{product.description || '—'}</Descriptions.Item>
-        </Descriptions>
+        {/* Правая колонка: информация + кнопки */}
+        <Col xs={24} md={14}>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            justifyContent: 'space-between',
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {product.productType && (
+                <Tag color="purple" style={{ width: 'fit-content', fontSize: 14 }}>
+                  {product.productType === 'DLC' ? 'DLC' : 'Игра'}
+                </Tag>
+              )}
+              <Title level={2} style={{ margin: 0, fontWeight: 700, fontSize: 28, lineHeight: 1.3 }}
+                ellipsis={{ rows: 2 }}>
+                {product.title}
+              </Title>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <Text type="secondary" style={{ fontSize: 16 }}>
+                  {product.salesCount} {product.salesCount === 1 ? 'продажа' : 'продаж'} · {reviewCount} {reviewCount === 1 ? 'отзыв' : 'отзывов'}
+                </Text>
+                <Rate disabled value={averageRating} allowHalf style={{ fontSize: 18 }} />
+                <Text type="secondary" style={{ fontSize: 16 }}>
+                  {averageRating.toFixed(1)}
+                </Text>
+              </div>
+              <Text strong style={{ fontSize: 32, color: '#fff', marginTop: 8 }}>
+                {product.price} ₽
+              </Text>
+            </div>
 
-        {/* Кнопка избранного и покупки */}
-        <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 16 }}>
-          {/* Сердечко: всегда HeartFilled, меняется цвет, чёрная обводка */}
-          <Button
-            type="text"
-            icon={
-              isInWishlist(product.id) ? (
-                <HeartFilled style={{
-                  fontSize: 24,
-                  color: '#722ed1',
+            {/* Кнопки с увеличенными отступами */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 24, marginBottom: 12 }}>
+              <Button
+                type="text"
+                icon={<HeartFilled style={{
+                  fontSize: 28,
+                  color: inWishlist ? '#722ed1' : '#ffffff',
                   stroke: 'black',
                   strokeWidth: 48,
-                }} />
-              ) : (
-                <HeartFilled style={{
-                  fontSize: 24,
-                  color: '#ffffff',
-                  stroke: 'black',
-                  strokeWidth: 48,
-                }} />
-              )
-            }
-            onClick={() => {
-              if (!user) {
-                message.info('Войдите, чтобы добавить в избранное');
-                return;
-              }
-              if (isInWishlist(product.id)) {
-                removeItem(product.id);
-              } else {
-                addItem({
-                  id: product.id,
-                  title: product.title,
-                  price: product.price,
-                  imageUrl: product.imageUrl,
-                });
-              }
-            }}
-            style={{ background: 'transparent', border: 'none', padding: 0 }}
-          />
+                }} />}
+                onClick={() => {
+                  if (!user) {
+                    message.info('Войдите, чтобы добавить в избранное');
+                    return;
+                  }
+                  if (inWishlist) {
+                    removeItem(product.id);
+                  } else {
+                    addItem({
+                      id: product.id,
+                      title: product.title,
+                      price: product.price,
+                      imageUrl: product.imageUrl,
+                      productType: product.productType,
+                      category: product.category,
+                      sales: product.salesCount,
+                    });
+                  }
+                }}
+                style={{ background: 'transparent', border: 'none', padding: 0, lineHeight: 1 }}
+              />
 
-          {product.stock > 0 && !orderId && !paidOrder && (
-            <Button
-              type="primary"
-              size="large"
-              icon={<ShoppingCartOutlined />}
-              onClick={handleBuy}
-              loading={orderLoading}
-              style={{ height: 48, paddingLeft: 32, paddingRight: 32 }}
-            >
-              Купить
-            </Button>
-          )}
-          {product.stock === 0 && !paidOrder && (
-            <Button disabled size="large">Нет в наличии</Button>
-          )}
-        </div>
-      </Card>
+              {product.stock > 0 && !orderId && !paidOrder && (
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<ShoppingCartOutlined />}
+                  onClick={handleBuy}
+                  loading={orderLoading}
+                  style={{ height: 48, paddingLeft: 32, paddingRight: 32, fontSize: 16 }}
+                >
+                  Купить
+                </Button>
+              )}
+              {product.stock === 0 && !paidOrder && (
+                <Button disabled size="large">Нет в наличии</Button>
+              )}
+            </div>
+          </div>
+        </Col>
+      </Row>
 
-      {/* Блок ожидания оплаты */}
-      {orderId && !paidOrder && (
-        <Card style={{ marginTop: 20 }}>
-          <Title level={4}>Заказ ожидает оплаты</Title>
-          <Space size="middle">
-            <Button type="primary" size="large" onClick={handleOpenPayment}>
-              Оплатить
-            </Button>
-            <Button size="large" danger onClick={handleCancelOrder}>
-              Отменить заказ
-            </Button>
-          </Space>
-        </Card>
-      )}
-
-      {/* Блок оплаченного заказа */}
+      {/* Блоки оплаты / ожидания */}
       {paidOrder && (
-        <Card style={{ marginTop: 20, textAlign: 'center' }}>
+        <Card style={{ marginTop: 24, textAlign: 'center' }}>
           <GiftOutlined style={{ fontSize: 48, color: '#722ed1', marginBottom: 16 }} />
           <Title level={3}>Спасибо за покупку!</Title>
           <Descriptions bordered column={1} style={{ marginTop: 16 }}>
@@ -311,20 +296,60 @@ const ProductPage = () => {
           </Descriptions>
           <Row gutter={[12, 12]} style={{ marginTop: 16 }} justify="center">
             <Col>
-              <Button type="primary" onClick={() => navigate('/cabinet')}>
-                В личный кабинет
-              </Button>
+              <Button type="primary" onClick={() => navigate('/cabinet')}>В личный кабинет</Button>
             </Col>
             <Col>
-              <Button onClick={() => navigate('/catalog')}>
-                Продолжить покупки
-              </Button>
+              <Button onClick={() => navigate('/catalog')}>Продолжить покупки</Button>
             </Col>
           </Row>
         </Card>
       )}
 
-      <ReviewList productId={product.id} />
+      {orderId && !paidOrder && (
+        <Card style={{ marginTop: 24 }}>
+          <Title level={4}>Заказ ожидает оплаты</Title>
+          <Space size="middle">
+            <Button type="primary" size="large" onClick={handleOpenPayment}>Оплатить</Button>
+            <Button size="large" danger onClick={handleCancelOrder}>Отменить заказ</Button>
+          </Space>
+        </Card>
+      )}
+
+      {/* Вкладки с описанием и отзывами */}
+      <div style={{ marginTop: 32 }}>
+        <Tabs
+          defaultActiveKey="description"
+          items={[
+            {
+              key: 'description',
+              label: <span style={{ fontSize: 24 }}>Описание</span>,
+              children: (
+                <div style={{ fontSize: 20, color: '#b0b0b0', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                  {isLongDescription && !showFullDescription ? (
+                    <>
+                      <Paragraph style={{ fontSize: 20, color: '#b0b0b0', marginBottom: 8 }}>
+                        {product.description?.slice(0, 200)}...
+                      </Paragraph>
+                      <Button type="link" onClick={() => setShowFullDescription(true)} style={{ padding: 0, fontSize: 18, color: '#722ed1' }}>
+                        Показать полностью
+                      </Button>
+                    </>
+                  ) : (
+                    <Paragraph style={{ fontSize: 20, color: '#b0b0b0', marginBottom: 0 }}>
+                      {product.description || 'Описание отсутствует.'}
+                    </Paragraph>
+                  )}
+                </div>
+              ),
+            },
+            {
+              key: 'reviews',
+              label: <span style={{ fontSize: 24 }}>Отзывы</span>,
+              children: <ReviewList productId={product.id} />,
+            },
+          ]}
+        />
+      </div>
     </div>
   );
 };

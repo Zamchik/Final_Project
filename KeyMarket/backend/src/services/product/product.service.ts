@@ -61,7 +61,7 @@ export class ProductService {
     if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
     if (data.status !== undefined) updateData.status = data.status;
     if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
-    if (data.productType !== undefined) updateData.productType = data.productType; // обновление типа
+    if (data.productType !== undefined) updateData.productType = data.productType;
 
     if (Object.keys(updateData).length > 0) {
       ops.push(queries.updateProductFields(productId, updateData as any));
@@ -103,10 +103,16 @@ export class ProductService {
       return null;
     }
 
+    // Считаем количество проданных ключей
+    const salesCount = await prisma.productKey.count({
+      where: { productId: id, soldAt: { not: null } },
+    });
+
     const { keys, ...rest } = product;
     return {
       ...rest,
       stock: keys.filter(k => !k.soldAt).length,
+      salesCount,
     };
   }
 
