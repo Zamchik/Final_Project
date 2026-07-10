@@ -82,8 +82,8 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: 'Ошибка обработки изображения' });
     }
 
-    // Возвращаем URL для доступа к файлу
-    const imageUrl = `/uploads/${newFileName}`;
+    const baseUrl = process.env.APP_BASE_URL || `${request.protocol}://${request.hostname}`;
+    const imageUrl = `${baseUrl}/uploads/${newFileName}`;
     return { imageUrl };
   });
 }
