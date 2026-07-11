@@ -195,7 +195,7 @@ const CreateEditProductPage = () => {
             .map(k => k.trim())
             .filter(k => k.length > 0);
         }
-        if (values.status) payload.status = values.status;
+        if (values.status) payload.status = (values.status as string).toUpperCase();
         await apiClient.put(`/products/${id}`, payload);
         message.success('Товар обновлён');
       } else {
