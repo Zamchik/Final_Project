@@ -1,5 +1,6 @@
 // Страница каталога товаров
 import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom'; // <-- добавлено
 import { Select, InputNumber, Row, Col, Pagination, Spin, Empty, message, Segmented } from 'antd';
 import ProductCard from '../components/ProductCard';
 import apiClient from '../api/client';
@@ -17,22 +18,34 @@ interface Product {
 }
 
 const CatalogPage = () => {
+  const [searchParams] = useSearchParams();
+  const initialSearch = searchParams.get('search') || '';
+
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
 
+  const [search, setSearch] = useState(initialSearch);
   const [categoryId, setCategoryId] = useState<number | undefined>(undefined);
   const [minPrice, setMinPrice] = useState<number | undefined>(undefined);
   const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
   const [productType, setProductType] = useState<string | undefined>(undefined);
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
 
+useEffect(() => {
+  const newSearch = searchParams.get('search') || '';
+  if (newSearch !== search) {
+    setSearch(newSearch);
+    setPage(1);
+  }
+}, [searchParams]);
+
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await apiClient.get('/products', {
-        params: { page, limit: 12, categoryId, minPrice, maxPrice, productType },
+        params: { page, limit: 12, search, categoryId, minPrice, maxPrice, productType },
       });
       setProducts(data.products);
       setTotal(data.total);
@@ -41,7 +54,7 @@ const CatalogPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, categoryId, minPrice, maxPrice, productType]);
+  }, [page, search, categoryId, minPrice, maxPrice, productType]);
 
   useEffect(() => {
     fetchProducts();
