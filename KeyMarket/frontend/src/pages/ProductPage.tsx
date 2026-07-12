@@ -4,9 +4,9 @@ import {
   Card, Descriptions, Button, Spin, Result, Typography, message, Space, Row, Col, Tag, Tabs, Rate,
 } from 'antd';
 import { ShoppingCartOutlined, GiftOutlined, HeartFilled } from '@ant-design/icons';
-import apiClient from '../api/client';
+import apiClient from '../shared/api/client';
 import { useAuthStore } from '../stores/authStore';
-import { useWishlistStore } from '../stores/wishlistStore';
+import { useWishlistStore } from '../entities/product/model/wishlistStore';
 import { AxiosError } from 'axios';
 import ReviewList from '../components/ReviewList';
 

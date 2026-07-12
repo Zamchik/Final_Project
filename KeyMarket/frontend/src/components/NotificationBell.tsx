@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Badge, Popover, Typography, Button } from 'antd';
 import { BellOutlined } from '@ant-design/icons';
-import apiClient from '../api/client';
+import apiClient from '../shared/api/client';
 import { useAuthStore } from '../stores/authStore';
 
 const { Text } = Typography;

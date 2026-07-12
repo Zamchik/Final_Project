@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Table, Tag, Typography, message, Button, Popconfirm, Space } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import apiClient from '../api/client';
+import apiClient from '../shared/api/client';
 import { AxiosError } from 'axios';
 import ReviewForm from '../components/ReviewForm';
 

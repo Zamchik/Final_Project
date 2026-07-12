@@ -8,7 +8,7 @@ import {
   GithubOutlined, TwitterOutlined, InstagramOutlined, YoutubeOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../stores/authStore';
-import { useWishlistStore } from '../stores/wishlistStore';
+import { useWishlistStore } from '../entities/product/model/wishlistStore';
 import NotificationBell from './NotificationBell';
 import MobileBottomNav from './MobileBottomNav';
 import '../styles/global.scss';

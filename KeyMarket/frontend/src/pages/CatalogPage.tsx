@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom'; // <-- добавлено
 import { Select, InputNumber, Row, Col, Pagination, Spin, Empty, message, Segmented } from 'antd';
 import ProductCard from '../components/ProductCard';
-import apiClient from '../api/client';
+import apiClient from '../shared/api/client';
 
 interface Product {
   id: number;

@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Typography, Button, Row, Col, Spin, message } from 'antd';
 import { ArrowRightOutlined } from '@ant-design/icons';
 import ProductCard from '../components/ProductCard';
-import apiClient from '../api/client';
+import apiClient from '../shared/api/client';
 
 const { Title, Paragraph } = Typography;
 

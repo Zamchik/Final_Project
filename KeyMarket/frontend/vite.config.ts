@@ -1,9 +1,15 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src'),
+    },
+  },
   server: {
     proxy: {
       '/auth': 'http://localhost:3000',
@@ -20,6 +26,7 @@ export default defineConfig({
       '/reviews': 'http://localhost:3000',
       '/health': 'http://localhost:3000',
     },
+    allowedHosts: ['.loca.lt', 'localhost'],
   },
   test: {
     globals: true,

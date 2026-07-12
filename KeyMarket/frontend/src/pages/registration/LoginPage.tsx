@@ -2,7 +2,7 @@ import { Form, Input, Button, Card, message, Modal, Typography } from 'antd';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../../stores/authStore';
-import apiClient from '../../api/client';
+import apiClient from '../../shared/api/client';
 import { AxiosError } from 'axios';
 import { MailOutlined } from '@ant-design/icons';
 

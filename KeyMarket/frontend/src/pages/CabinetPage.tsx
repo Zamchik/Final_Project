@@ -9,7 +9,7 @@ import {
 import {
   UserOutlined, DollarOutlined, LockOutlined, LogoutOutlined,
 } from '@ant-design/icons';
-import apiClient from '../api/client';
+import apiClient from '../shared/api/client';
 import { AxiosError } from 'axios';
 import OrdersList from '../components/OrdersList';
 

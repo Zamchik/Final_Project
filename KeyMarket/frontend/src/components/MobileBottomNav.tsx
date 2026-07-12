@@ -10,7 +10,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../stores/authStore';
-import { useWishlistStore } from '../stores/wishlistStore';
+import { useWishlistStore } from '../entities/product/model/wishlistStore';
 
 const MobileBottomNav = () => {
   const user = useAuthStore((s) => s.user);

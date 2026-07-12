@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Table, Input, Select, Space, message, Tag } from 'antd';
-import apiClient from '../../api/client';
+import apiClient from '../../shared/api/client';
 
 interface OrderItem {
   id: number;

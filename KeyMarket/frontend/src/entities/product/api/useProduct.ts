@@ -1,35 +1,22 @@
+// Хук для загрузки данных одного товара (используется при редактировании).
 import { useState, useEffect } from 'react';
 import { message } from 'antd';
-import apiClient from '../api/client';
+import apiClient from '@/shared/api/client';
+import type { Product } from '../types';
 
-interface ProductKey {
-  id: number;
-  keyValue: string;
-  isSold: boolean;
-}
-
-interface ProductData {
-  id: number;
-  title: string;
+interface ProductData extends Product {
   description: string;
-  price: string;
   categoryId: number;
   status: string;
-  imageUrl: string | null;
-  productType: string;
-  keys: ProductKey[];
+  keys: { id: number; keyValue: string; soldAt: string | null }[];
 }
 
-export const useProduct = (
-  id: string | undefined,
-  isEdit: boolean,
-  enabled: boolean
-) => {
+export const useProduct = (id: string | undefined, isEdit: boolean) => {
   const [productData, setProductData] = useState<ProductData | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!isEdit || !id || !enabled) return;
+    if (!isEdit || !id) return;
 
     const fetchProduct = async () => {
       setLoading(true);
@@ -44,7 +31,7 @@ export const useProduct = (
     };
 
     fetchProduct();
-  }, [id, isEdit, enabled]);
+  }, [id, isEdit]);
 
   return { productData, loading };
 };

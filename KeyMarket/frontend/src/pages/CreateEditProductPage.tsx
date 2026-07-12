@@ -16,13 +16,13 @@ import {
 import { PlusOutlined } from '@ant-design/icons';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import apiClient from '../api/client';
+import apiClient from '../shared/api/client';
 import { useAuthStore } from '../stores/authStore';
 import { AxiosError } from 'axios';
 
 import { FormValues } from '../types/product';
-import { validateKeys } from '../utils/validateKeys';
-import { useCategories } from '../hooks/useCategories';
+import { validateKeys } from '../shared/lib/validateKeys';
+import { useCategories } from '../entities/product/api/useCategories';
 import { useProduct } from '../hooks/useProduct';
 import { KeyPreviewList } from '../components/KeyPreviewList';
 

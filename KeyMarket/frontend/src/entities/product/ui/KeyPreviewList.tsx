@@ -1,7 +1,7 @@
-// Компонент визуального отображения списка ключей с индикаторами валидности
-
+// Визуальный предпросмотр загружаемых ключей с индикаторами валидности.
+// Зелёный – ключ соответствует Steam-формату, красный – невалиден.
 import { Typography } from 'antd';
-import { KEY_PATTERN } from '../constants/validation';
+import { KEY_PATTERN } from '@/shared/constants/validation';
 
 const { Text } = Typography;
 
@@ -9,11 +9,6 @@ interface KeyPreviewListProps {
   keys: string[];
 }
 
-/**
- * Отображает список ключей с цветными точками:
- * - зелёная — ключ соответствует формату XXXXX-XXXXX-XXXXX
- * - красная — ключ невалиден
- */
 export const KeyPreviewList = ({ keys }: KeyPreviewListProps) => {
   if (keys.length === 0) return null;
 
@@ -31,7 +26,6 @@ export const KeyPreviewList = ({ keys }: KeyPreviewListProps) => {
               padding: '4px 0',
             }}
           >
-            {/* Индикатор валидности */}
             <span
               style={{
                 width: 8,

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Table, Button, Select, Input, Space, message, Popconfirm } from 'antd';
-import apiClient from '../../api/client';
+import apiClient from '../../shared/api/client';
 import { AxiosError } from 'axios';
 import { useAuthStore } from '../../stores/authStore';
 

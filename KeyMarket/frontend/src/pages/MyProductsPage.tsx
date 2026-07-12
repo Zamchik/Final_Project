@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Table, Button, Input, message, Popconfirm } from 'antd';
 import { Link, useNavigate } from 'react-router-dom';
-import apiClient from '../api/client';
+import apiClient from '../shared/api/client';
 import { useAuthStore } from '../stores/authStore';
 
 interface ProductItem {

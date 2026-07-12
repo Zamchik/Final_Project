@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Form, Input, Button, Card, message, Modal, Typography } from 'antd';
 import { Link } from 'react-router-dom';
 import { MailOutlined } from '@ant-design/icons';
-import apiClient from '../api/client';
+import apiClient from '../shared/api/client';
 
 const { Text } = Typography;
 

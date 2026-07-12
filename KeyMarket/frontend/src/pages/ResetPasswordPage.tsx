@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Form, Input, Button, Card, message } from 'antd';
-import apiClient from '../api/client';
+import apiClient from '../shared/api/client';
 import { AxiosError } from 'axios';
 
 const ResetPasswordPage = () => {

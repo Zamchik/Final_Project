@@ -1,7 +1,7 @@
 import { Typography, Row, Col, Empty, Button } from 'antd';
 import { HeartOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
-import { useWishlistStore } from '../stores/wishlistStore';
+import { useWishlistStore } from '../entities/product/model/wishlistStore';
 import ProductCard from '../components/ProductCard';
 
 const { Title } = Typography;

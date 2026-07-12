@@ -2,7 +2,7 @@
 // Принимает productId и orderId, а также callback после успешной отправки
 import { useState } from 'react';
 import { Modal, Rate, Input, message } from 'antd';
-import apiClient from '../api/client';
+import apiClient from '../shared/api/client';
 import { AxiosError } from 'axios';
 
 const { TextArea } = Input;

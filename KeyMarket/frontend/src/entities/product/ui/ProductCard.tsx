@@ -1,25 +1,20 @@
+// Переиспользуемая карточка товара для каталога, главной, избранного.
+// Содержит изображение, тег типа, кнопку избранного, цену, название, категорию, продажи и кнопку "Купить".
 import { Button, Typography, Tag, message } from 'antd';
 import { HeartFilled } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
-import { useAuthStore } from '../stores/authStore';
-import { useWishlistStore } from '../stores/wishlistStore';
+import { useAuthStore } from '@/entities/user/model/authStore';
+import { useWishlistStore } from '../model/wishlistStore';
+import type { Product } from '../types';
 
 const { Paragraph, Text } = Typography;
 
 interface ProductCardProps {
-  product: {
-    id: number;
-    title: string;
-    price: string;
-    imageUrl: string | null;
-    productType?: string;
-    category?: { name: string };
-    sales?: number;
-  };
+  product: Product;
 }
 
 const ProductCard = ({ product }: ProductCardProps) => {
-  const user = useAuthStore((s) => s.user);
+  const user = useAuthStore((s: { user: { id: number } | null }) => s.user);
   const { addItem, removeItem, isInWishlist } = useWishlistStore();
   const inWishlist = isInWishlist(product.id);
 
@@ -77,11 +72,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
           <img
             src={product.imageUrl || '/placeholder.png'}
             alt={product.title}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-            }}
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
             onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
           />
           <div style={{
@@ -121,7 +112,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
           </div>
         </div>
 
-        {/* Информация о товаре */}
+        {/* Информация */}
         <div style={{ padding: '12px 16px 16px 16px', flex: 1 }}>
           <div style={{ marginBottom: 8 }}>
             <Text strong style={{ fontSize: 20, color: '#fff', lineHeight: 1.2 }}>
@@ -153,6 +144,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
           )}
         </div>
 
+        {/* Кнопка "Купить" */}
         <div style={{ width: '100%' }}>
           <Button
             type="primary"

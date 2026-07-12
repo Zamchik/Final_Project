@@ -1,9 +1,9 @@
 // Хранилище Zustand для аутентификации
 import { create } from 'zustand';
-import apiClient from '../api/client';
+import apiClient from '@/shared/api/client';
 import { message } from 'antd';
 import { AxiosError } from 'axios';
-import { useWishlistStore } from './wishlistStore';
+import { useWishlistStore } from '@/entities/product/model/wishlistStore';
 
 interface User {
   id: number;
