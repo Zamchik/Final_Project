@@ -1,13 +1,16 @@
-import { Form, Input, Button, Card, message, Modal, Typography } from 'antd';
-import { Link, useNavigate } from 'react-router-dom';
+// Форма регистрации нового пользователя.
+// После успешной регистрации показывает модальное окно с ссылкой подтверждения
+// и кнопкой для открытия Ethereal (если письмо отправлено).
 import { useState } from 'react';
-import { useAuthStore } from '../../stores/authStore';
-import { AxiosError } from 'axios';
+import { Form, Input, Button, Card, message, Modal, Typography } from 'antd';
 import { MailOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/entities/user/model/authStore';
+import { AxiosError } from 'axios';
 
 const { Text } = Typography;
 
-const RegisterPage = () => {
+const RegisterForm = () => {
   const register = useAuthStore((s) => s.register);
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,35 +35,32 @@ const RegisterPage = () => {
   };
 
   const handleOpenLink = () => {
-    // Закрываем модальное окно и переходим на URL подтверждения в этой же вкладке
     setIsModalOpen(false);
     window.location.href = verificationUrl;
   };
 
   return (
-    <div style={{ maxWidth: 400, margin: '40px auto' }}>
-      <Card title="Регистрация">
-        <Form onFinish={onFinish} layout="vertical">
-          <Form.Item
-            name="email"
-            rules={[{ required: true, type: 'email', message: 'Введите email' }]}
-          >
-            <Input placeholder="Email" />
-          </Form.Item>
-          <Form.Item
-            name="password"
-            rules={[{ required: true, min: 6, message: 'Минимум 6 символов' }]}
-          >
-            <Input.Password placeholder="Пароль" autoComplete="new-password" />
-          </Form.Item>
-          <Button type="primary" htmlType="submit" block>
-            Зарегистрироваться
-          </Button>
-        </Form>
-        <div style={{ marginTop: 16, textAlign: 'center' }}>
-          Уже есть аккаунт? <Link to="/login">Войти</Link>
-        </div>
-      </Card>
+    <Card title="Регистрация">
+      <Form onFinish={onFinish} layout="vertical">
+        <Form.Item
+          name="email"
+          rules={[{ required: true, type: 'email', message: 'Введите email' }]}
+        >
+          <Input placeholder="Email" />
+        </Form.Item>
+        <Form.Item
+          name="password"
+          rules={[{ required: true, min: 6, message: 'Минимум 6 символов' }]}
+        >
+          <Input.Password placeholder="Пароль" autoComplete="new-password" />
+        </Form.Item>
+        <Button type="primary" htmlType="submit" block>
+          Зарегистрироваться
+        </Button>
+      </Form>
+      <div style={{ marginTop: 16, textAlign: 'center' }}>
+        Уже есть аккаунт? <a href="/login">Войти</a>
+      </div>
 
       <Modal
         title="Подтверждение email"
@@ -84,8 +84,8 @@ const RegisterPage = () => {
         <br /><br />
         <p>Или нажмите «Открыть ссылку», чтобы подтвердить сейчас.</p>
       </Modal>
-    </div>
+    </Card>
   );
 };
 
-export default RegisterPage;
+export default RegisterForm;

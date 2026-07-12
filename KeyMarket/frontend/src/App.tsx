@@ -4,15 +4,16 @@ import HomePage from './pages/HomePage';
 import CatalogPage from './pages/CatalogPage';
 import ProductPage from './pages/ProductPage';
 import CabinetPage from './pages/CabinetPage';
-import LoginPage from './pages/registration/LoginPage';
-import RegisterPage from './pages/registration/RegisterPage';
+import LoginPage from './features/auth/login/LoginPage';
+import RegisterPage from './features/auth/register/RegisterPage';
 import MyProductsPage from './pages/MyProductsPage';
 import CreateEditProductPage from './pages/CreateEditProductPage';
 import AdminPage from './pages/AdminPage';
 import SellPage from './pages/SellPage';
 import WishlistPage from './pages/WishlistPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ForgotPasswordPage from './features/auth/forgot-password/ForgotPasswordPage';
+import ResetPasswordPage from './features/auth/reset-password/ResetPasswordPage';
+
 
 function App() {
   return (

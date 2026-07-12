@@ -1,10 +1,12 @@
+// Форма сброса пароля по токену из URL (?token=...).
+// Принимает новый пароль и подтверждение, отправляет запрос на бэкенд.
 import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Form, Input, Button, Card, message } from 'antd';
-import apiClient from '../shared/api/client';
+import apiClient from '@/shared/api/client';
 import { AxiosError } from 'axios';
 
-const ResetPasswordPage = () => {
+const ResetPasswordForm = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -51,4 +53,4 @@ const ResetPasswordPage = () => {
   );
 };
 
-export default ResetPasswordPage;
+export default ResetPasswordForm;

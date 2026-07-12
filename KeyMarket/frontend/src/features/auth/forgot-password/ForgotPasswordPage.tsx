@@ -1,12 +1,14 @@
+// Форма восстановления пароля.
+// Принимает email, отправляет запрос на бэкенд и показывает модальное окно
+// с ссылкой для сброса (работает даже без отправки письма).
 import { useState } from 'react';
-import { Form, Input, Button, Card, message, Modal, Typography } from 'antd';
-import { Link } from 'react-router-dom';
+import { Form, Input, Button, message, Modal, Typography } from 'antd';
 import { MailOutlined } from '@ant-design/icons';
-import apiClient from '../shared/api/client';
+import apiClient from '@/shared/api/client';
 
 const { Text } = Typography;
 
-const ForgotPasswordPage = () => {
+const ForgotPasswordForm = () => {
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [resetUrl, setResetUrl] = useState('');
@@ -32,19 +34,17 @@ const ForgotPasswordPage = () => {
 
   return (
     <div style={{ maxWidth: 400, margin: '40px auto' }}>
-      <Card title="Восстановление пароля">
-        <Form onFinish={onFinish} layout="vertical">
-          <Form.Item name="email" rules={[{ required: true, type: 'email', message: 'Введите email' }]}>
-            <Input placeholder="Email" />
-          </Form.Item>
-          <Button type="primary" htmlType="submit" loading={loading} block>
-            Отправить ссылку
-          </Button>
-        </Form>
-        <div style={{ marginTop: 16, textAlign: 'center' }}>
-          <Link to="/login">Вспомнили пароль? Войти</Link>
-        </div>
-      </Card>
+      <Form onFinish={onFinish} layout="vertical">
+        <Form.Item name="email" rules={[{ required: true, type: 'email', message: 'Введите email' }]}>
+          <Input placeholder="Email" />
+        </Form.Item>
+        <Button type="primary" htmlType="submit" loading={loading} block>
+          Отправить ссылку
+        </Button>
+      </Form>
+      <div style={{ marginTop: 16, textAlign: 'center' }}>
+        <a href="/login">Вспомнили пароль? Войти</a>
+      </div>
 
       <Modal
         title="Сброс пароля"
@@ -75,4 +75,4 @@ const ForgotPasswordPage = () => {
   );
 };
 
-export default ForgotPasswordPage;
+export default ForgotPasswordForm;
