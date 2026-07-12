@@ -1,7 +1,8 @@
-// Список отзывов о товаре
+// Список отзывов о товаре с пагинацией.
+// Загружает отзывы с бэкенда и отображает их с рейтингом.
 import { useEffect, useState, useCallback } from 'react';
 import { List, Rate, Typography, message } from 'antd';
-import apiClient from '../shared/api/client';
+import apiClient from '@/shared/api/client';
 
 const { Text } = Typography;
 
@@ -18,7 +19,7 @@ interface ReviewListProps {
   fontSize?: number;
 }
 
-const ReviewList = ({ productId, fontSize = 18 }: ReviewListProps) => {
+const ReviewList = ({ productId, fontSize = 22 }: ReviewListProps) => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);

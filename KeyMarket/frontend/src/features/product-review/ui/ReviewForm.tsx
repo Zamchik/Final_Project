@@ -1,8 +1,8 @@
-// Форма оставления отзыва о товаре
-// Принимает productId и orderId, а также callback после успешной отправки
+// Форма оставления отзыва о товаре.
+// Принимает productId, orderId и callback после успешной отправки.
 import { useState } from 'react';
 import { Modal, Rate, Input, message } from 'antd';
-import apiClient from '../shared/api/client';
+import apiClient from '@/shared/api/client';
 import { AxiosError } from 'axios';
 
 const { TextArea } = Input;
@@ -12,7 +12,7 @@ interface ReviewFormProps {
   orderId: number;
   visible: boolean;
   onClose: () => void;
-  onSuccess: () => void; // вызывается после успешной отправки (обновить список)
+  onSuccess: () => void;
 }
 
 const ReviewForm = ({ productId, orderId, visible, onClose, onSuccess }: ReviewFormProps) => {
@@ -36,7 +36,7 @@ const ReviewForm = ({ productId, orderId, visible, onClose, onSuccess }: ReviewF
       message.success('Отзыв отправлен!');
       setRating(0);
       setComment('');
-      onSuccess(); // обновить список заказов или отзывов
+      onSuccess();
       onClose();
     } catch (err) {
       const error = err as AxiosError<{ error: string }>;
