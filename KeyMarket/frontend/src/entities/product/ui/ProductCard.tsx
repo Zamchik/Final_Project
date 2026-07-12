@@ -1,11 +1,9 @@
 // Переиспользуемая карточка товара для каталога, главной, избранного.
 // Содержит изображение, тег типа, кнопку избранного, цену, название, категорию, продажи и кнопку "Купить".
-import { Button, Typography, Tag, message } from 'antd';
-import { HeartFilled } from '@ant-design/icons';
+import { Button, Typography, Tag } from 'antd';
 import { Link } from 'react-router-dom';
-import { useAuthStore } from '@/entities/user/model/authStore';
-import { useWishlistStore } from '../model/wishlistStore';
 import type { Product } from '../types';
+import { WishlistButton } from '@/features/wishlist';
 
 const { Paragraph, Text } = Typography;
 
@@ -14,32 +12,6 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product }: ProductCardProps) => {
-  const user = useAuthStore((s: { user: { id: number } | null }) => s.user);
-  const { addItem, removeItem, isInWishlist } = useWishlistStore();
-  const inWishlist = isInWishlist(product.id);
-
-  const handleWishlist = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (!user) {
-      message.info('Войдите, чтобы добавить в избранное');
-      return;
-    }
-    if (inWishlist) {
-      removeItem(product.id);
-    } else {
-      addItem({
-        id: product.id,
-        title: product.title,
-        price: product.price,
-        imageUrl: product.imageUrl,
-        productType: product.productType,
-        category: product.category,
-        sales: product.sales,
-      });
-    }
-  };
-
   const formatSales = (count: number) => {
     if (count > 1000) return '1000+ продаж';
     return `${count} продаж`;
@@ -90,25 +62,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
                 {product.productType === 'DLC' ? 'DLC' : 'Игра'}
               </Tag>
             )}
-            <Button
-              type="text"
-              icon={
-                <HeartFilled style={{
-                  fontSize: 24,
-                  color: inWishlist ? '#722ed1' : '#ffffff',
-                  stroke: 'black',
-                  strokeWidth: 48,
-                }} />
-              }
-              onClick={handleWishlist}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                padding: 0,
-                lineHeight: 1,
-                marginLeft: 'auto',
-              }}
-            />
+            <WishlistButton product={product} />
           </div>
         </div>
 

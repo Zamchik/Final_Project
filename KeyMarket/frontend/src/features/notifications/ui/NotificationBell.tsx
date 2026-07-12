@@ -1,9 +1,10 @@
-// Компонент "Колокольчик" для отображения уведомлений
+// Компонент "Колокольчик" для отображения уведомлений.
+// Показывает количество непрочитанных уведомлений и список в попапе.
 import { useEffect, useState, useCallback } from 'react';
 import { Badge, Popover, Typography, Button } from 'antd';
 import { BellOutlined } from '@ant-design/icons';
-import apiClient from '../shared/api/client';
-import { useAuthStore } from '../stores/authStore';
+import apiClient from '@/shared/api/client';
+import { useAuthStore } from '@/entities/user/model/authStore';
 
 const { Text } = Typography;
 
@@ -25,12 +26,10 @@ const NotificationBell = () => {
     if (!user) return;
     try {
       const { data } = await apiClient.get('/notifications');
-      // Гарантируем, что работаем с массивом
       const list = Array.isArray(data) ? data : [];
       setNotifications(list);
       setUnreadCount(list.length);
     } catch {
-      // Игнорируем ошибки, чтобы не мешать интерфейсу
       setNotifications([]);
       setUnreadCount(0);
     }
@@ -47,11 +46,10 @@ const NotificationBell = () => {
     const ids = notifications.map((n) => n.id);
     try {
       await apiClient.post('/notifications/read', { ids });
-      // Локально очищаем список
       setNotifications([]);
       setUnreadCount(0);
-    } catch { 
-      // Игнорируем ошибки, чтобы не мешать интерфейсу
+    } catch {
+      // тихо
     }
   };
 
@@ -85,7 +83,7 @@ const NotificationBell = () => {
       onOpenChange={setOpen}
     >
       <Badge count={unreadCount} size="small" offset={[-2, 2]}>
-        <BellOutlined style={{ fontSize: 28, cursor: 'pointer', color: '#fff' }} />
+        <BellOutlined style={{ fontSize: 20, cursor: 'pointer', color: '#fff' }} />
       </Badge>
     </Popover>
   );

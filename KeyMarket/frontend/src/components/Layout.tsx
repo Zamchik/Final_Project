@@ -9,7 +9,7 @@ import {
 } from '@ant-design/icons';
 import { useAuthStore } from '../stores/authStore';
 import { useWishlistStore } from '../entities/product/model/wishlistStore';
-import NotificationBell from './NotificationBell';
+import NotificationBell from '../features/notifications/ui/NotificationBell';
 import MobileBottomNav from './MobileBottomNav';
 import '../styles/global.scss';
 
