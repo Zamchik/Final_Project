@@ -1,19 +1,20 @@
+// App.tsx – корневой компонент с маршрутами.
+// Все страницы теперь импортируются из новых FSD-путей.
 import { Routes, Route } from 'react-router-dom';
-import MainLayout from './components/Layout';
-import HomePage from './pages/HomePage';
-import CatalogPage from './pages/CatalogPage';
-import ProductPage from './pages/ProductPage';
-import CabinetPage from './pages/CabinetPage';
-import LoginPage from './features/auth/login/LoginPage';
-import RegisterPage from './features/auth/register/RegisterPage';
-import MyProductsPage from './pages/MyProductsPage';
-import CreateEditProductPage from './pages/CreateEditProductPage';
-import AdminPage from './pages/AdminPage';
-import SellPage from './pages/SellPage';
-import WishlistPage from './pages/WishlistPage';
-import ForgotPasswordPage from './features/auth/forgot-password/ForgotPasswordPage';
-import ResetPasswordPage from './features/auth/reset-password/ResetPasswordPage';
-
+import HomePage from '@/pages/HomePage/HomePage';
+import CatalogPage from '@/pages/CatalogPage/CatalogPage';
+import ProductPage from '@/pages/ProductPage/ProductPage';
+import CabinetPage from '@/pages/CabinetPage/CabinetPage';
+import LoginPage from '@/pages/LoginPage/LoginPage';
+import RegisterPage from '@/pages/RegisterPage/RegisterPage';
+import MyProductsPage from '@/pages/MyProductsPage/MyProductsPage';
+import CreateEditProductPage from '@/pages/CreateEditProductPage/CreateEditProductPage';
+import AdminPage from '@/pages/AdminPage/AdminPage';
+import SellPage from '@/pages/SellPage/SellPage';
+import WishlistPage from '@/pages/WishlistPage/WishlistPage';
+import ForgotPasswordPage from '@/pages/ForgotPasswordPage/ForgotPasswordPage';
+import ResetPasswordPage from '@/pages/ResetPasswordPage/ResetPasswordPage';     
+import MainLayout from '@/widgets/Layout/ui/Layout';
 
 function App() {
   return (
