@@ -1,12 +1,15 @@
-// Страница создания и редактирования товара (FSD).
-// Использует сущности product (useCategories, useProduct, KeyPreviewList, типы) и user (authStore).
-// Изображение загружается через простой input[type=file] и обрезается на сервере.
-import { useEffect, useState, useRef } from 'react';
+// pages/CreateEditProductPage/CreateEditProductPage.tsx
+// Страница создания и редактирования товара с клиентским кадрированием изображения (react-easy-crop).
+// При выборе файла открывается модальное окно с инструментом обрезки (соотношение 4:3).
+// После кадрирования изображение обрезается на клиенте и загружается на сервер без повторной обработки.
+// Использует FSD-сущности (product, user) и общие утилиты.
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Form, Input, InputNumber, Select, Button, message, Space, Typography, Tag, Card, Modal,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import Cropper, { type Area } from 'react-easy-crop';
 import apiClient from '@/shared/api/client';
 import { useAuthStore } from '@/entities/user/model/authStore';
 import { useCategories } from '@/entities/product/api/useCategories';
@@ -18,6 +21,43 @@ import { AxiosError } from 'axios';
 
 const { TextArea } = Input;
 const { Text } = Typography;
+
+const createImage = (url: string): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener('load', () => resolve(image));
+    image.addEventListener('error', (error) => reject(error));
+    image.src = url;
+  });
+
+const getCroppedImg = async (imageSrc: string, pixelCrop: Area): Promise<Blob> => {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas context not available');
+
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height,
+  );
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error('Canvas is empty'));
+    }, 'image/jpeg');
+  });
+};
 
 const CreateEditProductPage = () => {
   const { id } = useParams();
@@ -38,6 +78,14 @@ const CreateEditProductPage = () => {
   const categories = useCategories();
   const safeCategories = Array.isArray(categories) ? categories : [];
   const { productData, loading: productLoading } = useProduct(id, isEdit);
+
+  // Состояния для кадрирования (react-easy-crop)
+  const [cropModalVisible, setCropModalVisible] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const [cropImageSrc, setCropImageSrc] = useState<string>('');
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -71,34 +119,60 @@ const CreateEditProductPage = () => {
     }
   }, [isEdit, productData, safeCategories, form]);
 
+  // Открыть выбор файла
   const handleUploadClick = () => fileInputRef.current?.click();
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Обработчик выбора файла – открывает модалку для кадрирования
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const MAX_FILE_SIZE = 5 * 1024 * 1024;
-    if (file.size > MAX_FILE_SIZE) {
+    if (file.size > 5 * 1024 * 1024) {
       message.error('Файл слишком большой. Максимальный размер: 5 МБ.');
       return;
     }
-    const formData = new FormData();
-    formData.append('file', file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropImageSrc(reader.result as string);
+      setCropFile(file);
+      setCropModalVisible(true);
+      setCroppedAreaPixels(null);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+    };
+    reader.readAsDataURL(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Обработчик подтверждения кадрирования (react-easy-crop)
+  const handleCropConfirm = async () => {
+    if (!croppedAreaPixels || !cropImageSrc) return;
     try {
+      const croppedBlob = await getCroppedImg(cropImageSrc, croppedAreaPixels);
+      const newFile = new File([croppedBlob], cropFile?.name || 'cropped.jpg', { type: 'image/jpeg' });
+      const formData = new FormData();
+      formData.append('file', newFile);
       const { data } = await apiClient.post('/upload/product-image', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      setImageUrl(data.imageUrl);
-      message.success('Изображение загружено');
+      if (data.imageUrl) {
+        setImageUrl(data.imageUrl + '?t=' + Date.now());
+        message.success('Изображение загружено');
+      } else {
+        message.error('Не удалось получить URL изображения');
+      }
+      setCropModalVisible(false);
     } catch (err) {
       if (err instanceof AxiosError && err.response?.status === 413) {
         message.error('Файл слишком большой. Максимальный размер: 5 МБ.');
       } else {
         message.error('Ошибка загрузки изображения');
       }
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
+
+  const onCropComplete = useCallback((_: Area, croppedAreaPixels: Area) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
 
   const onFinish = async (values: FormValues) => {
     setLoadingForm(true);
@@ -111,13 +185,9 @@ const CreateEditProductPage = () => {
         imageUrl: imageUrl || null,
         productType: values.productType || 'GAME',
       };
-
       if (isEdit && id) {
         if (values.newKeys) {
-          payload.newKeys = values.newKeys
-            .split('\n')
-            .map(k => k.trim())
-            .filter(k => k.length > 0);
+          payload.newKeys = values.newKeys.split('\n').map(k => k.trim()).filter(k => k.length > 0);
         }
         if (values.status) payload.status = (values.status as string).toUpperCase();
         await apiClient.put(`/products/${id}`, payload);
@@ -172,24 +242,33 @@ const CreateEditProductPage = () => {
             </Form.Item>
           )}
 
-          {/* Загрузка изображения */}
+          {/* Блок загрузки изображения */}
           <Form.Item label="Изображение товара">
             <div style={{ marginBottom: 8 }}>
               {imageUrl ? (
-                <div style={{ width: '100%', aspectRatio: '4 / 3', overflow: 'hidden', borderRadius: 8, border: '1px solid #434343', background: '#1a1a1a' }}>
+                <div style={{
+                  width: '100%', aspectRatio: '4 / 3', overflow: 'hidden', borderRadius: 8,
+                  border: '1px solid #434343', background: '#1a1a1a',
+                }}>
                   <img src={imageUrl} alt="предпросмотр" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </div>
               ) : (
-                <div onClick={handleUploadClick} style={{ width: '100%', aspectRatio: '4 / 3', background: '#1a1a1a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: 8, border: '1px dashed #434343', cursor: 'pointer' }}>
+                <div onClick={handleUploadClick} style={{
+                  width: '100%', aspectRatio: '4 / 3', background: '#1a1a1a', display: 'flex',
+                  flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  borderRadius: 8, border: '1px dashed #434343', cursor: 'pointer',
+                }}>
                   <PlusOutlined style={{ fontSize: 24, marginBottom: 8, color: '#fff' }} />
                   <span style={{ color: '#fff' }}>Загрузить изображение</span>
                 </div>
               )}
             </div>
             <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
-            <Button onClick={handleUploadClick}>{imageUrl ? 'Изменить изображение' : 'Выбрать файл'}</Button>
+            <Button onClick={handleUploadClick}>
+              {imageUrl ? 'Изменить изображение' : 'Выбрать файл'}
+            </Button>
             <Text type="secondary" style={{ display: 'block', marginTop: 4 }}>
-              Рекомендуемый формат — 4:3. Изображение будет обрезано до этого формата.
+              При выборе файла откроется инструмент кадрирования (4:3).
             </Text>
           </Form.Item>
 
@@ -232,6 +311,30 @@ const CreateEditProductPage = () => {
           </Form.Item>
         </Form>
       </Card>
+
+      {/* Модальное окно кадрирования с react-easy-crop */}
+      <Modal
+        title="Обрежьте изображение"
+        open={cropModalVisible}
+        onOk={handleCropConfirm}
+        onCancel={() => setCropModalVisible(false)}
+        okText="Сохранить"
+        cancelText="Отмена"
+        width={600}
+        styles={{ body: { height: 400, position: 'relative', background: '#f0f0f0' } }}
+      >
+        {cropImageSrc && (
+          <Cropper
+            image={cropImageSrc}
+            crop={crop}
+            zoom={zoom}
+            aspect={4 / 3}
+            onCropChange={setCrop}
+            onCropComplete={onCropComplete}
+            onZoomChange={setZoom}
+          />
+        )}
+      </Modal>
     </div>
   );
 };
