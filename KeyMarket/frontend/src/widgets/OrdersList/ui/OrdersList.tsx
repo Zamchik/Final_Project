@@ -101,6 +101,7 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
             dataIndex: 'status',
             key: 'status',
             render: (status: string) => {
+                // Используем заглавные значения, соответствующие enum OrderStatus
                 const colorMap: Record<string, string> = {
                     CREATED: 'blue',
                     DELIVERED: 'green',
@@ -129,6 +130,7 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
             title: 'Ключ',
             key: 'key',
             render: (_, record) => {
+                // Показываем ключи только для выполненных заказов
                 if (record.status !== 'DELIVERED') return '—';
                 return record.items.map((item) =>
                     item.productKey ? (
@@ -143,6 +145,7 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
             title: 'Действия',
             key: 'actions',
             render: (_, record) => {
+                // Для созданных заказов – оплатить и отменить
                 if (record.status === 'CREATED') {
                     return (
                         <Space>
@@ -160,6 +163,7 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
                         </Space>
                     );
                 }
+                // Для выполненных заказов – кнопка "Оставить отзыв"
                 if (record.status === 'DELIVERED') {
                     return (
                         <Button

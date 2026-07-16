@@ -1,33 +1,31 @@
-// Футер приложения с информационными ссылками и соцсетями.
+// Виджет футера: логотип, ссылки, соцсети, копирайт.
+import { Row, Col, Typography, Divider } from 'antd';
 import { Link } from 'react-router-dom';
-import { Layout, Row, Col, Typography, Divider } from 'antd';
 import { GithubOutlined, TwitterOutlined, InstagramOutlined, YoutubeOutlined } from '@ant-design/icons';
 
-const { Footer: AntFooter } = Layout;
-const { Title, Text } = Typography;
+const { Text, Title } = Typography;
 
 const FooterWidget = () => {
   return (
-    <AntFooter
-      className="desktop-footer"
-      style={{
-        background: 'linear-gradient(180deg, #141414 0%, #0d0d0d 100%)',
-        padding: '48px 32px 24px',
-        color: '#b0b0b0',
-        borderTop: '1px solid #333',
-      }}
-    >
+    <div style={{
+      background: 'linear-gradient(180deg, #141414 0%, #0d0d0d 100%)',
+      padding: '48px 32px 24px',
+      color: '#b0b0b0',
+      borderTop: '1px solid #333',
+    }}>
       <Row gutter={[32, 32]} justify="center" style={{ maxWidth: 1400, margin: '0 auto' }}>
         <Col xs={24} sm={6}>
           <Title level={4} style={{ color: '#fff', marginBottom: 16 }}>
             <span style={{ color: '#722ed1' }}>Key</span>Market
           </Title>
-          <Text type="secondary">Маркетплейс цифровых товаров. Безопасные сделки, мгновенная выдача ключей, низкая комиссия 5%.</Text>
+          <Text type="secondary">
+            Маркетплейс цифровых товаров. Безопасные сделки, мгновенная выдача ключей, низкая комиссия 5%.
+          </Text>
           <div style={{ marginTop: 16, display: 'flex', gap: 12, fontSize: 24 }}>
-            <GithubOutlined />
-            <TwitterOutlined />
-            <InstagramOutlined />
-            <YoutubeOutlined />
+            <a href="#" style={{ color: '#b0b0b0' }}><GithubOutlined /></a>
+            <a href="#" style={{ color: '#b0b0b0' }}><TwitterOutlined /></a>
+            <a href="#" style={{ color: '#b0b0b0' }}><InstagramOutlined /></a>
+            <a href="#" style={{ color: '#b0b0b0' }}><YoutubeOutlined /></a>
           </div>
         </Col>
         <Col xs={24} sm={6}>
@@ -54,9 +52,11 @@ const FooterWidget = () => {
       </Row>
       <Divider style={{ borderColor: '#333', marginTop: 32, marginBottom: 16 }} />
       <div style={{ textAlign: 'center', maxWidth: 1400, margin: '0 auto' }}>
-        <Text type="secondary" style={{ fontSize: 13 }}>© 2026 KeyMarket. Все права защищены.</Text>
+        <Text type="secondary" style={{ fontSize: 13 }}>
+          © 2026 KeyMarket. Все права защищены. Товары, представленные на платформе, являются цифровыми лицензионными ключами.
+        </Text>
       </div>
-    </AntFooter>
+    </div>
   );
 };
 

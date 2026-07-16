@@ -7,7 +7,8 @@
     "dev": "tsx watch src/app.ts",
     "build": "tsc",
     "start": "npx tsx src/app.ts",
-    "test": "jest --runInBand --forceExit --detectOpenHandles"
+    "test": "jest --runInBand --forceExit --detectOpenHandles",
+    "seed": "npx prisma db seed"
   },
   "keywords": [],
   "author": "",
@@ -22,7 +23,6 @@
     "@fastify/swagger": "^9.7.0",
     "@fastify/swagger-ui": "^6.0.0",
     "@prisma/adapter-pg": "^7.8.0",
-    "@prisma/client": "^7.8.0",
     "@prisma/config": "^7.8.0",
     "bcrypt": "^6.0.0",
     "dotenv": "^17.4.2",
@@ -35,10 +35,11 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@prisma/client": "^7.8.0",
     "@types/bcrypt": "^6.0.0",
     "@types/jest": "^30.0.0",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^24.12.4",
+    "@types/node": "^24.13.3",
     "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.20.0",
     "@types/supertest": "^7.2.0",

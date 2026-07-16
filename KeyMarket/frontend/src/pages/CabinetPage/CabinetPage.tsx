@@ -12,7 +12,7 @@ import {
 import apiClient from '@/shared/api/client';
 import { useAuthStore } from '@/entities/user/model/authStore';
 import { AxiosError } from 'axios';
-import OrdersList from '@/widgets/OrdersList/OrdersList';
+import OrdersList from '@/widgets/OrdersList/ui/OrdersList';
 
 const { Text } = Typography;
 
