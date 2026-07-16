@@ -1,9 +1,10 @@
+// Тест страницы товара: отображение названия, цены, кнопки "Купить".
 import { render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
 import { ConfigProvider, App } from 'antd';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ProductPage from '@/pages/ProductPage/ProductPage';
 import { useAuthStore } from '@/entities/user/model/authStore';
+import { TestRouter } from '@/test/testUtils';
 
 // Мокаем useParams, чтобы всегда возвращал id = '1'
 vi.mock('react-router-dom', async () => {
@@ -51,13 +52,13 @@ describe('ProductPage', () => {
 
   it('отображает информацию о товаре после загрузки', async () => {
     render(
-      <MemoryRouter initialEntries={['/product/1']}>
+      <TestRouter initialEntries={['/product/1']}>
         <ConfigProvider>
           <App>
             <ProductPage />
           </App>
         </ConfigProvider>
-      </MemoryRouter>
+      </TestRouter>
     );
 
     await waitFor(() => {
@@ -69,13 +70,13 @@ describe('ProductPage', () => {
 
   it('показывает кнопку "Купить" для авторизованного пользователя', async () => {
     render(
-      <MemoryRouter initialEntries={['/product/1']}>
+      <TestRouter initialEntries={['/product/1']}>
         <ConfigProvider>
           <App>
             <ProductPage />
           </App>
         </ConfigProvider>
-      </MemoryRouter>
+      </TestRouter>
     );
 
     await waitFor(() => {

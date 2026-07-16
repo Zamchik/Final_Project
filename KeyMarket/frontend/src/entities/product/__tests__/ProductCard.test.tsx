@@ -1,11 +1,11 @@
-// Тесты проверяют отображение цены, названия, кнопки "Купить" и взаимодействие с избранным.
+// Тест карточки товара: название, цена, категория, кнопка "Купить", избранное, продажи.
 import { render, screen, fireEvent } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
 import { ConfigProvider, App } from 'antd';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useAuthStore } from '@/entities/user/model/authStore';
 import { useWishlistStore } from '@/entities/product/model/wishlistStore';
 import { ProductCard } from '@/entities/product';
+import { TestRouter } from '@/test/testUtils';
 
 // Мокаем навигацию
 const mockNavigate = vi.fn();
@@ -34,64 +34,59 @@ describe('ProductCard', () => {
     useWishlistStore.setState({ items: [] });
   });
 
-  // Проверяем базовое отображение информации
   it('отображает название, цену и категорию товара', () => {
     render(
-      <MemoryRouter>
+      <TestRouter>
         <ConfigProvider>
           <App>
             <ProductCard product={product} />
           </App>
         </ConfigProvider>
-      </MemoryRouter>
+      </TestRouter>
     );
     expect(screen.getByText('Cyberpunk 2077')).toBeInTheDocument();
     expect(screen.getByText('1999 ₽')).toBeInTheDocument();
     expect(screen.getByText('Экшен')).toBeInTheDocument();
   });
 
-  // Проверяем кнопку "Купить"
   it('отображает кнопку "Купить"', () => {
     render(
-      <MemoryRouter>
+      <TestRouter>
         <ConfigProvider>
           <App>
             <ProductCard product={product} />
           </App>
         </ConfigProvider>
-      </MemoryRouter>
+      </TestRouter>
     );
     expect(screen.getByRole('button', { name: /купить/i })).toBeInTheDocument();
   });
 
-  // Проверяем добавление в избранное (клик по сердечку)
   it('добавляет товар в избранное при клике на сердечко', () => {
     render(
-      <MemoryRouter>
+      <TestRouter>
         <ConfigProvider>
           <App>
             <ProductCard product={product} />
           </App>
         </ConfigProvider>
-      </MemoryRouter>
+      </TestRouter>
     );
     const heartButton = screen.getByRole('button', { name: /heart/i });
     fireEvent.click(heartButton);
-    // После клика товар должен оказаться в избранном
     const wishlistItems = useWishlistStore.getState().items;
     expect(wishlistItems.some(item => item.id === product.id)).toBe(true);
   });
 
-  // Проверяем количество продаж (форматирование)
   it('отображает количество продаж (150)', () => {
     render(
-      <MemoryRouter>
+      <TestRouter>
         <ConfigProvider>
           <App>
             <ProductCard product={product} />
           </App>
         </ConfigProvider>
-      </MemoryRouter>
+      </TestRouter>
     );
     expect(screen.getByText('150 продаж')).toBeInTheDocument();
   });
