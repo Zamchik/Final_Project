@@ -23,18 +23,3 @@ export class WalletController {
     return this.walletService.withdraw(userId, amount);
   };
 }
-
-   // POST /wallet/replenish — пополнить баланс
-    // replenish = async (req: FastifyRequest<{ Body: { amount: number } }>, reply: FastifyReply) => {
-    //     const userId = req.session.get('user')?.id;
-    //     if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
-    //     const { amount } = req.body;
-    //     try {
-    //         const result = await this.walletService.replenish(userId, Number(amount));
-    //         return result;
-    //     } catch (err) {
-    //         reply.status(400).send({ error: (err as Error).message });
-    //     }
-    // };
-    
-    // Пока убрал, изначально планировалось пополнение через кошелёк, но потом решили через платёжную систему.

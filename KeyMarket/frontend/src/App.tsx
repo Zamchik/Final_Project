@@ -1,5 +1,4 @@
-// App.tsx – корневой компонент с маршрутами.
-// Все страницы теперь импортируются из новых FSD-путей.
+// корневой компонент с маршрутами.
 import { Routes, Route } from 'react-router-dom';
 import HomePage from '@/pages/HomePage/HomePage';
 import CatalogPage from '@/pages/CatalogPage/CatalogPage';
