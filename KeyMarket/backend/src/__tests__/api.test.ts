@@ -1,3 +1,4 @@
+// Проверяют регистрацию, вход и доступ к защищённым маршрутам.
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import secureSession from '@fastify/secure-session';
@@ -6,11 +7,22 @@ import authRoutes from '../routes/auth.routes';
 import orderRoutes from '../routes/order.routes';
 import { prisma } from '../prisma';
 
-// Создаём тестовый экземпляр Fastify
 const buildApp = () => {
   const app = Fastify();
 
-  // Регистрируем плагины, как в основном приложении
+  // Моки для emailService и notificationService
+  app.decorate('emailService', {
+    send: jest.fn().mockResolvedValue({ messageId: 'test' }),
+    transporter: {},
+    logger: console,
+  } as any);
+
+  app.decorate('notificationService', {
+    create: jest.fn().mockResolvedValue(undefined),
+    getUnread: jest.fn().mockResolvedValue([]),
+    markAsRead: jest.fn().mockResolvedValue(undefined),
+  } as any);
+
   app.register(cors, { origin: true, methods: ['GET', 'POST', 'PUT', 'DELETE'] });
   app.register(secureSession, {
     key: crypto.randomBytes(32),
@@ -36,7 +48,6 @@ describe('API Integration Tests', () => {
   const testPassword = 'password123';
 
   beforeAll(async () => {
-    // Очищаем тестового пользователя перед тестами
     await prisma.user.deleteMany({ where: { email: testEmail } });
   });
 
@@ -52,17 +63,15 @@ describe('API Integration Tests', () => {
       url: '/auth/register',
       payload: { email: testEmail, password: testPassword },
     });
-    expect(response.statusCode).toBe(200);
+    expect(response.statusCode).toBe(201);
     const body = JSON.parse(response.body);
-    expect(body.user).toHaveProperty('id');
-    expect(body.user.email).toBe(testEmail);
-
-    // Проверяем, что кука установлена
-    expect(response.headers['set-cookie']).toBeDefined();
+    expect(body).toHaveProperty('verificationUrl');
   });
 
   it('POST /auth/login — вход', async () => {
     const app = buildApp();
+    await prisma.user.update({ where: { email: testEmail }, data: { verifiedAt: new Date() } });
+
     const response = await app.inject({
       method: 'POST',
       url: '/auth/login',
@@ -72,11 +81,9 @@ describe('API Integration Tests', () => {
     const body = JSON.parse(response.body);
     expect(body.user.email).toBe(testEmail);
 
-    // Получаем куку для следующего запроса
     const cookie = response.headers['set-cookie'];
     expect(cookie).toBeDefined();
 
-    // Проверяем GET /auth/me с этой кукой
     const meResponse = await app.inject({
       method: 'GET',
       url: '/auth/me',

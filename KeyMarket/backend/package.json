@@ -47,5 +47,12 @@
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.11",
     "typescript": "^6.0.3"
-  }
+  },
+  "jest": {
+  "preset": "ts-jest",
+  "testEnvironment": "node",
+  "roots": ["<rootDir>/src"],
+  "testMatch": ["**/__tests__/**/*.test.ts"],
+  "setupFiles": ["<rootDir>/jest.setup.ts"]
+}
 }

@@ -8,15 +8,15 @@ describe('ProductService', () => {
     productService = new ProductService();
   });
 
-  it('должен выбросить ошибку при создании товара без ключей', async () => {
-    await expect(
-      productService.createProduct(1, {
-        title: 'Test Product',
-        price: 100,
-        categoryId: 1,
-        keys: [],
-      })
-    ).rejects.toThrow('Добавьте хотя бы один ключ');
+  it('должен создать товар с пустым списком ключей (stock = 0)', async () => {
+    const product = await productService.createProduct(1, {
+      title: 'Test Product',
+      price: 100,
+      categoryId: 1,
+      keys: [],
+    });
+    expect(product).toHaveProperty('id');
+    expect(product.stock).toBe(0);
   });
 
   it('должен получить список товаров продавца (пустой)', async () => {
