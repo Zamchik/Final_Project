@@ -4,14 +4,14 @@ import { requireRole } from '../middleware/auth';
 import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
-import sharp from 'sharp';
+// sharp больше не нужен, если не обрезаем
 
 export default async function uploadRoutes(fastify: FastifyInstance) {
   fastify.post('/product-image', {
     preHandler: [fastify.authenticate, requireRole('SELLER')],
     schema: {
       tags: ['upload'],
-      summary: 'Загрузить изображение товара с обрезкой до 4:3',
+      summary: 'Загрузить изображение товара (кадрирование происходит на клиенте)',
       description:
         'Принимает файл в multipart/form-data.\n\n' +
         'Пример curl:\n\n' +
@@ -49,7 +49,7 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: 'Разрешены только изображения' });
     }
 
-    // Создаём папку для загрузок относительно рабочей директории (на Render это /opt/render/project/src/KeyMarket/backend/uploads)
+    // Создаём папку для загрузок
     const uploadDir = path.join(process.cwd(), 'uploads');
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
@@ -67,23 +67,15 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
     }
     const buffer = Buffer.concat(chunks);
 
-    // Обрезаем изображение до пропорции 4:3 с помощью sharp
+    // Просто сохраняем файл, без повторной обрезки
     try {
-      await sharp(buffer)
-        .resize({
-          width: 800,
-          height: 600,
-          fit: 'cover',
-          position: 'center',
-        })
-        .jpeg({ quality: 90 })
-        .toFile(filePath);
+      await fs.promises.writeFile(filePath, buffer);
     } catch (err) {
-      return reply.status(400).send({ error: 'Ошибка обработки изображения' });
+      return reply.status(400).send({ error: 'Ошибка сохранения изображения' });
     }
 
-    const baseUrl = process.env.APP_BASE_URL || `${request.protocol}://${request.hostname}`;
-    const imageUrl = `${baseUrl}/uploads/${newFileName}`;
+    // Возвращаем относительный URL
+    const imageUrl = `/uploads/${newFileName}`;
     return { imageUrl };
   });
 }
