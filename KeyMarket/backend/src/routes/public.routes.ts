@@ -8,22 +8,33 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   const productService = new ProductService();
   const reviewService = new ReviewService(prisma);
 
-  // GET /products — публичный каталог
+  // GET /products (публичный каталог)
   fastify.get('/', {
     schema: {
       tags: ['products'],
-      summary: 'Публичный каталог товаров с фильтрами и пагинацией',
+      summary: 'Публичный каталог товаров',
+      description:
+        'Возвращает список активных товаров с пагинацией, фильтрацией и сортировкой. ' +
+        'Можно фильтровать по категории, диапазону цен, типу товара (GAME/DLC) и искать по названию.',
       querystring: {
         type: 'object',
         properties: {
-          page: { type: 'integer', default: 1 },
-          limit: { type: 'integer', default: 12 },
-          search: { type: 'string' },
-          categoryId: { type: 'integer' },
-          minPrice: { type: 'number' },
-          maxPrice: { type: 'number' },
-          sort: { type: 'string', enum: ['price_asc', 'price_desc', 'newest'] },
-          productType: { type: 'string', enum: ['GAME', 'DLC'] },
+          page: { type: 'integer', default: 1, description: 'Номер страницы' },
+          limit: { type: 'integer', default: 12, description: 'Товаров на странице' },
+          search: { type: 'string', description: 'Поиск по названию (регистронезависимый)' },
+          categoryId: { type: 'integer', description: 'Фильтр по ID категории' },
+          minPrice: { type: 'number', description: 'Минимальная цена' },
+          maxPrice: { type: 'number', description: 'Максимальная цена' },
+          sort: {
+            type: 'string',
+            enum: ['price_asc', 'price_desc', 'newest'],
+            description: 'Сортировка: по возрастанию/убыванию цены или новизне',
+          },
+          productType: {
+            type: 'string',
+            enum: ['GAME', 'DLC'],
+            description: 'Тип товара: игра или дополнение',
+          },
         },
       },
       response: {
@@ -40,8 +51,8 @@ export default async function publicRoutes(fastify: FastifyInstance) {
                   price: { type: 'string' },
                   rating: { type: 'string' },
                   imageUrl: { type: 'string', nullable: true },
-                  productType: { type: 'string' },
-                  sales: { type: 'integer' },
+                  productType: { type: 'string', description: 'GAME или DLC' },
+                  sales: { type: 'integer', description: 'Количество продаж' },
                   category: {
                     type: 'object',
                     properties: {
@@ -53,10 +64,30 @@ export default async function publicRoutes(fastify: FastifyInstance) {
                 },
               },
             },
-            total: { type: 'integer' },
+            total: { type: 'integer', description: 'Общее количество товаров' },
             page: { type: 'integer' },
             limit: { type: 'integer' },
           },
+          examples: [
+            {
+              products: [
+                {
+                  id: 1,
+                  title: 'Cyberpunk 2077',
+                  price: '1999',
+                  rating: '4.5',
+                  imageUrl: '/uploads/abc.jpg',
+                  productType: 'GAME',
+                  sales: 150,
+                  category: { id: 1, name: 'Экшен' },
+                  createdAt: '2026-07-16T12:00:00.000Z',
+                },
+              ],
+              total: 1,
+              page: 1,
+              limit: 12,
+            },
+          ],
         },
       },
     },
@@ -74,11 +105,13 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     });
   });
 
-  // GET /products/:id — детальная карточка товара
+  // GET /products/:id (детальная карточка)
   fastify.get('/:id', {
     schema: {
       tags: ['products'],
       summary: 'Детальная информация о товаре',
+      description:
+        'Возвращает все данные товара, кроме проданных ключей. Включает категорию, количество доступных ключей и общее количество продаж.',
       params: {
         type: 'object',
         required: ['id'],
@@ -93,7 +126,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
             description: { type: 'string' },
             price: { type: 'string' },
             rating: { type: 'string' },
-            stock: { type: 'integer' },
+            stock: { type: 'integer', description: 'Количество доступных ключей' },
             imageUrl: { type: 'string', nullable: true },
             productType: { type: 'string' },
             category: {
@@ -104,10 +137,29 @@ export default async function publicRoutes(fastify: FastifyInstance) {
               },
             },
             status: { type: 'string' },
-            salesCount: { type: 'integer' },
+            salesCount: { type: 'integer', description: 'Общее число продаж' },
           },
+          examples: [
+            {
+              id: 1,
+              title: 'Cyberpunk 2077',
+              description: 'Ролевая игра в открытом мире.',
+              price: '1999',
+              rating: '4.5',
+              stock: 2,
+              imageUrl: '/uploads/abc.jpg',
+              productType: 'GAME',
+              category: { id: 1, name: 'Экшен' },
+              status: 'ACTIVE',
+              salesCount: 150,
+            },
+          ],
         },
-        404: { type: 'object', properties: { error: { type: 'string' } } },
+        404: {
+          type: 'object',
+          properties: { error: { type: 'string' } },
+          description: 'Товар не найден или неактивен',
+        },
       },
     },
   }, async (req: FastifyRequest, reply: FastifyReply) => {
@@ -119,17 +171,16 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     return product;
   });
 
-  // GET /products/:id/reviews — отзывы
+  // GET /products/:id/reviews
   fastify.get('/:id/reviews', {
     schema: {
       tags: ['products'],
       summary: 'Получить отзывы о товаре',
+      description: 'Возвращает список отзывов с пагинацией.',
       params: {
         type: 'object',
         required: ['id'],
-        properties: {
-          id: { type: 'integer' },
-        },
+        properties: { id: { type: 'integer' } },
       },
       querystring: {
         type: 'object',
@@ -153,9 +204,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
                   createdAt: { type: 'string' },
                   user: {
                     type: 'object',
-                    properties: {
-                      email: { type: 'string' },
-                    },
+                    properties: { email: { type: 'string' } },
                   },
                 },
               },
@@ -173,7 +222,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     return reviewService.getByProduct(Number(id), Number(page), Number(limit));
   });
 
-  // GET /products/:id/rating — средний рейтинг
+  // GET /products/:id/rating
   fastify.get('/:id/rating', {
     schema: {
       tags: ['products'],
@@ -181,16 +230,14 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       params: {
         type: 'object',
         required: ['id'],
-        properties: {
-          id: { type: 'integer' },
-        },
+        properties: { id: { type: 'integer' } },
       },
       response: {
         200: {
           type: 'object',
           properties: {
-            average: { type: 'number' },
-            count: { type: 'integer' },
+            average: { type: 'number', description: 'Средняя оценка (0-5)' },
+            count: { type: 'integer', description: 'Количество отзывов' },
           },
         },
       },

@@ -59,25 +59,48 @@ async function setup() {
   app.decorate('emailService', emailService);
   app.decorate('notificationService', notificationService);
 
-  // Swagger-документация
+  // Swagger
   app.register(swagger, {
     openapi: {
       info: {
         title: 'KeyMarket API',
-        description: 'Документация API для маркетплейса цифровых товаров KeyMarket',
+        description:
+          'API для маркетплейса цифровых товаров KeyMarket.\n\n' +
+          '## Основные возможности\n' +
+          '- Регистрация и аутентификация (подтверждение email)\n' +
+          '- Каталог товаров с фильтрацией, поиском и пагинацией\n' +
+          '- Мгновенная покупка и выдача ключа\n' +
+          '- Личный кабинет покупателя и продавца\n' +
+          '- Вывод средств (эмуляция)\n' +
+          '- Администрирование пользователей, товаров и заказов\n\n' +
+          '### Аутентификация\n' +
+          'Используются сессионные куки (`httpOnly`, `secure`, `sameSite=none`).\n' +
+          'После входа кука `session` отправляется автоматически.',
         version: '1.0.0',
+        contact: {
+          name: 'KeyMarket Support',
+          email: 'support@keymarket.local',
+        },
+      },
+      externalDocs: {
+        description: 'Полная документация проекта (README)',
+        url: 'https://github.com/Zamchik/Final_Project#readme',
       },
       servers: [
         { url: 'http://localhost:3000', description: 'Локальный сервер' },
+        { url: 'https://keymarket-api.onrender.com', description: 'Продакшен (Render)' },
       ],
       tags: [
-        { name: 'auth', description: 'Аутентификация и пользователи' },
-        { name: 'products', description: 'Товары' },
-        { name: 'orders', description: 'Заказы' },
-        { name: 'wallet', description: 'Кошелёк' },
-        { name: 'payments', description: 'Платежи' },
-        { name: 'admin', description: 'Администрирование' },
-        { name: 'notifications', description: 'Уведомления' },
+        { name: 'auth', description: 'Аутентификация и управление профилем' },
+        { name: 'products', description: 'Каталог товаров и управление товарами продавца' },
+        { name: 'categories', description: 'Категории товаров' },
+        { name: 'orders', description: 'Заказы: создание, оплата, история' },
+        { name: 'wallet', description: 'Баланс и вывод средств' },
+        { name: 'payments', description: 'Платёжные операции (mock)' },
+        { name: 'admin', description: 'Администрирование (только ADMIN/SUPER_ADMIN)' },
+        { name: 'notifications', description: 'Внутренние уведомления' },
+        { name: 'reviews', description: 'Отзывы о товарах' },
+        { name: 'upload', description: 'Загрузка изображений товаров' },
       ],
       components: {
         securitySchemes: {
@@ -85,7 +108,9 @@ async function setup() {
             type: 'apiKey',
             in: 'cookie',
             name: 'session',
-            description: 'Сессионная кука для аутентификации',
+            description:
+              'Сессионная кука, устанавливается после успешного входа. ' +
+              'Для авторизации в Swagger UI сначала выполните POST /auth/login.',
           },
         },
       },
@@ -104,7 +129,6 @@ async function setup() {
     app.log.info(`Created upload directory: ${uploadDir}`);
   }
 
-  // Раздача статических файлов (изображения товаров)
   app.register(fastifyStatic, {
     root: uploadDir,
     prefix: '/uploads/',
