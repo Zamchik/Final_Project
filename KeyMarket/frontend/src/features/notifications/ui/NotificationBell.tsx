@@ -83,7 +83,7 @@ const NotificationBell = () => {
       onOpenChange={setOpen}
     >
       <Badge count={unreadCount} size="small" offset={[-2, 2]}>
-        <BellOutlined style={{ fontSize: 20, cursor: 'pointer', color: '#fff' }} />
+        <BellOutlined style={{ fontSize: 28, cursor: 'pointer', color: '#fff' }} />
       </Badge>
     </Popover>
   );

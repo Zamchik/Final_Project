@@ -1,8 +1,4 @@
 // Единый виджет шапки приложения.
-// Содержит логотип, кнопку «Каталог», поиск, иконки навигации
-// (избранное, заказы, уведомления, профиль, админ-панель),
-// а также мобильное меню (Drawer).
-// Используется в MainLayout.
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Layout, Button, Typography, Input, Badge, Dropdown, Drawer, Menu, message } from 'antd';
@@ -26,14 +22,12 @@ const HeaderWidget = () => {
   const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
   const [searchValue, setSearchValue] = useState('');
 
-  // Обработчик поиска
   const handleSearch = (value: string) => {
     if (value.trim()) {
       navigate(`/catalog?search=${encodeURIComponent(value.trim())}`);
     }
   };
 
-  // Пункты выпадающего меню пользователя
   const userMenuItems = [
     {
       key: 'cabinet',
@@ -101,8 +95,9 @@ const HeaderWidget = () => {
           height: 88,
         }}
       >
-        {/* Левая часть: логотип + Каталог */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        {/* Левая часть: логотип + кнопка «Каталог» (горизонтально) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+          {/* Логотип */}
           <Link
             to="/"
             style={{
@@ -135,12 +130,20 @@ const HeaderWidget = () => {
             </span>
           </Link>
 
+          {/* Горизонтальная кнопка «Каталог»: иконка + текст справа */}
           <Button
             type="text"
-            icon={<AppstoreOutlined style={{ color: '#fff', fontSize: 28 }} />}
+            icon={<AppstoreOutlined style={{ fontSize: 28 }} />}
             onClick={() => navigate('/catalog')}
-            style={{ color: '#fff', fontSize: 16 }}
-            className="hide-on-mobile"
+            style={{
+              color: '#fff',
+              fontSize: 16,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              height: 'auto',
+              padding: 0,
+            }}
           >
             Каталог
           </Button>
@@ -170,7 +173,7 @@ const HeaderWidget = () => {
           />
         </div>
 
-        {/* Правая часть: иконки с подписями */}
+        {/* Правая часть: иконки с подписями (вертикально) */}
         <div
           className="desktop-icons"
           style={{
