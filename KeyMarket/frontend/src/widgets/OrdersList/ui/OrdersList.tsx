@@ -36,14 +36,12 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
     const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(false);
 
-    // Состояние для модального окна отзыва
     const [reviewModal, setReviewModal] = useState<{
         visible: boolean;
         productId: number | null;
         orderId: number | null;
     }>({ visible: false, productId: null, orderId: null });
 
-    // Загрузка заказов
     const fetchOrders = useCallback(async () => {
         setLoading(true);
         try {
@@ -63,7 +61,6 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
         fetchOrders();
     }, [fetchOrders]);
 
-    // Оплатить заказ (создать платёж и открыть ссылку)
     const handlePayOrder = async (orderId: number) => {
         try {
             const { data } = await apiClient.post(`/payments/orders/${orderId}/create-payment`);
@@ -75,7 +72,6 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
         }
     };
 
-    // Отменить заказ (только для статуса 'CREATED')
     const handleCancelOrder = async (orderId: number) => {
         try {
             await apiClient.post(`/orders/${orderId}/cancel`);
@@ -87,7 +83,9 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
         }
     };
 
-    // Колонки таблицы
+    // Определяем, является ли список "продажами" (у продавца есть поле buyer)
+    const isSalesView = orders.length > 0 && orders[0].buyer !== undefined;
+
     const columns: ColumnsType<OrderItem> = [
         { title: 'ID заказа', dataIndex: 'id', key: 'id', width: 80 },
         {
@@ -101,7 +99,6 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
             dataIndex: 'status',
             key: 'status',
             render: (status: string) => {
-                // Используем заглавные значения, соответствующие enum OrderStatus
                 const colorMap: Record<string, string> = {
                     CREATED: 'blue',
                     DELIVERED: 'green',
@@ -130,7 +127,6 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
             title: 'Ключ',
             key: 'key',
             render: (_, record) => {
-                // Показываем ключи только для выполненных заказов
                 if (record.status !== 'DELIVERED') return '—';
                 return record.items.map((item) =>
                     item.productKey ? (
@@ -145,7 +141,6 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
             title: 'Действия',
             key: 'actions',
             render: (_, record) => {
-                // Для созданных заказов – оплатить и отменить
                 if (record.status === 'CREATED') {
                     return (
                         <Space>
@@ -163,8 +158,8 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
                         </Space>
                     );
                 }
-                // Для выполненных заказов – кнопка "Оставить отзыв"
-                if (record.status === 'DELIVERED') {
+                // Показываем кнопку «Оставить отзыв» только для покупок (не для продаж)
+                if (record.status === 'DELIVERED' && !isSalesView) {
                     return (
                         <Button
                             type="link"
@@ -186,8 +181,8 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
         },
     ];
 
-    // Если в заказах есть покупатель (для продавца), добавляем колонку
-    if (orders.length > 0 && orders[0].buyer) {
+    // Добавляем колонку "Покупатель" для продаж
+    if (isSalesView) {
         columns.splice(4, 0, {
             title: 'Покупатель',
             key: 'buyer',
