@@ -1,8 +1,10 @@
 // Виджет списка заказов (покупки или продажи) с пагинацией.
 // Используется в личном кабинете на вкладках "Покупки" и "Продажи".
-// Содержит кнопки "Оплатить", "Отменить", "Оставить отзыв".
+// Содержит кнопки "Оплатить", "Отменить", "Оставить отзыв", "Детали".
 // Использует фичу ReviewForm из features/product-review.
+
 import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Table, Tag, Typography, message, Button, Popconfirm, Space } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import apiClient from '@/shared/api/client';
@@ -31,6 +33,7 @@ interface OrdersListProps {
 }
 
 const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersListProps) => {
+    const navigate = useNavigate();
     const [orders, setOrders] = useState<OrderItem[]>([]);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
@@ -140,27 +143,24 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
         {
             title: 'Действия',
             key: 'actions',
-            render: (_, record) => {
-                if (record.status === 'CREATED') {
-                    return (
-                        <Space>
+            render: (_, record) => (
+                <Space>
+                    {record.status === 'CREATED' && (
+                        <>
                             <Button type="primary" size="small" onClick={() => handlePayOrder(record.id)}>
                                 Оплатить
                             </Button>
-                            <Popconfirm
-                                title="Отменить заказ?"
-                                onConfirm={() => handleCancelOrder(record.id)}
-                            >
-                                <Button type="link" danger size="small">
-                                    Отменить
-                                </Button>
+                            <Popconfirm title="Отменить заказ?" onConfirm={() => handleCancelOrder(record.id)}>
+                                <Button type="link" danger size="small">Отменить</Button>
                             </Popconfirm>
-                        </Space>
-                    );
-                }
-                // Показываем кнопку «Оставить отзыв» только для покупок (не для продаж)
-                if (record.status === 'DELIVERED' && !isSalesView) {
-                    return (
+                        </>
+                    )}
+                    {/* Кнопка "Детали" для любого заказа */}
+                    <Button type="link" size="small" onClick={() => navigate(`/orders/${record.id}`)}>
+                        Детали
+                    </Button>
+                    {/* Кнопка "Оставить отзыв" только для выполненных покупок */}
+                    {record.status === 'DELIVERED' && !isSalesView && (
                         <Button
                             type="link"
                             size="small"
@@ -174,10 +174,9 @@ const OrdersList = ({ fetchUrl, emptyText = 'Заказов нет' }: OrdersLis
                         >
                             Оставить отзыв
                         </Button>
-                    );
-                }
-                return null;
-            },
+                    )}
+                </Space>
+            ),
         },
     ];
 

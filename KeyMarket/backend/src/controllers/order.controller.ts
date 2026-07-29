@@ -58,6 +58,8 @@ export class OrderController {
       totalPrice: order.totalPrice.toString(),
       status: order.status,
       createdAt: order.createdAt,
+      buyerId: order.buyerId,
+      sellerId: order.items[0]?.product.sellerId,
       items: order.items.map((item: any) => ({
         id: item.id,
         price: item.price.toString(),

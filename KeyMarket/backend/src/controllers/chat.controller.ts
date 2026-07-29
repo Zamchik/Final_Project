@@ -1,9 +1,10 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { ChatService } from '../services/chat.service';
-import { UnauthorizedError, BadRequestError } from '../common/errors';
+import { UnauthorizedError, BadRequestError, ForbiddenError } from '../common/errors';
+import { prisma } from '../prisma';
 
 export class ChatController {
-  constructor(private chatService: ChatService) {}
+  constructor(private chatService: ChatService) { }
 
   // GET /chat/conversations — мои диалоги
   getConversations = async (req: FastifyRequest) => {
@@ -17,13 +18,25 @@ export class ChatController {
     const userId = req.session.get('user')?.id;
     if (!userId) throw new UnauthorizedError('Unauthorized');
     const { orderId } = req.params as any;
-    // В идеале проверить, что пользователь является покупателем или продавцом заказа
-    const order = await (this.chatService as any).prisma.order.findUnique({ where: { id: Number(orderId) } });
-    if (!order || (order.buyerId !== userId && order.sellerId !== (await (this.chatService as any).prisma.product.findUnique({ where: { id: order.id } }))?.sellerId)) {
+
+    // Получаем заказ вместе с продавцом товара
+    const order = await prisma.order.findUnique({
+      where: { id: Number(orderId) },
+      include: { items: { include: { product: { select: { sellerId: true } } } } },
+    });
+
+    if (!order) throw new BadRequestError('Заказ не найден');
+
+    const sellerId = order.items[0]?.product.sellerId;
+    if (order.buyerId !== userId && sellerId !== userId) {
       throw new BadRequestError('Нет доступа');
     }
-    // Для простоты используем buyerId и sellerId из заказа
-    const conv = await this.chatService.findOrCreateOrderChat(Number(orderId), order.buyerId, order.sellerId);
+
+    const conv = await this.chatService.findOrCreateOrderChat(
+      Number(orderId),
+      order.buyerId,
+      sellerId!
+    );
     return conv;
   };
 
@@ -32,6 +45,32 @@ export class ChatController {
     const userId = req.session.get('user')?.id;
     if (!userId) throw new UnauthorizedError('Unauthorized');
     return this.chatService.findOrCreateSupportChat(userId);
+  };
+
+  // GET /admin/chat/tickets — все тикеты поддержки (для админа)
+  getSupportTickets = async (req: FastifyRequest) => {
+    const user = req.session.get('user');
+    if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN')) {
+      throw new ForbiddenError('Только для администраторов');
+    }
+
+    const tickets = await prisma.conversation.findMany({
+      where: { type: 'SUPPORT' },
+      include: {
+        user: { select: { id: true, email: true } },
+        messages: { orderBy: { createdAt: 'desc' }, take: 1 },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    return tickets.map((t) => ({
+      id: t.id,
+      userId: t.userId,
+      user: t.user ? { id: t.user.id, email: t.user.email } : null,
+      unreadAdmin: t.unreadAdmin,
+      updatedAt: t.updatedAt,
+      lastMessage: t.messages[0]?.text || null,
+    }));
   };
 
   // GET /chat/:id/messages — сообщения диалога
@@ -43,14 +82,29 @@ export class ChatController {
     return this.chatService.getMessages(Number(id), Number(page), Number(limit));
   };
 
-  // POST /chat/:id/messages — отправить сообщение (REST, но также будет WS)
+  // POST /chat/:id/messages — отправить сообщение
   sendMessage = async (req: FastifyRequest) => {
     const userId = req.session.get('user')?.id;
     if (!userId) throw new UnauthorizedError('Unauthorized');
     const { id } = req.params as any;
     const { text } = req.body as any;
     if (!text || !text.trim()) throw new BadRequestError('Текст не может быть пустым');
-    return this.chatService.sendMessage(Number(id), userId, text);
+
+    const msg = await this.chatService.sendMessage(Number(id), userId, text);
+
+    // Рассылаем всем подписанным WebSocket-клиентам в комнате
+    const wsRooms = (req.server as any).wsRooms as Map<number, Set<any>>;
+    const sockets = wsRooms.get(Number(id));
+    if (sockets) {
+      const payload = JSON.stringify({ type: 'new_message', message: msg });
+      for (const sock of sockets) {
+        if (sock.readyState === 1) {
+          sock.send(payload);
+        }
+      }
+    }
+
+    return msg;
   };
 
   // PUT /chat/:id/read — пометить прочитанным

@@ -11,23 +11,33 @@ export default defineConfig({
     },
   },
   server: {
-    proxy: {
-      '/auth': 'http://localhost:3000',
-      '/products': 'http://localhost:3000',
-      '/categories': 'http://localhost:3000',
-      '/upload': 'http://localhost:3000',
-      '/uploads': 'http://localhost:3000',
-      '/wallet': 'http://localhost:3000',
-      '/orders': 'http://localhost:3000',
-      '/admin': 'http://localhost:3000',
-      '/payments': 'http://localhost:3000',
-      '/mock-payment': 'http://localhost:3000',
-      '/notifications': 'http://localhost:3000',
-      '/reviews': 'http://localhost:3000',
-      '/health': 'http://localhost:3000',
+  proxy: {
+    '/auth': { target: 'http://localhost:3000', changeOrigin: true },
+    '/products': { target: 'http://localhost:3000', changeOrigin: true },
+    '/categories': { target: 'http://localhost:3000', changeOrigin: true },
+    '/upload': { target: 'http://localhost:3000', changeOrigin: true },
+    '/uploads': { target: 'http://localhost:3000', changeOrigin: true },
+    '/wallet': { target: 'http://localhost:3000', changeOrigin: true },
+    '/orders': { target: 'http://localhost:3000', changeOrigin: true },
+    '/admin': {
+      target: 'http://localhost:3000',
+      changeOrigin: true,
+      bypass(req) {
+        if (req.headers.accept?.includes('text/html')) {
+          return '/index.html';
+        }
+      },
     },
-    allowedHosts: ['.loca.lt', 'localhost'],
+    '/payments': { target: 'http://localhost:3000', changeOrigin: true },
+    '/mock-payment': { target: 'http://localhost:3000', changeOrigin: true },
+    '/notifications': { target: 'http://localhost:3000', changeOrigin: true },
+    '/reviews': { target: 'http://localhost:3000', changeOrigin: true },
+    '/health': { target: 'http://localhost:3000', changeOrigin: true },
+    '/chat': { target: 'http://localhost:3000', changeOrigin: true },
+    '/ws': { target: 'ws://localhost:3000', ws: true, changeOrigin: true },
   },
+  allowedHosts: ['.loca.lt', 'localhost'],
+},
   test: {
     globals: true,
     environment: 'jsdom',

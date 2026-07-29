@@ -8,8 +8,10 @@ import {
 } from '@ant-design/icons';
 import { useAuthStore } from '@/entities/user/model/authStore';
 import { Header } from '@/widgets/Header';
+import { SupportFab } from '@/widgets/SupportFab';
 import MobileBottomNav from '@/widgets/MobileBottomNav/ui/MobileBottomNav';
 import '@/app/styles/global.scss';
+
 
 const { Content, Footer } = AntLayout;
 const { Text, Title } = Typography;
@@ -112,6 +114,7 @@ const MainLayout = () => {
 
       {/* Мобильная нижняя навигация */}
       <MobileBottomNav />
+      <SupportFab /> 
     </AntLayout>
   );
 };
