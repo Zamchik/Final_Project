@@ -3,12 +3,13 @@
 
 name: CI
 
-# Запускать при пуше в любую ветку и при создании pull request
+# Запускать при пуше в любую ветку, при создании pull request и вручную
 on:
   push:
     branches: [ "**" ]
   pull_request:
     branches: [ "**" ]
+  workflow_dispatch: # Позволяет запускать тесты вручную кнопкой в GitHub Actions
 
 jobs:
   # Тесты бэкенда
@@ -43,28 +44,28 @@ jobs:
         with:
           node-version: 22
           cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: KeyMarket/backend/package-lock.json
 
       # Устанавливаем зависимости бэкенда
       - name: Install backend dependencies
-        working-directory: backend
+        working-directory: KeyMarket/backend
         run: npm ci
 
       # Генерируем Prisma Client (надо для тестов)
       - name: Generate Prisma Client
-        working-directory: backend
+        working-directory: KeyMarket/backend
         run: npx prisma generate
 
       # Применяем миграции к тестовой бд
       - name: Apply migrations
-        working-directory: backend
+        working-directory: KeyMarket/backend
         env:
           DATABASE_URL: postgresql://keymarket:keymarket123@localhost:5432/keymarket
         run: npx prisma migrate deploy
 
       # Запускаем тесты бэкенда
       - name: Run backend tests
-        working-directory: backend
+        working-directory: KeyMarket/backend
         env:
           DATABASE_URL: postgresql://keymarket:keymarket123@localhost:5432/keymarket
           SESSION_SECRET: test-secret-key
@@ -84,12 +85,12 @@ jobs:
         with:
           node-version: 22
           cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: KeyMarket/frontend/package-lock.json
 
       - name: Install frontend dependencies
-        working-directory: frontend
+        working-directory: KeyMarket/frontend
         run: npm ci
 
       - name: Run frontend tests
-        working-directory: frontend
+        working-directory: KeyMarket/frontend
         run: npm test
