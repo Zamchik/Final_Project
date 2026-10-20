@@ -74,6 +74,12 @@ model User {
   notifications Notification[]
   reviews       Review[]
 
+  buyerConversations  Conversation[] @relation("BuyerConversations")
+  sellerConversations Conversation[] @relation("SellerConversations")
+  userConversations   Conversation[] @relation("UserConversations")
+  adminConversations  Conversation[] @relation("AdminConversations")
+  messages            Message[]
+
   @@map("users")
 }
 
@@ -139,6 +145,7 @@ model Order {
   transactions Transaction[]
   payments     Payment[]
   reviews      Review[]
+  conversations Conversation[]
 
   @@map("orders")
 }
@@ -209,4 +216,43 @@ model Review {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("reviews")
+}
+
+// Чат между покупателем и продавцом (по заказу) или тикет поддержки
+model Conversation {
+  id        Int       @id @default(autoincrement())
+  type      String    // "ORDER" или "SUPPORT"
+  orderId   Int?      @map("order_id")
+  order     Order?    @relation(fields: [orderId], references: [id])
+  buyerId   Int?      @map("buyer_id")
+  buyer     User?     @relation("BuyerConversations", fields: [buyerId], references: [id])
+  sellerId  Int?      @map("seller_id")
+  seller    User?     @relation("SellerConversations", fields: [sellerId], references: [id])
+  userId    Int?      @map("user_id")
+  user      User?     @relation("UserConversations", fields: [userId], references: [id])
+  adminId   Int?      @map("admin_id")
+  admin     User?     @relation("AdminConversations", fields: [adminId], references: [id])
+  unreadBuyer   Int @default(0)
+  unreadSeller  Int @default(0)
+  unreadAdmin   Int @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  messages Message[]
+
+  @@map("conversations")
+}
+
+// Сообщение в чате
+model Message {
+  id             Int      @id @default(autoincrement())
+  conversationId Int      @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  senderId       Int      @map("sender_id")
+  sender         User     @relation(fields: [senderId], references: [id])
+  text           String
+  createdAt      DateTime @default(now()) @map("created_at")
+  readAt         DateTime? @map("read_at")
+
+  @@map("messages")
 }

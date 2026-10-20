@@ -1,4 +1,4 @@
-// Главный файл приложения Fastify
+// Главный файл приложения Fastify.
 import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
@@ -7,6 +7,7 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
+import websocket from '@fastify/websocket';
 import fs from 'fs';
 import path from 'path';
 
@@ -22,6 +23,8 @@ import mockPaymentRoutes from './routes/mock-payment.routes';
 import notificationRoutes from './routes/notification.routes';
 import reviewRoutes from './routes/review.routes';
 import uploadRoutes from './routes/upload.routes';
+import chatRoutes from './routes/chat.routes';
+import wsRoutes from './routes/ws.routes';
 
 import { corsOptions } from './config/cors';
 import { sessionKey, sessionCookieOptions } from './config/session';
@@ -29,6 +32,8 @@ import { authenticate } from './middleware/authenticate';
 import { createTestTransport } from './config/mail';
 import { EmailService } from './services/email.service';
 import { NotificationService } from './services/notification.service';
+import { ChatService } from './services/chat.service';
+import { prisma } from './prisma';
 
 import { AppError } from './common/errors';
 
@@ -44,10 +49,13 @@ declare module '@fastify/secure-session' {
   }
 }
 
+// тип FastifyInstance для новых декораторов
 declare module 'fastify' {
   interface FastifyInstance {
     emailService: import('./services/email.service').EmailService;
     notificationService: import('./services/notification.service').NotificationService;
+    chatService: import('./services/chat.service').ChatService;
+    wsRooms: Map<number, Set<any>>;
   }
 }
 
@@ -58,6 +66,14 @@ async function setup() {
   const notificationService = new NotificationService();
   app.decorate('emailService', emailService);
   app.decorate('notificationService', notificationService);
+
+  // Чат
+  const chatService = new ChatService(prisma, emailService);
+  app.decorate('chatService', chatService);
+
+  // WebSocket-комнаты (общая память для рассылки сообщений)
+  const wsRooms = new Map<number, Set<any>>();
+  app.decorate('wsRooms', wsRooms);
 
   // Swagger
   app.register(swagger, {
@@ -72,10 +88,8 @@ async function setup() {
           '- Мгновенная покупка и выдача ключа\n' +
           '- Личный кабинет покупателя и продавца\n' +
           '- Вывод средств (эмуляция)\n' +
-          '- Администрирование пользователей, товаров и заказов\n\n' +
-          '### Аутентификация\n' +
-          'Используются сессионные куки (`httpOnly`, `secure`, `sameSite=none`).\n' +
-          'После входа кука `session` отправляется автоматически.',
+          '- Администрирование пользователей, товаров и заказов\n' +
+          '- Чат между покупателем и продавцом, а также поддержка',
         version: '1.0.0',
         contact: {
           name: 'KeyMarket Support',
@@ -101,6 +115,7 @@ async function setup() {
         { name: 'notifications', description: 'Внутренние уведомления' },
         { name: 'reviews', description: 'Отзывы о товарах' },
         { name: 'upload', description: 'Загрузка изображений товаров' },
+        { name: 'chat', description: 'Чат и поддержка' },
       ],
       components: {
         securitySchemes: {
@@ -122,6 +137,7 @@ async function setup() {
   // Плагины
   app.register(multipart, { limits: { fileSize: 5 * 1024 * 1024 } });
   app.register(cors, corsOptions);
+  app.register(websocket);
 
   const uploadDir = path.resolve(process.cwd(), 'uploads');
   if (!fs.existsSync(uploadDir)) {
@@ -154,6 +170,8 @@ async function setup() {
   app.register(notificationRoutes, { prefix: '/notifications' });
   app.register(reviewRoutes, { prefix: '/reviews' });
   app.register(uploadRoutes, { prefix: '/upload' });
+  app.register(chatRoutes, { prefix: '/chat' });
+  app.register(wsRoutes, { prefix: '/ws' });
 
   app.get('/health', async () => ({ status: 'ok' }));
 

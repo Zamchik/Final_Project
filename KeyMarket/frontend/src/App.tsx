@@ -14,6 +14,7 @@ import WishlistPage from '@/pages/WishlistPage/WishlistPage';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage/ForgotPasswordPage';
 import ResetPasswordPage from '@/pages/ResetPasswordPage/ResetPasswordPage';     
 import MainLayout from '@/widgets/Layout/ui/Layout';
+import OrderDetailPage from '@/pages/OrderDetailPage/OrderDetailPage';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
         <Route path="/wishlist" element={<WishlistPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/orders/:id" element={<OrderDetailPage />} />
       </Route>
     </Routes>
   );

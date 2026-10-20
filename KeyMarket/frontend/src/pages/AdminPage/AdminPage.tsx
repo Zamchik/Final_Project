@@ -7,6 +7,7 @@ import { useAuthStore } from '@/entities/user/model/authStore';
 import UsersTab from '@/widgets/admin/UsersTab'; // TODO перенести в widgets/admin
 import ProductsTab from '@/widgets/admin/ProductsTab';
 import OrdersTab from '@/widgets/admin/OrdersTab';
+import SupportTab from '@/widgets/admin/SupportTab';
 
 const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN'];
 
@@ -32,6 +33,7 @@ const AdminPage = () => {
         { key: 'users', label: 'Пользователи', children: <UsersTab /> },
         { key: 'products', label: 'Товары', children: <ProductsTab /> },
         { key: 'orders', label: 'Заказы', children: <OrdersTab /> },
+        { key: 'support', label: 'Поддержка', children: <SupportTab /> },
       ]} />
     </div>
   );

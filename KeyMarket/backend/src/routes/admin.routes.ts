@@ -2,11 +2,15 @@
 import { FastifyInstance } from 'fastify';
 import { AdminController } from '../controllers/admin.controller';
 import { AdminService } from '../services/admin.service';
+import { ChatController } from '../controllers/chat.controller';
+import { ChatService } from '../services/chat.service';
 import { prisma } from '../prisma';
 
 export default async function adminRoutes(fastify: FastifyInstance) {
   const adminService = new AdminService(prisma);
   const controller = new AdminController(adminService);
+
+  // Существующие маршруты администратора
 
   // GET /admin/users — список пользователей с пагинацией, поиском и фильтром по роли
   fastify.get('/users', {
@@ -205,4 +209,41 @@ export default async function adminRoutes(fastify: FastifyInstance) {
       },
     },
   }, controller.getOrders);
+
+  // GET /admin/chat/tickets – все обращения в поддержку (только для ADMIN/SUPER_ADMIN)
+  const chatService = new ChatService(prisma, fastify.emailService);
+  const chatController = new ChatController(chatService);
+
+  fastify.get('/chat/tickets', {
+    preHandler: [fastify.authenticate],
+    schema: {
+      tags: ['admin'],
+      summary: 'Получить список всех тикетов поддержки (для администраторов)',
+      description: 'Возвращает все диалоги типа SUPPORT с информацией о пользователе, непрочитанных сообщениях и последнем сообщении.',
+      security: [{ cookieAuth: [] }],
+      response: {
+        200: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'integer' },
+              userId: { type: 'integer', nullable: true },
+              user: {
+                type: 'object',
+                properties: {
+                  id: { type: 'integer' },
+                  email: { type: 'string' },
+                },
+                nullable: true,
+              },
+              unreadAdmin: { type: 'integer' },
+              updatedAt: { type: 'string' },
+              lastMessage: { type: 'string', nullable: true },
+            },
+          },
+        },
+      },
+    },
+  }, chatController.getSupportTickets);
 }
